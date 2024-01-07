@@ -3,9 +3,128 @@ import myPackages.myMath as myMath
 import numpy as np 
 import pdb 
 
+
+class Simulator(): 
+    """
+    What is this class for? Really serves to just hold and execute different 
+    simulation objectives/functions 
+    
+    """
+    def __init__(self, manager): 
+        self.manager = manager
+
+    #what are we doing? implementing the simulation type with path failures 
+    def simulatePathFailureFromSatFailure(self, 
+                                          satFailuresPerGroup, 
+                                          numGroupsOfSatFailures, 
+                                          numPathsEvaluated): 
+        """
+        This function examines the effect a satellite failure has path failures. 
+        It does this by first: 
+        1. generating "numGroupsOfSatFailures" groups of "satFailuresPerGroup" satellites that 
+        we will effectively disable 
+        2. for sat failure group, get "numPathsEvaluated" 
+        sat pairs and their associated optimal paths in normal network 
+        3. evaluate the "rate" or proportion of these paths that have a sat from the 
+        failure group in them 
+        4. average over all sat failure groups (so from steps 2 and 3) to get the average rate 
+
+        Inputs: 
+        satFailuresPerGroup: how many satellties fail in each trial 
+        numGroupsOfSatFailures: how many trials to conduct 
+        numPathsEvaluated: how many paths in each trial to examine to see path failure rate 
+        
+        """
+        #first, flatten sats out for easier processing
+        #flatSats = np.ravel(self.sats)
+
+        #first, get our storage for groups of satellites that will fail 
+        createStorageForGroups = [set()]*numGroupsOfSatFailures
+        #then, iterate through and generate indices of satellites that will fail 
+        for i in range(len(createStorageForGroups)): 
+            createStorageForGroups[i] = np.random.choice(self.manager.numLEOs, size=satFailuresPerGroup)
+
+        totalPathsFailed = 0 
+        #now, for each group of sats to fail 
+        for ind, group in enumerate(createStorageForGroups): 
+            #first, generate # pairs corresponding to the # of paths we examine 
+            nodePairs = np.random.choice(self.manager.numLEOs, size=[numPathsEvaluated,2])
+            
+            #for each node pair: 
+            for nodePair in nodePairs: 
+                #get the optimal path 
+                path, _ = myMath.dijkstraWithPath(self.manager.currAdjMat, nodePair[0],nodePair[1])
+                #then, examine if that path contains a node from the group we are looking at 
+                for nodeInPath in path: 
+                    #only add once if you found one in the group tho
+                    if(nodeInPath in group): 
+                        totalPathsFailed+=1
+                        break 
+
+        #compute the avg rate of failure 
+        #uhhh...this should work. it makes sense.
+        #pdb.set_trace()  
+        avgRateOfFailure = totalPathsFailed/(numPathsEvaluated*numGroupsOfSatFailures)
+        return avgRateOfFailure
+
+
+    def simulateTransmits(self, numTrials): 
+        """
+        For a given topology, computes the mean tx time, max tx time, and 
+        mean # of transmits/links used for a given transmission (transmission
+        being defined as a source and destination, and only looking at 
+        propagation delay)
+        
+        Input: 
+        numTrials: how many trials we are executing 
+
+        Output: 
+        avgLength: average number of links required for a transmission 
+        avgTime: average time of going through path in seconds 
+        maxTime: max time of going through any path in seconds   
+        """
+
+        #get adjacency matrix for satellites 
+        #please note...hmmm...it should have already been init with that topology...
+        #i think the manager should initialize the topology and base stations in its own init
+        adjMat = self.manager.generateAdjacencyMatrix() 
+
+        #size 2 as we have a destination and a start
+        #we want to go between any sat and any BS, so sum those for the max ind 
+        setOftoAndFro = np.random.randint(0, self.manager.numLEOs + len(self.manager.baseStations), size =(numTrials, 2))
+
+        totalTime = 0
+        totalLength = 0
+        ind = 0 
+        maxTime = 0
+        totalLength = 0 
+        for set in setOftoAndFro: 
+            
+            ind+=1
+            path, time = myMath.dijkstraWithPath(adjMat, set[0], set[1])
+            
+            totalTime+=time
+            totalLength+=len(path) 
+            if(maxTime < time): 
+                maxTime = time 
+
+            print(ind)
+
+        avgTime = totalTime/numTrials
+        avgLength = totalLength/numTrials
+
+        return avgLength, avgTime, maxTime
+
+
 #general manager/scheduler of processes   
 class Manager(): 
-
+    """
+    to coordinate interactions between different players. This includes creating ISLs with 
+    diff topologies, and may include dealing with time frame changes, 
+    interactions with stochastic elements, etc. 
+    
+    """
+    
     def __init__(self, walkerPoints, baseStationLocations, fieldOfViewAngle, phasingParemeter): 
         """
         This does the initialization step for internals, as well as generating satellites 
@@ -24,16 +143,39 @@ class Manager():
 
         #init storage for satellites, base stations, and links   
         self.sats = np.tile(LEO(), [self.numPlanes, self.numSatPerPlane]) 
-        self.baseStations = np.tile(baseStation(), [np.shape(baseStationLocations)[0]])
 
         #call generate satellites function, which initializes our structure 
         self.generateSatellites(walkerPoints)
+        #first, format the baseStationInputs 
         self.generateBaseStations(baseStationLocations, fieldOfViewAngle)
+
+        #this could be wrong lol 
+        self.numBaseStations = len(self.baseStations)
 
         #set up storage for adjacency matrix 
         self.currentAdjacencyMatrix =  np.tile(np.Infinity, [self.numLEOs + len(self.baseStations), self.numLEOs + len(self.baseStations)])
 
+    def getBaseStationLocations(self):
+        """
+        Return list of x y z locations of base stations
+
+        Input: 
+        Output: list of BS locations
+        """
+        hold = [0]*len(self.baseStations)
+        for ind, baseStation in enumerate(self.baseStations): 
+            hold[ind] = baseStation.getCoords()
+        
+        return hold
+
     def averageDistToBaseStation(self): 
+        """
+        Get average distance of all satellites to base station 
+
+        Input: None
+        Output: avg dist 
+
+        """
         
         storeAvgPropToBS = np.ones(len(np.ravel(self.sats)))
 
@@ -186,7 +328,7 @@ class Manager():
             pdb.set_trace() 
         return myMath.dist3d(point1, point2)/(3e5)    
 
-    def getXYZofLinks(self, maxNumLinksPerSat): 
+    def getXYZofLinks(self, maxNumLinksPerSat=6): 
         """
         Just output array of XYZ positions of all links 
 
@@ -210,7 +352,8 @@ class Manager():
                 ind+=1 
             for toBaseStation in fromSat.connectedBaseStations: 
                 holdLinks[ind] = np.concatenate([[fromSat.getCoords()], [toBaseStation.getCoords()]], axis = 0)
-                ind+=1                 
+                ind+=1               
+
         return holdLinks
     
     def generateBaseStations(self, baseStationLocations, fieldOfViewAngle): 
@@ -225,10 +368,18 @@ class Manager():
         Effect/Output: 
         Created base station objects 
         """
-        #iterate through the locations 
-        for ind in range(np.shape(baseStationLocations)[0]): 
-            #for each location create the associated object
-            self.baseStations[ind] = baseStation(*baseStationLocations[ind], fieldOfViewAngle)
+        #iterate through the locations (if we have locations at all)
+        if(baseStationLocations is not None): 
+            #create storage for base stations 
+            self.baseStations = np.tile(baseStation(), [np.shape(baseStationLocations)[0]])
+            for ind in range(np.shape(baseStationLocations)[0]): 
+                #convert properly 
+                formattedLocation = myMath.geodetic_to_cartesian(*baseStationLocations[ind])
+                #for each location create the associated object
+                self.baseStations[ind] = baseStation(*formattedLocation, fieldOfViewAngle)
+        #otherwise set as place holder 
+        else: 
+            self.baseStations = [] 
 
     def generateSatellites(self, walkerPoints): 
         """
@@ -344,14 +495,15 @@ class Manager():
         Outputs: 
         Effect: VN connected topology in our satellites :) 
         """
+        self.connect2ISL() 
 
         #upward set 
         for partialSpiralInd in range(4):
-            self.connectSpiralTopologySimple(2, 5, 5*partialSpiralInd, startSatInd-partialSpiralInd)
+            self.connectSpiralTopologySimple(2, 5, 5*partialSpiralInd, startSatInd-partialSpiralInd, True)
             
         #downward set, so offset the sat ind by half a revolution 
         for partialSpiralInd in range(4):
-            self.connectSpiralTopologySimple(2, 5, 5*partialSpiralInd, startSatInd-partialSpiralInd+10)
+            self.connectSpiralTopologySimple(2, 5, 5*partialSpiralInd, startSatInd-partialSpiralInd+10, True)
             
         return 
 
@@ -364,6 +516,8 @@ class Manager():
         Output:
         Effect: Ladder connected satellite constellation 
         """
+
+        self.connect2ISL()
         
         #in total, in this topology there are 40 connections 
         #there are 2 sets of 20. 
@@ -429,8 +583,10 @@ class Manager():
         Output: zig zag connected satellites, of zig zag period = 4 satellites 
         """
 
+        self.connect2ISL() 
+
         #for each zig zag 
-        for zigZagInd in range(2):#self.numSatPerPlane):
+        for zigZagInd in range(self.numSatPerPlane):
             #the satellite we start with is at plane 0, and this index 
             startSat = self.sats[0,zigZagInd]
             
@@ -465,7 +621,7 @@ class Manager():
            
         return 
 
-    def connectSpiralTopologySimple(self, satsBetweenConnections= 1, numberConnections = -1, startPlaneInd = 0, startSatInd = 0 ): 
+    def connectSpiralTopologySimple(self, satsBetweenConnections= 1, numberConnections = -1, startPlaneInd = 0, startSatInd = 0, ISL2Done = False): 
         """
         Connect all satellites in a spiral fashion. 
         This method uses the fact of periodicity in modulus operator connecting
@@ -480,6 +636,7 @@ class Manager():
         startSatInd, startPlaneInd: designates the satellite that the spiral starts at. For the
         default case of full spiral, it doesnt matter where it starts, as it will return
         to that satellite 
+        ISL2done: if we have already connected the 2ISL topology (if we have already, dont do it again)
 
         satsBetweenConnections: number of satellites between connections. Just 1
         in normal spiral, but in something like disjoint, it will be 2.
@@ -491,8 +648,9 @@ class Manager():
         Effect: all satellites connected in spiral fashion 
         """
 
-        #first make in plane connections 
-        self.connect2ISL() 
+        #first make in plane connections, if we havent already
+        if(not ISL2Done): 
+            self.connect2ISL() 
 
         #if we use default case 
         if(numberConnections == -1): 
@@ -501,6 +659,7 @@ class Manager():
         planeInd1 = startPlaneInd
         satInd1 = startSatInd
 
+        #for spiral, focus on indexing by plane while mostly keeping the sat ind constant
         planeInd2 = startPlaneInd + 1
         satInd2 = startSatInd
 
@@ -542,15 +701,17 @@ class Manager():
         self.connectSpiralTopologySimple(2)
         return 
 
-    def connectDisjointSpiralTopology(self): 
+    def connectDisjointSpiralTopologyaoeuaoeuaoeu(self): 
         """
+        DEPRECATED (use simple version instead)
         Similar to spiral topology implementation. However, we will
         instead use every other. 
 
         Effect: disjoint spiral connections
         """
-        #first connect in the basic 2ISL case 
-        #self.connect2ISL() 
+
+        self.connect2ISL() 
+
         #then, connect to adjacent planes 
         #iterate through planes and then sats within a plane 
         for smallSatInd in range(self.numSatPerPlane):  
@@ -583,7 +744,7 @@ class Manager():
         Conect all sats in modified spiral topology 
         """
         #first connect in the basic 2ISL case 
-        #self.connect2ISL() 
+        self.connect2ISL() 
 
         #then, connect to adjacent planes 
         #iterate through a certain plane, and then satellites 
@@ -658,7 +819,7 @@ class Manager():
         for playerFrom in allPlayers:
             #iterate through the players satellites and base stations  
             for satTo in playerFrom.connectedSats: 
-                #pdb.set_trace()
+            
                 adjMat[playerFrom.index, satTo.index] = self.propDelayBetween(playerFrom, satTo)
             for baseStationTo in playerFrom.connectedBaseStations: 
                 adjMat[playerFrom.index, baseStationTo.index] = self.propDelayBetween(playerFrom, baseStationTo)
@@ -733,17 +894,15 @@ class LEO(Player):
         if(polarRegionRestriction): 
             lats = myMath.cartesian_to_geodetic(*satToConnectTo.getCoords(), 6371) 
             
-            #print(lats) 
             if(lats[0] > 70 or lats[0] < -70): 
                 return False 
 
             selfLats = myMath.cartesian_to_geodetic(*self.getCoords(), 6371) 
             
-            #print(selfLats) 
             if(selfLats[0] > 70 or selfLats[0] < -70): 
                 return False 
             
-        #pdb.set_trace()
+        
         self.connectedSats = self.connectedSats + [satToConnectTo]
         return True 
 

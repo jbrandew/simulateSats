@@ -115,6 +115,16 @@ def plot_line_segments(pair_of_points_list, ax = []):
 
 #trying for pipeline of sphere, walker star, base stations 
 def multiPlot(radius, satPoints, baseStationPoints, links, axisLimit = 8000): 
+    """
+    Function to plot all players and links. Plotting with the globe doesnt work very well, 
+    as it tends to absorb links/players graphically...so for now just make the radius very small 
+
+    Inputs: 
+    radius: radius of the globe 
+    satPoints: xyz of all satellites 
+    baseStationPoints: xyz of all base stations 
+    links: connections to plot using line segments 
+    """
     #get figure and axes to use for all this 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')

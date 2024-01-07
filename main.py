@@ -44,6 +44,10 @@ altitude = configData['orbitAltitudeLEO']
 #get the radius of earth 
 earthRadius = configData['earthRadius']
 
+#get the baseStationLocations and field of view 
+baseStationLocations = configData['BaseStationLocations']
+baseStationFieldofView = configData['BaseStationViewAngle']
+
 #aight, now we get the coordinates for all the satellites 
 walkerPoints = myMath.generateWalkerStarConstellationPoints(
     numSatellites=numLEOs,
@@ -66,75 +70,38 @@ relayB = myClasses.baseStation(*myMath.geodetic_to_cartesian(70.4, 31.1),30)
 #in order to do so, iterate through all satellites in formation 
 numInView, numOrbitInView = relayA.numSatellitesInView(walkerPoints)
 
-print("Num Satellites in View: " + str(numInView)) 
-print("Num Disc. Planes in View: " + str(numOrbitalPlanes - numOrbitInView))
+#print("Num Satellites in View: " + str(numInView)) 
+#print("Num Disc. Planes in View: " + str(numOrbitalPlanes - numOrbitInView))
 
-#now, need to pass in the list of locations in x y z of base stations 
-BSLocHold = np.ones([2, 3])
-BSLocHold[0] = myMath.geodetic_to_cartesian(82.5, -62.3)
-BSLocHold[1] = myMath.geodetic_to_cartesian(70.4, 31.1)
 
 #lets look at the connections of the satellites. how do we do this?
-lemmeManage = myClasses.Manager(walkerPoints, BSLocHold, 10, phaseParameter)
-lemmeManage.connect2ISL() 
-lemmeManage.connectBaseStationsToSatellites() 
+lemmeManage = myClasses.Manager(walkerPoints, 
+                                baseStationLocations, 
+                                baseStationFieldofView, 
+                                phaseParameter)
+
+lemmeManage.connectLadderTopology() 
 
 #in 2ISL with 2 base stations, max # of connection per = 4 
-linkCoords = lemmeManage.getXYZofLinks(6) 
-#pdb.set_trace() 
-#myPlots.plotWalkerStar(walkerPoints) 
-#myPlots.multiPlot(earthRadius/100, walkerPoints, BSLocHold, linkCoords)
+linkCoords = lemmeManage.getXYZofLinks(maxNumLinksPerSat=6) 
 
-#exit() 
+#divide by 100 just so we dont see the sphere of the globe for now
+#myPlots.multiPlot(earthRadius/100, walkerPoints, lemmeManage.getBaseStationLocations(), linkCoords)
 
 adjMat = lemmeManage.generateAdjacencyMatrix() 
-#pdb.set_trace() 
 
-#after we get adjacency matrix, analyze use time: 
-#for satellites vs base stations 
-#for satellites closer vs farther to base station 
+#this gives me the # rows that have a non inf value 
+non_inf_rows = np.sum(~np.isinf(adjMat).any(axis=1))
 
-#plt.show()
+#print("Number of rows wit non-infinite values:", non_inf_rows)
 
-#pdb.set_trace()
+simmer = myClasses.Simulator(lemmeManage)
 
-#now that we have adj matrix computed, get mean latency with monte carlo
-#sampled base station and users 
-#in order to do that, get 2 random num in length of numLeos
+def plotUsageAnalysis():
 
-numTrials = 1000
-#2 = num base stations
-setOftoAndFro = np.random.randint(0,numLEOs + 2, size =(numTrials, 2))
-totalTime = 0
-ind = 0 
-maxTime = 0
-totalLength = 0 
-for set in setOftoAndFro: 
-    
-    ind+=1
-    time = myMath.dijkstra(adjMat, set[0], set[1])
-    totalTime+=time
-    print(ind)
-    print(time)
-    if(maxTime < time): 
-        maxTime = time
+    with open('pseudoCapacity.npy', 'rb') as f:
 
-    #totalLength+=len(path)
-    #print(totalTime)
-
-avgTime = totalTime/numTrials 
-print("Time in ms: "+ str(avgTime*1000))
-print("Max Time: "+str(maxTime))
-#print("Average Length: "+str(totalLength/numTrials))
-
-
-#pseudoCapacity = lemmeManage.getPseudoCapacity(1000)
-
-# with open('pseudoCapacity.npy', 'rb') as f:
-
-#     a = np.load(f)
-
-def plotUsageAnalysis(): 
+        a = np.load(f)   
     #load in usage times, for just the satellites  
     usageTimes = a[0:360]
     #then examine the dist of each satellite to the two base stations 
@@ -146,5 +113,50 @@ def plotUsageAnalysis():
     plt.xlabel('Average Propagation Delay to BS')
     plt.ylabel('Pseudo Measure of Usage')
     plt.title('Simulated 1000 Transmissions')
+
+#plotUsageAnalysis() 
+
+# avgLength, avgTime, maxTime = simmer.simulateTransmits(1000)
+# print("Avg # of links used:" + str(avgLength))
+# print("Time in ms: "+ str(avgTime))
+# print("Max Time: "+str(maxTime))
+
+rate = simmer.simulatePathFailureFromSatFailure(25, 100, 100)
+print("Hello :D")
+print(rate)
+
+
+# numTrials = 1000
+# #2 = num base stations
+# setOftoAndFro = np.random.randint(0,numLEOs + 2, size =(numTrials, 2))
+# totalTime = 0
+# ind = 0 
+# maxTime = 0
+# totalLength = 0 
+# for set in setOftoAndFro: 
+    
+#     ind+=1
+#     time = myMath.dijkstra(adjMat, set[0], set[1])
+#     totalTime+=time
+#     print(ind)
+#     print(time)
+#     if(maxTime < time): 
+#         maxTime = time
+
+#     #totalLength+=len(path)
+#     #print(totalTime)
+
+# avgTime = totalTime/numTrials 
+# print("Time in ms: "+ str(avgTime*1000))
+# print("Max Time: "+str(maxTime))
+#print("Average Length: "+str(totalLength/numTrials))
+
+
+#pseudoCapacity = lemmeManage.getPseudoCapacity(1000)
+
+# with open('pseudoCapacity.npy', 'rb') as f:
+
+#     a = np.load(f)
+
 
 
