@@ -1,0 +1,440 @@
+Hello :) 
+
+Working on the project. What to do? 
+Having a graphical bug with something. 
+Thought: decrease radius and maybe we can work with smaller numbers. 
+
+as expected, that did nothing. Now, make the sim input much simpler and see whats wrong 
+
+
+aight uhhh what are we doing 
+walker star constellation plotter works 
+Now what? 
+
+1. transfer newTestSpace.py data to a usable package 
+2. resume implementation. What does this mean? I will pull up and see my notes for
+the previous research paper and go from there afterwards 
+
+#resolution of envelope detector -> BW of it kinda... yee...
+anyways 
+
+trying to organize functionality 
+
+rotate3d 
+deepCopy 
+plot3d 
+generateWalkerStar 
+plotWalkerStar 
+
+so lets have a 
+"myMath" 
+"myPlots" 
+"myRandom" 
+
+to designate each package we are using 
+
+
+Problem: 
+in each plane, the plotter repeats the coordinates of two points
+probably, problem = whe 
+
+Problem: 
+not able to graph cone correctly to graphically verify results
+
+Solution: 
+simplify by:  
+
+1. parametrically describing cone with a specified angle of opening 
+-ez & done 
+2. rotating by the angle of the vector 
+-ez
+3. shifting all points from the initial set to the new one 
+-ez 
+
+Types of results to put in paper: 
+current class structure and packages 
+graphic of Walker Star 
+graphic of connections from base station to in view satellites...
+table of results for min elevation angle 
+
+Thought: 
+our main seems pretty disorganized. 
+i dont like how we are calculating the numberInView in main. That should be a base
+station's job. So i dont think we need a bigger overseer, at least not yet. 
+
+btw, difference between their results and ours for first part of verification could be
+from going the other direction when looking at phase difference
+
+
+thought: 
+total length of orbit = (6371 + 1000) * 2 * Pi 
+distBetween two = around that / 19 
+
+the 20 disconnected segments just means that we have 20 planes that arent connected 
+
+question: 
+should linking to the base station be in the connect2ISL? 
+or should that type of function focus on inter satellite connections, and 
+then we have a different function that connects to all satellites within field of view 
+	-i like this 
+
+
+thought: 
+not sure how to plot inter satellite links and satellite to base station links 
+have "links" variable 
+
+
+what is the "spiral" referenece topology? 
+4 ISLs per sat. 
+I think its 4 ISL because you maintain connection with your the ISLs in your plane, 
+and then additionally the 2 ISLs in adjacent planes for same phase 
+-so connect to the next plane and previous plane with same satellite position 
+
+thought: 
+super confused as to why its connecting to a seemingly random other satellite when jumping
+some of the time.
+
+possibilities: 
+not iterating correctly 
+not instantiating satellites in the correct order
+...
+
+is this even worth doing? spend 5 minutes and then move to next concept
+-give up, use basic one. realize though that the satellite data structure 
+may not be properly sorted in lat/long...maybe... 
+
+Introduce satellite failures: 
+1000 random sets of n satellite failures (so inf = adj matrix row and col) 
+for each of these sets, 5000 sets of surviving used...
+
+
+Next idea: 
+max throughput/overall transmission
+just a bit of work into it, then study for other things
+
+so need to: use utility functions with dynamic routing, a bit. 
+
+
+each sat = MG1 Q from ground station
+
+different approaches for final stage: 
+-time steps with location of each and frame processing 
+-make each satellite an markov receival from ground plane, with each 
+having a random destination (being another satellite). then, simulate overall throughput of different topology schemes 
+-i like this 
+
+breaking this into steps. Do we establish the sampling of each being an markov queue first,
+or do we work with moving in location with space? 
+
+-markov queue first, then moving in location 
+1. establish base case with exponential receiver 
+-done, have functions for it 
+2. implement base case into receival for stationary satellites
+-now what? need to use this base case implementation for general receival. Is there a way 
+to do that without using time frames and multiprocessing? 
+3. maybe move into moving components 
+
+Difficult to process/implement this. 
+1. first approach i can come up with: have each satellite be a separate process. let there be a "packet" object with destination, current processiintme, hell no too much 
+
+2. second approach: 
+a. have # of exponential arrival processes = # satellites
+b. for each process, generate inter arrival scheme
+c. for each arrival, create a destination satellite (we already have the "from" satellite)
+d. plot each path sending in pseudo real time, so slowed down alot, but sent 
+	(maybe have # of packets on line => diff color 
+
+3. refined second approach
+a. have # of overall arrivals = sum of all processes. randomly choose source and end. 
+b. for each source and end, get the path as well as the links used and the time frame each link was used within
+c. 
+
+Phases: 
+1. given adjacency matrix and source and end, output the path as list and end amount of time
+2. now that we have the path for each start and end, now a set of paths from interarrivals
+3. from this set of paths, what do we want to do? could: 
+
+-compare usage of base station links to inter satellite links 
+-could plot: 
+	-average satellite link usage time vs rate 
+	-average base station - satellite link usage time vs rate 
+	
+Process: 
+generate interarrival times for each packet (dont need this) 
+
+get start and end for each packet 
+get associated path and overall transmit time 
+for each path, for each link, add the prop delay to each end of the link to model general overhead 
+
+then, plot overhead for average satellite and average base station 
+then, plot overhead of satellite vs proximity to base station (should go up) 
+
+
+slow down packet transmission by alot. for each request, there wil
+
+
+random thought: should the processing at each satellite be exponential as well? what really "processing" is there to do? are we modeling the routing computation as this "processing?" 
+
+
+okay, end project results to put up: 
+diagram of class structure 
+data pipeline 
+figure of just walker delta points
+figure of base stations with 2 ISL topology 
+figure of adjunct topology 
+
+figure of comparison of results for avg connection time 
+figure of use time vs proximity to base stations 
+
+discuss framework for expansion 
+
+
+need a bit more results, just a bit. 
+how did we index the pseudo cap? (in terms of planes and sub parts) 
+
+
+originally, sats was: 
+num plane x satSubInd 
+
+then, after ravel, it was 
+
+row1 data, row2 data, row3 data 
+
+
+With the drastic reduction in price for launches of all types of satellites, a more in depth analysis of optimal routing, constellation & topology selection is needed. Most existing simulation frameworks do not consider multi-satellite coordination, stochastic environments, or dynamic selection of routing paths. 
+
+Approaches to satellite topology must rightfully be approached in a much more different way when compared to ground networks, because of different conditions regarding speed of changes in topology, noisy conditions, and vulnerabilities to interference. 
+
+This project implemented a majority of the paper [], creating a modular framework that allows for easy expansion in the future, to better generate data for selection of network parameters. In addition, some analysis in a Monte carlo simulated player usage was done to show how proximity to a base station affects a satellites usage in time. 
+
+For tackling this, a very sequential data pipeline was needed, shown in figure 1. The config file allows for a choices involving, number of each satellite, base station, and general initialization. Each other step uses this data. 
+
+In the class structure, purple has yet to be implmented, as we have yet to start stochasticness from the user, and only worked with PLEO here. 
+
+
+I now understand why im getting funky results for the spiral topology and those in general.
+Its because beforehand i was operating under the assumption that the highest index in the plane subset was the highest altitude. This is incorrect because of the phasing rotation. 
+Instead, work with latitude and longitude. If we are outside the 70 range, dont connect. 
+If the satellite we would connect to is outside the 70 range, dont connect to it. 
+
+thats not the only problem. The other one is the modulus operation we were doing. 
+
+so, it connects to the correct next plane, but not the correct satellite index after doing a full revolution 
+-so offset by a certain in plane index when you do a full rev. 
+
+
+just getting used to this new keyboard sigh
+
+where were we? just implementing the spiral topology thats fully connected 
+
+so, whats the problem? something to do with how we iterate through the satellite planes. 
+
+should we instead iterate through spirals instead iterating through planes? could have reference start with the 
+
+how many satellites in a spiral? determined by the phasing constraint and the restriction on latitdues where the ISL connections are allowed 
+
+how do we iterate through a full spiral? must iterate past just one plane... 
+there should be # of spirals = # of planes 
+
+so approach should still be iterate thorugh 
+
+confused: 
+the first loop with planeIndex iterates through # of planes 
+the second loop with samllSatInd 
+
+so wait, how does the second index of the satellite data structure seem to be more of the plane than the other... 
+
+nah it checks out. it just looks that way because of the requirement for the latitude thing. 
+
+so, first loop is the plane index, which is fine. There should be one spiral per plane. 
+
+
+The second loop should iterate through many more. there is a specific offset within one plane for how many satellites ahead you should index when looping back around. what is that equal to? 
+its equal to the number of planes*phasing parameter/ (360/ # of satellites per plane) 
+
+okay, thats the offset. How long should a spiral be though? the # of revolutions should be equal to the 180 / (phasing parameter * number of planes) 
+
+how many spirals should there be? 
+
+
+uhhh what are we doing? 
+end goal: structure in which to implement reinforcement algorithm for optimizing both (I think) topology formation and packet routing policy 
+current general step: creating simulation structure for allowing this algorithm to run. 
+current specific step: implementing topologies that i could use in the future to test out different routing policies. also, helps in general with observing structure. 
+
+thoughts: 
+i dont like the location of my current project, located in final project when im already done. with the project. 
+i dont particularly like some aspects of the project structure, so ill examine that as well. 
+need to move all essentials to different folder. 
+id like to have this on github as well
+
+Okay, we are back. 
+ending the excursion into cliques for now. 
+
+What are we doing? 
+reviewing what we are stuck on, and then: 
+modifying djikstras approach to use previously constructed graph 
+
+what was this originally doing? 
+taking a random set of n satellites
+computing x paths and seeing how many of those paths would intersect the group of n satellites (which we are saying has failed) 
+
+currently, we are using djikstras algorithm every time we seek a new path in the graph with n nodes failing. 
+instead, could use an optimized version in which we use the previous routing table, as its in the same graph 
+
+thought: could use this in practice, if topology is roughly the same/see how it changes over time (preventing us from having to compute djikstras again and again) 
+
+so, what is this problem formalized as? 
+if we have a graph g with nodes n and edges e, what is an efficient way to compute x number of paths between x pairs of nodes within the graph? 
+
+will use djikstras, but use the routing table from before in construction of ours. 
+
+ideas: 
+basic: have an overall routing table. after you compute all your shortest paths, put those in the table. so if you get called again, you can refer back to it. 
+advanced: examine relationship between routing table of each other node...
+
+used floyd warshall with subset, it worked. 
+now, just need to use it within the simulation sphere 
+
+what are we doing? 
+seeing what the difference in data type is between the floyd call that worked vs the one that didnt 
+
+
+
+uhhhhhhhhhhhhhhhhhhhhhhhhhh what are we doing 
+so the one approach worked very poorly, so we need to just...look at the notes from last meeting and examine if there is anything we can work on
+
+action items: 
+
+follow these action items. (simulation, routing, topology, then ways for potential routing) 
+-routing or topology, RL is a good approach
+-links you can form and user demands -> stimuli for RL algo. 
+
+could spread out users -> each need 10b/s, evaluate how well they satisfy stuff 
+-should be nonuniform or uniform traffic demand
+-could be uniform and then sudden hotspot -> how does the system respond/change its connectivity 
+
+-priority/size/requried BW of packets...maybe...not really mut. ex. 
+-modeling overhead of switching ISLs -> one of the standards has reconnection time for satelliets (paramaterize over) 
+	-compare answers of toplogy for different reconnection times 
+	
+
+a. modify simulation enviroment to include: 
+-attenuation effects of ISLs that cross the 100km threshold in atmosphere 
+-put a cost to adding an ISL. Might make higher orbit GEOs more worth it, as they require less connections, as their field of view is wider 
+-impelement facets from SDA standards, which include: 
+https://www.sda.mil/wp-content/uploads/2020/08/9100-0001-01-OISL-Standard.pdf
+https://www.sda.mil/wp-content/uploads/2022/04/SDA-OCT-Standard-v3.0.pdf
+
+b. run throughput caluclations and compare: 
+-greedy case of connecting to nearest satellite (s) in the various topologies vs the case of using our algorithm that we develop 
+
+c. look into research with the alyria tool for topology management 
+
+d. compare output of using optical connections vs RF connections 
+-optical: specific area, high data rate 
+-RF: large area, low data rate (phased array antenna) 
+
+e. implement the distributed case of communication
+-so, each satellite doesnt know the whole topology (what connections each other one makes, etc.)
+-"link discovery packets" are used, advertising distances/connections 
+-this could be better than Alyria, which assumes centralized.
+
+f. exploring this notion of maximaly spread out choice of edges/links 
+
+Questions: 
+on e, the general process is:  
+
+init: 
+-each sat is connected to n nearest satellites 
+
+repeat step: 
+-advertise what satellites you are connected to to the satellites you are connected to and distances to nearby satellites 
+-based on a policy and what nearby satellites say to you, change who you are connected to next 
+
+
+questions: 
+-each satellite is changing who they are connected to based on information from other satellites, which in the next time step may be false (as satellites may have changed their connections)
+-BF algorithm worked with finding shortest path between one node and all other nodes via a distributed manner, but that was in a static graph (ISLs didnt change, nor did distances between satellites). So it doesnt seem super applicable to this situation 
+	-like, the "reliability/accuracy" of channel/topology state information is dependent on 	
+	how far satellites are from each other 
+	
+	-fish eye routing: (less frequent link updates on others away) 
+	-geographic routing/groupign those in a certain area 
+	-toplogy construction vs routing problem (which one im trying to solve) 
+	-"geneated algorithm.." with toplogy construction
+	-notion of "age of information".... (considered with RL, why its good) 
+	-RL could pick up on more complex relationships 
+	
+-what if there is some general information known by each satellite?
+	-for example, it seems plausible that in a walker delta constellation, every satellite 
+	would easily know where every other satellite is. however, the packet processing delay/
+	how many packets are already queued up could be seen as a stochastic process
+	
+	-probably reliable to assume we know yea...notice failures 
+	 
+-are there algorithms for shortest path in a changing graph? 
+-should there be a notion of "recomputing" only when the adjacency matrix we computed when establishing our last policy differs by a certain threshold from the current state/adj matrix? 
+
+
+how do me measure throughput/performance of a certain policy/compared to baseline? 
+-in a static case without moving, evaluate the average latency of a packet (so between a pair of nodes). 
+-repeat that many times.... 
+
+-if im constrainted on uplink or crosslink capacity -> how does that change components/policy 
+
+what are we doing now? we are using the standards document to incorporate various limitations. 
+then, examine throughput results for latency etc. along the parametirization
+
+actually, first review class structure 
+
+what are we doing? need to calm down. 
+changing the location of the simulator for seeing num satellites in view of base station. 
+
+aight. i need to calm down, and think of how to best approach this. figured it out, its good now :D 
+
+what next? modifying floyd warshall thingy. 
+first, test the modified version 
+uhhh i think its about good. kinda good. something wrong teehee.
+
+move on to incorporating standards for more accurate analysis. 
+1. wavelength used: not sure
+2. polarization type: not sure 
+3. OISL switchable...not sure. i think that means that we have bidirectional ISLs 
+4. limiting min and max flux at a certain altitude... 
+-is this in the context of isotropic antennas? or, should i examine this in the context of directional antennas? 
+-so, waves are transmitted out uniformly in all directions. To get the power, do i just use friszs, or something else? 
+5. link margin. 3db...? added power strength beyond the normal amount that you use to ensure relaible comms. 
+6. Modulation type: on off keying, NRZ 
+7. LDPC FEC (could just use this with overhead budget and increase in SNR) 
+8. BER after FEC (relating SNR with decision stat/maybe multipath...?)
+9. adaptive coding and modulation...? so different vars change with conditions, but its not really deterministic in what it means..
+10. OISL term to term timing accuracy  10 ns (threshold) -> 1 ns (objective) 
+-what even is timing accuracy? i think it deals with synchronization that allows better data transmit, sat tracking, handover of users, 
+-im not really sure exactly what this sychronization means...maybe like real world clock time...or something 
+-useful in schemes like TDMA where each user is assigned a time slot 
+-
+11. aoeuea
+12
+123
+aquisition time: not sure what this exactly means. its like 100s, so i dont think it deals with sat to sat. it might though, as an orbit for a LEO is ~90-120 min. 
+
+hello. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+
+
+

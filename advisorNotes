@@ -1,0 +1,184 @@
+Continuous notes from advisor meetings: 
+
+Meeting 1/4/23: 
+what are we doing? preparing for meeting. 
+what are we updating on? current progress and future steps. 
+
+Done so far: 
+majority of the paper (topologies, simulating results of like mean connection time) 
+expandible topologies (3 ISL spiral topology -> 2-3 or others) 
+easy to add base stations
+easier graphical analysis 
+used structure in analyzing proximity of satellite to usage 
+
+Next steps: 
+Implement dynamic routing paper and compare results 
+Self teach and implement RL algorithm baselines 
+Implement RL algorithms with just pLEO case 
+Expand into multi level satellites (so diff kinds of players), more stochastic elements (higher state space), randomized state, and then possibly continuous time frame analysis (continuous time would allow me to 
+
+Orbital altitude regime -> if im at 750 KM...
+	-can adjust data rate with range (to account for atteuatian) 
+	-attenuation for hitting atmosphere (100 km is fine of atmospheric effects) 
+
+highier field of view in geo
+maybe better hardware geo, (austere env.) -> tougher radiation environment in GEO
+-higher service life GEO
+-comparable processing power at GEO 
+
+GEO could be a producer and ---- of data, not just relay
+high rate leo data transport layers -> other layers are feeding data into it
+
+GEO might be able to widely transmit to other satellites...
+
+Questions: 
+How do i compare this to a purely terrestrial setup in terms of performance?
+-fiber doesnt go everywhere, satellite with optical connections is nice
+-compare to greedy case of connecting to nearest satellite vs optimized algorithm  
+Should i be constraining computational complexity at all in terms of on board hardware for satellites? 
+-can assume unconstrained 
+-
+Should there be communication limitations for scheduling/sending messages i should be aware of? 
+How long did a simulation take for you to run with avg transmit time for 1000 trials? 
+Should i be implementing some of this in cpp in end goal for RL? I can mix cpp for computationally hard algorithms, and then use python for the overhead project structure etc. 
+-
+
+More context: 
+alleria -> spin off from google for satcom...(space time tool) 
+aalyria
+-DOD has some contracts with them 
+might be able to get some copy of space time tool 
+developers interface...could maybe improve a component of the tool, like topology manager 
+(they are contracting with alot of people across globe....?) 
+
+northbound southbound interface...maybe east and west between diff segments 
+
+SDA constellation info -> standards for some inter satellite links 
+-can use reference for simulation components 
+https://www.sda.mil/wp-content/uploads/2020/08/9100-0001-01-OISL-Standard.pdf
+https://www.sda.mil/wp-content/uploads/2022/04/SDA-OCT-Standard-v3.0.pdf
+
+optical vs RF 
+-optical specific area but high data rate -> 
+-RF -> large area with one phased array antenna (many connections, lower data rate) 
+
+Implement;
+distributed case with communication 
+link discovery packets...advertise distances 
+BF with ISL connections (distributed ISL connections, # of hops away) 
+alyria assumes centralized....
+
+SDN uses centralized... 
+
+more interesting: what is the actual algo for getting routes/topology
+-not necessary to compare latency of centralized vs non centralized
+-woulda maybe be cool to have kind of distributed with a # of base stations.... 
+
+look at alyria stuff! 
+
+Meeting 1/18/23: 
+what are we doing? preparing for meeting. 
+what are we updating on? current progress and future steps. 
+
+I'm sorry, I got pretty distracted these past two weeks working on a different algorithm, as Dr. Brinton knows. It was possibly applicable to this project though, and it worked with minimizing the # of a certain size clique.
+
+Also, responding to the action items from last week, here are some concerns I had: (refernce them). 
+
+greedy edge assignment: 
+-could be useful for best edge allocation for max degree of graph 
+-could constrain for max out degree of a satellite 
+
+graph theory course materials 
+
+other notes/prep stuff for this meeting: 
+
+action items: 
+
+follow these action items. (simulation, routing, topology, then ways for potential routing) 
+-routing or topology, RL is a good approach
+-links you can form and user demands -> stimuli for RL algo. 
+
+could spread out users -> each need 10b/s, evaluate how well they satisfy stuff 
+-should be nonuniform or uniform traffic demand
+-could be uniform and then sudden hotspot -> how does the system respond/change its connectivity 
+
+-priority/size/requried BW of packets...maybe...not really mut. ex. 
+-modeling overhead of switching ISLs -> one of the standards has reconnection time for satelliets (paramaterize over) 
+	-compare answers of toplogy for different reconnection times 
+	
+
+a. modify simulation enviroment to include: 
+-attenuation effects of ISLs that cross the 100km threshold in atmosphere 
+-put a cost to adding an ISL. Might make higher orbit GEOs more worth it, as they require less connections, as their field of view is wider 
+-impelement facets from SDA standards, which include: 
+https://www.sda.mil/wp-content/uploads/2020/08/9100-0001-01-OISL-Standard.pdf
+https://www.sda.mil/wp-content/uploads/2022/04/SDA-OCT-Standard-v3.0.pdf
+
+b. run throughput caluclations and compare: 
+-greedy case of connecting to nearest satellite (s) in the various topologies vs the case of using our algorithm that we develop 
+
+c. look into research with the alyria tool for topology management 
+
+d. compare output of using optical connections vs RF connections 
+-optical: specific area, high data rate 
+-RF: large area, low data rate (phased array antenna) 
+
+e. implement the distributed case of communication
+-so, each satellite doesnt know the whole topology (what connections each other one makes, etc.)
+-"link discovery packets" are used, advertising distances/connections 
+-this could be better than Alyria, which assumes centralized.
+
+f. exploring this notion of maximaly spread out choice of edges/links 
+
+Questions: 
+on e, the general process is:  
+
+init: 
+-each sat is connected to n nearest satellites 
+
+repeat step: 
+-advertise what satellites you are connected to to the satellites you are connected to and distances to nearby satellites 
+-based on a policy and what nearby satellites say to you, change who you are connected to next 
+
+
+questions: 
+-each satellite is changing who they are connected to based on information from other satellites, which in the next time step may be false (as satellites may have changed their connections)
+-BF algorithm worked with finding shortest path between one node and all other nodes via a distributed manner, but that was in a static graph (ISLs didnt change, nor did distances between satellites). So it doesnt seem super applicable to this situation 
+	-like, the "reliability/accuracy" of channel/topology state information is dependent on 	
+	how far satellites are from each other 
+	
+	-fish eye routing: (less frequent link updates on others away) 
+	-geographic routing/groupign those in a certain area 
+	-toplogy construction vs routing problem (which one im trying to solve) 
+	-"geneated algorithm.." with toplogy construction
+	-notion of "age of information".... (considered with RL, why its good) 
+	-RL could pick up on more complex relationships 
+	
+-what if there is some general information known by each satellite?
+	-for example, it seems plausible that in a walker delta constellation, every satellite 
+	would easily know where every other satellite is. however, the packet processing delay/
+	how many packets are already queued up could be seen as a stochastic process
+	
+	-probably reliable to assume we know yea...notice failures 
+	 
+-are there algorithms for shortest path in a changing graph? 
+-should there be a notion of "recomputing" only when the adjacency matrix we computed when establishing our last policy differs by a certain threshold from the current state/adj matrix? 
+
+
+how do me measure throughput/performance of a certain policy/compared to baseline? 
+-in a static case without moving, evaluate the average latency of a packet (so between a pair of nodes). 
+-repeat that many times.... 
+
+-if im constrainted on uplink or crosslink capacity -> how does that change components/policy 
+
+evaluating 
+
+
+
+
+
+
+
+
+
+
