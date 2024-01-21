@@ -4,6 +4,8 @@ import math
 import pdb
 import heapq
 import sys
+import random 
+
 #hello! this package works with implementing custom math functions i need
 #some of the functions (such as the Walker one) may be more implementation 
 #focused 
@@ -376,67 +378,93 @@ def dijkstraAgain(graph, start):
 
 
 
-# Python program for Dijkstra's single
-# source shortest path algorithm. The program is
-# for adjacency matrix representation of the graph
-class Graph():
- 
-    def __init__(self, vertices):
-        self.V = vertices
-        self.graph = [[0 for column in range(vertices)]
-                      for row in range(vertices)]
- 
-    def printSolution(self, dist):
-        print("Vertex \t Distance from Source")
-        for node in range(self.V):
-            print(node, "\t\t", dist[node])
- 
-    # A utility function to find the vertex with
-    # minimum distance value, from the set of vertices
-    # not yet included in shortest path tree
-    def minDistance(self, dist, sptSet):
- 
-        # Initialize minimum distance for next node
-        min = 1e7
- 
-        # Search not nearest vertex not in the
-        # shortest path tree
-        pdb.set_trace() 
-        for v in range(self.V):
-            if dist[v] < min and sptSet[v] == False:
-                min = dist[v]
-                min_index = v
- 
-        return min_index
- 
-    # Function that implements Dijkstra's single source
-    # shortest path algorithm for a graph represented
-    # using adjacency matrix representation
-    def dijkstra(self, src):
- 
-        dist = [1e7] * self.V
-        dist[src] = 0
-        sptSet = [False] * self.V
- 
-        for cout in range(self.V):
- 
-            # Pick the minimum distance vertex from
-            # the set of vertices not yet processed.
-            # u is always equal to src in first iteration
-            u = self.minDistance(dist, sptSet)
- 
-            # Put the minimum distance vertex in the
-            # shortest path tree
-            sptSet[u] = True
- 
-            # Update dist value of the adjacent vertices
-            # of the picked vertex only if the current
-            # distance is greater than new distance and
-            # the vertex in not in the shortest path tree
-            for v in range(self.V):
-                if (self.graph[u][v] > 0 and
-                   sptSet[v] == False and
-                   dist[v] > dist[u] + self.graph[u][v]):
-                    dist[v] = dist[u] + self.graph[u][v]
- 
-        self.printSolution(dist)
+def floyd_warshall(graph):
+    """
+    Floyd warshall algorithm for getting all shortest paths. 
+
+    Inputs: 
+    graph: adjmat 
+
+    Outputs: 
+
+
+    """
+    #tested successfully against djikstras algorithm 
+    
+    num_nodes = len(graph)
+    
+    # Initialize the distance matrix
+    distance = [[float('inf') if i != j else 0 for j in range(num_nodes)] for i in range(num_nodes)]
+    
+    # Initialize the next node matrix for path reconstruction
+    next_node = [[-1 for _ in range(num_nodes)] for _ in range(num_nodes)]
+    
+    # Set initial distances for direct edges and update next_node matrix
+    for i in range(num_nodes):
+        for j in range(num_nodes):
+            if i != j and graph[i][j] != float('inf'):
+                distance[i][j] = graph[i][j]
+                next_node[i][j] = j
+    
+    # Floyd-Warshall algorithm
+    for k in range(num_nodes):
+        for i in range(num_nodes):
+            for j in range(num_nodes):
+                if distance[i][k] + distance[k][j] < distance[i][j]:
+                    distance[i][j] = distance[i][k] + distance[k][j]
+                    next_node[i][j] = next_node[i][k]
+    
+    # Extract paths for selected pairs
+    selected_paths = {}
+    for pair in []:
+        start_node, end_node = pair[0],pair[1]
+        path = reconstruct_path(start_node, end_node, next_node)
+        selected_paths[tuple(pair)] = path
+    
+    #now, get the output path dist for each pair 
+    lengths = [0]*len(selected_paths.keys())
+    for ind, key in enumerate(selected_paths.keys()): 
+        lengths[ind] = path_length(selected_paths[key], graph)
+
+    #could return selected paths or lengths, depending on if you want the path
+    #or the path length 
+    return next_node 
+
+def path_length(path, adj_matrix):
+    #not really tested 
+    length = 0
+    for i in range(len(path) - 1):
+        start_node = path[i]
+        end_node = path[i + 1]
+        edge_weight = adj_matrix[start_node][end_node]
+        length += edge_weight
+
+    return length
+
+def reconstruct_path(start, end, next_node):
+    path = [start]
+    while start != end:
+        if(start == -1): 
+            return [-1]
+        start = next_node[start][end]
+        path.append(start)
+    return path
+
+
+def generate_random_graph(num_nodes, density=0.3, weight_range=(1, 10)):
+    # Initialize an empty adjacency matrix
+    graph = [[float('inf') for _ in range(num_nodes)] for _ in range(num_nodes)]
+
+    # Set diagonal elements to 0 (no self-loops)
+    for i in range(num_nodes):
+        graph[i][i] = 0
+
+    # Fill in the upper triangular part with random edges
+    for i in range(num_nodes - 1):
+        for j in range(i + 1, num_nodes):
+            if random.random() < density:
+                weight = random.randint(weight_range[0], weight_range[1])
+                graph[i][j] = weight
+                graph[j][i] = weight  # Symmetry
+
+    return graph

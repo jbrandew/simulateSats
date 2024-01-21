@@ -1,4 +1,5 @@
 import math 
+import myPackages.myPlots as myPlots
 import myPackages.myMath as myMath 
 import numpy as np 
 import pdb 
@@ -6,12 +7,110 @@ import pdb
 
 class Simulator(): 
     """
-    What is this class for? Really serves to just hold and execute different 
+    This class serves to just hold and execute different 
     simulation objectives/functions 
     
     """
     def __init__(self, manager): 
         self.manager = manager
+
+    def multiPlot(self): 
+        """
+        Just plot current satellites, base stations, and ISLs
+
+        Input: none
+        Output: plot posted to GUI 
+        
+        """
+        myPlots.multiPlot(0,
+                          self.manager.getSatLocations(), 
+                          self.manager.getBaseStationLocations(), 
+                          self.manager.getXYZofLinks(maxNumLinksPerSat=6))
+
+
+    def getSatsAndPlanesInViewOfBaseStation(self):
+        """
+        Just a function to get the number of orbital planes and num satellites in view
+        of a base station. 
+
+        Input: none
+        Output: array of tuples of sats in view, planes in view, with length = # base stations
+
+        """ 
+
+        #create storage for num in view 
+        numInView = [0]*len(self.manager.baseStations) 
+
+        #create storage for all coordinates 
+        allSatCoords  = self.manager.getSatLocations()   
+
+        #then, for each base station 
+        for ind, baseStation in enumerate(self.manager.baseStations): 
+            numInView[ind] = baseStation.numSatellitesInView(allSatCoords)
+
+        return numInView
+
+    def simulatePathFailureFast(self, 
+                                satFailuresPerGroup, 
+                                numGroupsOfSatFailures, 
+                                numPathsEvaluated): 
+        """
+        This function is incredibly slow due to the computational complexity (~500 000 shortest paths in a graph computed)
+        It examines how many paths the failure of a group of satellites causes to fail. 
+        Currently, it uses the floyd warshall algorithm, returning the shortest path from every node
+        to every other node, and then for the paths that intersect a group of satellites we say "fail,"
+        we say that path has failed. 
+
+        Inputs: 
+        satFailuresPerGroup: how many satellites fail in each group 
+        numGroupsOfSatFailures: how many group of satellites failing we examine 
+        numPathsEvaluated: how many pairs of nodes/paths we examine 
+
+        Outputs: 
+        overall path failure rate (paths failed/paths examined)
+
+        TODO: I dont think at actually fully works currently. Something is possibly wrong with the 
+        floyd warshall/reconstruct path functions, although FW was tested previously, so im not sure.
+        Seems like we are running into inf loop somewhere. Was getting inf loop with -1 in adjmat
+
+        Not getting correct results for at least IPO...
+        -could check # of failures from path disconnects from actual structure or sat. failure.
+        
+        """
+
+        #first, get our storage for groups of satellites that will fail 
+        createStorageForGroups = [set()]*numGroupsOfSatFailures
+        #then, iterate through and generate indices of satellites that will fail 
+        for i in range(len(createStorageForGroups)): 
+            createStorageForGroups[i] = np.random.choice(self.manager.numLEOs, size=satFailuresPerGroup)
+
+        totalPathsFailed = 0 
+        
+        nextNodeMatrix = myMath.floyd_warshall(self.manager.currAdjMat)
+
+        #now, for each group of sats to fail 
+        for ind, group in enumerate(createStorageForGroups): 
+            print(str(ind) + "/" + str(len(createStorageForGroups)))         
+
+            #first, generate # pairs corresponding to the # of paths we examine 
+            nodePairs = np.random.choice(self.manager.numLEOs, size=[numPathsEvaluated,2])
+            
+            #get the optimal paths for the node sets 
+            optimalPaths = [0]*len(nodePairs)
+            for ind, pair in enumerate(nodePairs): 
+                optimalPaths[ind] = myMath.reconstruct_path(pair[0],pair[1],nextNodeMatrix)
+
+            #get the set of satellites that fails 
+            failedSatellites = createStorageForGroups[ind]
+
+            #failedPaths = 0 
+            #then, get the number of paths that have a satellite in the failed satellites
+            #so, iterating through our optimal paths: 
+            for optimalPath in optimalPaths:
+                #check if we have any overlap: 
+                totalPathsFailed+=bool(set(optimalPath) & set(failedSatellites)) or optimalPath==-1
+
+        return totalPathsFailed
 
     #what are we doing? implementing the simulation type with path failures 
     def simulatePathFailureFromSatFailure(self, 
@@ -46,7 +145,9 @@ class Simulator():
 
         totalPathsFailed = 0 
         #now, for each group of sats to fail 
+        
         for ind, group in enumerate(createStorageForGroups): 
+            print(str(ind) + "/" + str(len(createStorageForGroups))) 
             #first, generate # pairs corresponding to the # of paths we examine 
             nodePairs = np.random.choice(self.manager.numLEOs, size=[numPathsEvaluated,2])
             
@@ -125,15 +226,27 @@ class Manager():
     
     """
     
-    def __init__(self, walkerPoints, baseStationLocations, fieldOfViewAngle, phasingParemeter): 
+    def __init__(self, 
+                 constellationType, 
+                 constellationConfig, 
+                 baseStationLocations, 
+                 fieldOfViewAngle, 
+                 phasingParemeter): 
         """
         This does the initialization step for internals, as well as generating satellites 
         and base stations from respective locations 
 
         walkerPoints: x y z of all walker satellites
+        constellationType: type of constellation we want to use 
+        constellationConfig: configuration variables needed for creating that constellation
         baseStationLocations: x y z of all relay/baseStations :) 
         phasingParameter: the angular offset/revolution difference between adjacent planes
         """
+
+        if(constellationType == "walkerDelta"): 
+            walkerPoints = myMath.generateWalkerStarConstellationPoints(*constellationConfig)
+        else:
+            raise ValueError("Not valid constellation type")
 
         #calculate logical parameters based on point dimensions 
         self.numPlanes = np.shape(walkerPoints)[0]
@@ -154,6 +267,17 @@ class Manager():
 
         #set up storage for adjacency matrix 
         self.currentAdjacencyMatrix =  np.tile(np.Infinity, [self.numLEOs + len(self.baseStations), self.numLEOs + len(self.baseStations)])
+
+    def getSatLocations(self): 
+        #create storage for all coordinates 
+        allSatCoords  = np.empty((np.shape(self.sats)+(3,)))
+
+        #first, store the coords of all satellites  
+        for ind1, row in enumerate(self.sats): 
+            for ind2, sat in enumerate(row):
+                allSatCoords[ind1, ind2] = sat.getCoords() 
+
+        return allSatCoords        
 
     def getBaseStationLocations(self):
         """
@@ -1004,6 +1128,7 @@ class baseStation(Player):
                 #satNumWithinPlane = natInd%numSatPerPlane 
                 #and then min elevation angle is normal 
                 
+                #pdb.set_trace() 
                 inView = self.isSatelliteInView(
                     satelliteCoords=satelliteCoordsToCheck[orbitalPlaneInd, satIndInPlane])
                 
