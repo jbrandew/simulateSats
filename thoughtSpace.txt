@@ -405,21 +405,154 @@ move on to incorporating standards for more accurate analysis.
 -is this in the context of isotropic antennas? or, should i examine this in the context of directional antennas? 
 -so, waves are transmitted out uniformly in all directions. To get the power, do i just use friszs, or something else? 
 5. link margin. 3db...? added power strength beyond the normal amount that you use to ensure relaible comms. 
+-so, would need to start working with effective BER/SNR for a certain communication scheme used
+-wouldnt need to necessarily have simulation at the modulation level, but could have stochastic error analysis  
 6. Modulation type: on off keying, NRZ 
 7. LDPC FEC (could just use this with overhead budget and increase in SNR) 
+-this increases SNR 
 8. BER after FEC (relating SNR with decision stat/maybe multipath...?)
+-so, this would relate to the SNR of our implementation 
 9. adaptive coding and modulation...? so different vars change with conditions, but its not really deterministic in what it means..
+-not sure if i would implement this...or how i would even do that
+-is this outside the scope of this project? 
 10. OISL term to term timing accuracy  10 ns (threshold) -> 1 ns (objective) 
 -what even is timing accuracy? i think it deals with synchronization that allows better data transmit, sat tracking, handover of users, 
 -im not really sure exactly what this sychronization means...maybe like real world clock time...or something 
 -useful in schemes like TDMA where each user is assigned a time slot 
 -
 11. aoeuea
-12
-123
+
+OISL ranging accuracy: estimating location of other satellites 
+Range rate accuracy: estimating speed of other satellites 
+Point ahead capability: idk, its TBD 
 aquisition time: not sure what this exactly means. its like 100s, so i dont think it deals with sat to sat. it might though, as an orbit for a LEO is ~90-120 min. 
 
-hello. 
+Questions/Plans concerning implementation: 
+Wavelength bands parameters: this goes over frequency slots a certain user can have 
+-how would i implement this? should this be a parameter to optimize over?
+-and then, i guess each user gets a slot, and the level of interference with others would possibly be affected 
+by their own frequency bands in the event of misalignment etc. 
+
+Polarization Type: 
+-left hand circular polarization. How would i use this? 
+-if all are LHCP, maybe dont do anything anyways...
+-kind of confused on the actual wave traveling types...
+
+OISL switchable pairing: 
+-bidirectional links
+
+Proposed max flux:
+-so, the flux radiated outwards. Is this total, or in the non-directional area for a non-isotropic antenna? 
+-should this be another parameter to optimize over in tangent with the hardware constraints in terms of output
+power? 
+
+Link margin: 
+-above 3dB SNR for the given communication scheme that already meets the required BER 
+-so, use this with the required power output 
+
+Modulation format: 
+-OOK, NRZ
+-should we get down to this level of implementation? 
+
+Coding: 
+-LDPC. Just look at given gains in SNR based on this, I believe 
+
+BER: 
+-10^-6, 10^-9, (threshold vs wanted) 
+-examining the end result...
+
+Link Training: 
+-adaptively changing parameters of an ISL as response to channel to max good stuff
+-to use this, it would need time frame simulation, and examining channel stochastically 
+
+Framing: 
+-ARQ stuff
+-do i need packet level simms
+
+Link Management: 
+-kind of in tandem with link training
+-"negotiation policy," sync data, etc. 
+
+OISL term to term & timestamp acc.: 
+-how accurate the attachment of "when a message was sent" is 
+
+OISL ranging acc and range rate acc.: 
+-how accurate estimate of other sats velocity and location is 
+
+Acq time:
+-how long to connect to sat. 
+
+Sun excl. angle: 
+-min angle between sun and line of sight to avoid attempted comms
+
+Terminal orbital regime: 
+-750 to 1250 
+
+Thoughts: 
+-so, i could make a communication scheme with each of these and actually implement the transmits at the packet 
+level. Could do it on a multiprocessed system where each process is a satellite...and you have the main
+monitor of all processes 
+-or maybe i just dont. 
+-alot of these parameters (LDPC, modulation type, framing, link management, polarization type, etc.) deal
+with implementation details. Should I: simulate the given communication scheme and examine the output BER/SNR
+for a parameterized noise system? Or should I: have a dictionary of different comm. setups, each with their own
+BER/SNR for a given setup from papers. Then, modify the calulations based on this environment instead? So, pre
+calculate the effect these implementation details have on the overall BER, and then use that BER with some things
+held constant, like max flux. 
+-some of these parameters are kind of outside comm. implementation, and deal more with environment analysis. Like: 
+sun exclusion angle, acq time, orbital regime, etc. 
+-question: they have ranging acc and range rate acc. Does a satellite estimate other satellite's movement params 
+then, or are they communicated? 
+
+This is my categorization of different parameters in the SDA documentation: 
+
+Different levels of simulation: 
+-packet level: each user on the earth has a packet. deals with overall handshaking, and more of the TCP stack
+-signal level: we ignore packet details. we work with complete signal implementation 
+(FEC, mod. type, pol. type, mod type., antenna radiation pattern, comm. directionality of antenna/sat, OFDM ) 
+and actually measure and record the BER for a reciever for a variety of different signal implementations
+-satellite coordination level: we ignore all signal implementation details. we work at the level of: given a 
+satellite at one position, use a specific BER with respect to a satellite at x distance away. this will still 
+implement details such as sun exclusion angle, acq time. 
+
+The end goal is yes, to simulate optimal policy to:
+minimize latency for a standardized max power output (and probably some other restrictive parameters that im 
+forgetting). 
+
+However, what level of simulation should this entail? My understanding of the situation is that if 
+I simulate at the packet level, ill also have to implement all at signal level & sat. coordination level, etc. 
+
+Is this a logical framework for how to approach this problem?  
+
+what are we thinking? regardless, we need to incorporate some kind of time frame analysis into the simulation 
+framework, and then implement various policies with respect to changing topology. So, i think we can work with a
+basic case for this and go from there. 
+
+Okay. Work with the case of just 2ISL IPO. So the only ISLs that will change are the base station ones 
+
+checkpoint: 
+maybe work with animation for time frame. so in matplotlib, can use animation tool. I asked cgpt it before, 
+just refer to that. facing some issues with wsl ubuntu plotting here...
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

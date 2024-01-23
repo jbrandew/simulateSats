@@ -1,6 +1,4 @@
 #Hello :D 
-#today we are working on replicating the results from the paper Dr. Brinton sent out
-#classes we need: super class: player. sub classes: LEO, base station. 
 
 import yaml 
 import myPackages.myPlots as myPlots
@@ -9,11 +7,6 @@ import myPackages.myRandom as myRandom
 import pdb 
 import myClasses.classes as myClasses
 
-import matplotlib.pyplot as plt
-
-#shouldnt import here, main is not for computation 
-import numpy as np 
-
 #read in the config file 
 with open("environmentConfig.yaml", "r") as stream: 
     #attempt to read out 
@@ -21,6 +14,7 @@ with open("environmentConfig.yaml", "r") as stream:
         configData = yaml.safe_load(stream)
     except yaml.YAMLError as exc: 
         print(exc) 
+
 
 #now that we have the coordinates for all the satellites, lets proceed. 
 #first verify by using the two relays set up and looking at # sats in view per relay
