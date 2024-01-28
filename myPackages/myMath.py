@@ -5,10 +5,58 @@ import pdb
 import heapq
 import sys
 import random 
+import numpy as np
+from poliastro.bodies import Earth
+from poliastro.twobody import Orbit
+from astropy import units as u
+from datetime import datetime, timedelta
+
 
 #hello! this package works with implementing custom math functions i need
 #some of the functions (such as the Walker one) may be more implementation 
 #focused 
+
+def satelliteOrbitalPeriod(x, y, z): 
+    #this assumes circular orbit 
+    # Constants
+    G = 6.67430e-11  # Gravitational constant in m^3 kg^(-1) s^(-2)
+    M = 5.972e24     # Mass of the Earth in kg
+    R = 6371e3       # Earth's radius in meters
+    h = 1000       # Altitude in meters
+
+    distance_from_center = np.sqrt(x**2 + y**2 + z**2)
+    altitude = distance_from_center - R
+
+    # Calculate orbital speed
+    v = np.sqrt(G * M / (R + h))
+
+    # Calculate orbital period
+    T = 2 * np.pi * (R + h) / v
+    
+    return T
+
+def calculate_next_position(current_position, time_difference):
+    # Unpack current position
+    x, y, z = current_position
+    orbital_period = satelliteOrbitalPeriod(x,y,z)
+
+    # Calculate the angular velocity
+    angular_velocity = 2 * np.pi / orbital_period
+    
+    # Calculate the current angular position
+    current_theta = np.arctan2(y, x)
+    
+    # Calculate the new angular position after the time difference
+    new_theta = current_theta + angular_velocity * time_difference
+    
+    # Calculate the new position in Cartesian coordinates
+    new_x = np.cos(new_theta) * np.sqrt(x**2 + y**2)
+    new_y = np.sin(new_theta) * np.sqrt(x**2 + y**2)
+    new_z = z
+    
+    return [new_x, new_y, new_z]
+
+
 
 def spherical_to_cartesian(r, theta, phi):
     x = r * np.sin(theta) * np.cos(phi)

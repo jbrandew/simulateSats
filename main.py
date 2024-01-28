@@ -42,20 +42,22 @@ lemmeManage.connect2ISL()
 #get simulator 
 simmer = myClasses.Simulator(lemmeManage)
 
+simmer.timeFrameSequencing(10, 3, 10)
+
 #now, examining those in view 
 #view = simmer.getSatsAndPlanesInViewOfBaseStation()
 
 #also, plot the connections and so forth 
-#simmer.multiPlot() 
+simmer.multiPlot() 
 
 #get adjacency matrix 
 adjMat = lemmeManage.generateAdjacencyMatrix() 
 
 #simulate effect of satellite failure on path failure 
-rate = simmer.simulatePathFailureFast(25, 100, 100)
-print("Hello :D")
-print(rate)
-pdb.set_trace()
+#rate = simmer.simulatePathFailureFast(25, 100, 100)
+#print("Hello :D")
+#print(rate)
+#pdb.set_trace()
 
 
 #this gives me the # rows that have a non inf value 

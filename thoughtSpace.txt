@@ -534,6 +534,55 @@ checkpoint:
 maybe work with animation for time frame. so in matplotlib, can use animation tool. I asked cgpt it before, 
 just refer to that. facing some issues with wsl ubuntu plotting here...
 
+okay: 
+animations are easy
+just need to use the example code for 3d updates
+now....what do we do 
+need to convert current code to changing time frame 
+
+thoughts: 
+i want to have animation stuff in myPlots
+i want to have math computation/object stuff in classes 
+
+how do i separate those two? 
+
+if i have the animation code within myPlots...then 
+
+i should use object/state concepts rather than opting for direct calculation each time 
+so, have a velocity component in each satellite as well 
+no velocity, as im not sure how...
+
+need:
+current position 
+time change 
+
+to output: 
+next position 
+
+
+i should be constructing this in a way that uses the "state" of the constellation, while turning on an option that displays the data 
+then, the animate movement 
+
+what is our current class structure: 
+
+simulator
+manager (has objects) 
+plot funcs 
+main 
+
+so: 
+simulator: controller 
+manager: model
+plot funcs: view 
+
+i will need to change locations of some functions to best reflect this architecture 
+
+i need to adapt code to the helix plot model 
+
+so: 
+first clear axes
+then call multiplot function with ax given 
+then display outside of the func animation call 
 
 
 

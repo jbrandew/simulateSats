@@ -114,7 +114,7 @@ def plot_line_segments(pair_of_points_list, ax = []):
 
 
 #trying for pipeline of sphere, walker star, base stations 
-def multiPlot(radius, satPoints, baseStationPoints, links, axisLimit = 8000): 
+def multiPlot(radius, satPoints, baseStationPoints, links, axisLimit = 8000, fig = [], ax = []): 
     """
     Function to plot all players and links. Plotting with the globe doesnt work very well, 
     as it tends to absorb links/players graphically...so for now just make the radius very small 
@@ -126,8 +126,9 @@ def multiPlot(radius, satPoints, baseStationPoints, links, axisLimit = 8000):
     links: connections to plot using line segments 
     """
     #get figure and axes to use for all this 
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+    if(fig==[]): 
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
     
     # Set axis limits
     ax.set_xlim([-axisLimit, axisLimit])  # Adjust the limits for the X-axis
@@ -146,5 +147,32 @@ def multiPlot(radius, satPoints, baseStationPoints, links, axisLimit = 8000):
     #plot links 
     plot_line_segments(links, ax)
      
-    #show entire plot 
-    plt.show()
+
+class GraphicsView:
+    def __init__(self, manager, fig, ax):
+        self.manager = manager
+        self.fig = fig 
+        self.ax = ax 
+
+    def update_graphics(self):
+        self.ax.cla() 
+        multiPlot(0, 
+                  self.manager.getSatLocations(), 
+                  self.manager.getBaseStationLocations(), 
+                  self.manager.getXYZofLinks(6), 
+                  axisLimit = 8000, 
+                  fig = self.fig, 
+                  ax = self.ax)
+
+
+
+
+
+
+
+
+
+
+
+
+

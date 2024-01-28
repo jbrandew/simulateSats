@@ -6,3 +6,7 @@ Inclination: 80
 phasingParameter: 5
 orbitAltitudeLEO: 1000
 earthRadius: 6371
+BaseStationLocations: 
+  - [82.5, -62.3] 
+  - [70.4, -31.1]
+BaseStationViewAngle: 30

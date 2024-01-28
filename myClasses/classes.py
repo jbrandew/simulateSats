@@ -3,7 +3,8 @@ import myPackages.myPlots as myPlots
 import myPackages.myMath as myMath 
 import numpy as np 
 import pdb 
-
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
 
 class Simulator(): 
     """
@@ -13,6 +14,53 @@ class Simulator():
     """
     def __init__(self, manager): 
         self.manager = manager
+        
+        #create figure and plot to disploy data 
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d') 
+        self.view = myPlots.GraphicsView(self.manager, fig, ax)
+
+
+    def update(self, frame, satTimePerFrame): 
+        """
+        update function for frame data 
+        """
+        self.manager.updateConstellationPosition(satTimePerFrame) 
+        self.view.update_graphics() 
+
+
+    def timeFrameSequencing(self, timeRatio, FPS, animationDuration): 
+        """
+        This code starts the time frame varying animation 
+        
+        Inputs: 
+        timeRatio: ratio of time of animation to real time. Please note that currently an orbital period is ~6300 seconds, 
+        so some ratio is needed( satTime/realTime)
+        FPS: frames per second 
+        animationDuration: how long you want animation to run (can stop early)
+
+        Output: 
+        time varying plot of satellites and corresponding ISLs over time 
+
+        """
+
+        #get intermediate variables 
+        numFrames = int(FPS*animationDuration)
+        realTimePerFrame = int(1000*animationDuration/numFrames)
+        satTimePerFrame = realTimePerFrame*timeRatio
+
+        #this "func animation" works with both updating positions and plotting 
+        #each frame  
+        #pdb.set_trace() 
+        hold = FuncAnimation(self.view.fig, 
+                      self.update, 
+                      frames=numFrames, 
+                      interval=realTimePerFrame, 
+                      fargs = (satTimePerFrame,))
+    
+        plt.show() 
+
+        return 
 
     def multiPlot(self): 
         """
@@ -267,6 +315,21 @@ class Manager():
 
         #set up storage for adjacency matrix 
         self.currentAdjacencyMatrix =  np.tile(np.Infinity, [self.numLEOs + len(self.baseStations), self.numLEOs + len(self.baseStations)])
+
+
+    def updateConstellationPosition(self, timeDiff): 
+        """
+        this updates the position of all satellites in our constellation 
+
+        Inputs: 
+        timeDiff: difference in time between frames
+
+        Outputs: 
+        none, just changed constellation shape/state 
+        """
+        for satArr in self.sats: 
+            for sat in satArr:
+                sat.updatePosition(timeDiff)
 
     def getSatLocations(self): 
         #create storage for all coordinates 
@@ -972,7 +1035,6 @@ class Player():
 #LEO (low earth orbit) describes the lowest orbiting set of satellites 
 class LEO(Player): 
 
-
     def __init__(self, xIn = 0, yIn = 0, zIn = 0, planeIndex = 0, subSatIndex = 0):
         """
         Init function for LEO.
@@ -1000,6 +1062,20 @@ class LEO(Player):
         #base stations we are connected to
         #base station itself will probably do the connecting/disconnecting  
         self.connectedBaseStations = []
+
+    def updatePosition(self, timeDiff): 
+        """
+        Based on current position and time diff,
+        set your next position
+
+        Inputs:
+        timeDiff = satTimeDiff between positions
+
+        Effect: 
+        updates our position
+        
+        """
+        self.x, self.y, self.z = myMath.calculate_next_position([self.x, self.y, self.z], timeDiff)
 
     def connectToSat(self, satToConnectTo, polarRegionRestriction = True): 
         """
