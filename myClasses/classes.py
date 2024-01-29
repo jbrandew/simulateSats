@@ -73,7 +73,8 @@ class Simulator():
         myPlots.multiPlot(0,
                           self.manager.getSatLocations(), 
                           self.manager.getBaseStationLocations(), 
-                          self.manager.getXYZofLinks(maxNumLinksPerSat=6))
+                          self.manager.getXYZofLinks(maxNumLinksPerSat=6),
+                          showFigure=True)
 
 
     def getSatsAndPlanesInViewOfBaseStation(self):
@@ -292,7 +293,7 @@ class Manager():
         """
 
         if(constellationType == "walkerDelta"): 
-            walkerPoints = myMath.generateWalkerStarConstellationPoints(*constellationConfig)
+            walkerPoints, normVecs = myMath.generateWalkerStarConstellationPoints(*constellationConfig) 
         else:
             raise ValueError("Not valid constellation type")
 
@@ -306,7 +307,7 @@ class Manager():
         self.sats = np.tile(LEO(), [self.numPlanes, self.numSatPerPlane]) 
 
         #call generate satellites function, which initializes our structure 
-        self.generateSatellites(walkerPoints)
+        self.generateSatellites(walkerPoints, normVecs)
         #first, format the baseStationInputs 
         self.generateBaseStations(baseStationLocations, fieldOfViewAngle)
 
@@ -417,19 +418,22 @@ class Manager():
         nothing, just changed connected satellite arrays 
         """
         
-        if(polarRegionRestriction): 
-            lats1 = myMath.cartesian_to_geodetic(*sat1.getCoords(), 6371) 
+        # if(polarRegionRestriction): 
+        #     lats1 = myMath.cartesian_to_geodetic(*sat1.getCoords(), 6371) 
              
-            if(lats1[0] > 70 or lats1[0] < -70): 
-                return False 
+        #     if(lats1[0] > 70 or lats1[0] < -70): 
+        #         return False 
 
-            lats2 = myMath.cartesian_to_geodetic(*sat2.getCoords(), 6371) 
+        #     lats2 = myMath.cartesian_to_geodetic(*sat2.getCoords(), 6371) 
             
-            if(lats2[0] > 70 or lats2[0] < -70): 
-                return False 
+        #     if(lats2[0] > 70 or lats2[0] < -70): 
+        #         return False 
 
-        sat1.connectedSats = sat1.connectedSats + [sat2]
-        sat2.connectedSats = sat2.connectedSats + [sat1]
+        # sat1.connectedSats = sat1.connectedSats + [sat2]
+        # sat2.connectedSats = sat2.connectedSats + [sat1]
+
+        sat1.connectToPlayer(sat2, polarRegionRestriction)
+        sat2.connectToPlayer(sat1, polarRegionRestriction)
 
         return 
 
@@ -533,13 +537,13 @@ class Manager():
         #iterate through our satellites 
         for fromSat in np.ravel(self.sats): 
             #iterate through each satellites connections
-            for toSat in fromSat.connectedSats: 
+            for player in fromSat.connectedToPlayers: 
                 #create link 
-                holdLinks[ind] = np.concatenate([[fromSat.getCoords()], [toSat.getCoords()]], axis = 0)  
+                holdLinks[ind] = np.concatenate([[fromSat.getCoords()], [player.getCoords()]], axis = 0)  
                 ind+=1 
-            for toBaseStation in fromSat.connectedBaseStations: 
-                holdLinks[ind] = np.concatenate([[fromSat.getCoords()], [toBaseStation.getCoords()]], axis = 0)
-                ind+=1               
+            # for toBaseStation in fromSat.connectedBaseStations: 
+            #     holdLinks[ind] = np.concatenate([[fromSat.getCoords()], [toBaseStation.getCoords()]], axis = 0)
+            #     ind+=1               
 
         return holdLinks
     
@@ -568,11 +572,15 @@ class Manager():
         else: 
             self.baseStations = [] 
 
-    def generateSatellites(self, walkerPoints): 
+    def generateSatellites(self, walkerPoints, normVecs): 
         """
         Just storing satellites when given walker constellation points
 
-        Input: walker points (constellation points)
+        Input: 
+        walkerPoints: constellation points
+        normVecs: normal vectors for each satellite. each satellite will have the same 
+        normal vector as all those in its plane, as one normal vector determines a 
+        circular path  
         
         Effect: sets up our satellite internals using walkerPoints 
         """
@@ -582,7 +590,8 @@ class Manager():
                 #initialize a satellite each time  
                 self.sats[planeInd, smallSatInd] = LEO(*(walkerPoints[planeInd,smallSatInd]),
                                                         planeInd, 
-                                                        smallSatInd) 
+                                                        smallSatInd,
+                                                        normVecs[planeInd]) 
                 
     def connectBaseStationsToSatellites(self): 
         """
@@ -600,12 +609,13 @@ class Manager():
                 
                 if(baseStation.isSatelliteInView(satellite.getCoords())): 
                     #if we are, connect them both 
-                    baseStation.connectToSat(satellite)
-                    satellite.connectToBaseStation(baseStation)
+                    baseStation.connectToPlayer(satellite)
+                    satellite.connectToPlayer(baseStation)
 
             for baseStationTo in self.baseStations:  
                 if(baseStation != baseStationTo): 
-                    baseStation.connectedBaseStations = baseStation.connectedBaseStations + [baseStationTo]
+                    baseStation.connectToPlayer(baseStation)
+                    #baseStation.connectedBaseStations = baseStation.connectedBaseStations + [baseStationTo]
 
     def stochasticFailure(self, numSatellitesFail): 
         """
@@ -907,12 +917,12 @@ class Manager():
                 #for forward case:  
                 if(planeInd % 2 == 0): 
                     satOfPrevPlane = self.sats[(planeInd + 1 ) % self.numPlanes, smallSatInd]
-                    self.sats[planeInd, smallSatInd].connectToSat(satOfPrevPlane)
+                    self.sats[planeInd, smallSatInd].connectToPlayer(satOfPrevPlane)
                 
                 #for back case: 
                 else: 
                     satOfNextPlane = self.sats[(planeInd - 1) % self.numPlanes, smallSatInd]
-                    self.sats[planeInd, smallSatInd].connectToSat(satOfNextPlane)  
+                    self.sats[planeInd, smallSatInd].connectToPlayer(satOfNextPlane)  
 
 
 
@@ -1005,11 +1015,10 @@ class Manager():
 
         for playerFrom in allPlayers:
             #iterate through the players satellites and base stations  
-            for satTo in playerFrom.connectedSats: 
-            
-                adjMat[playerFrom.index, satTo.index] = self.propDelayBetween(playerFrom, satTo)
-            for baseStationTo in playerFrom.connectedBaseStations: 
-                adjMat[playerFrom.index, baseStationTo.index] = self.propDelayBetween(playerFrom, baseStationTo)
+            for playerTo in playerFrom.connectedToPlayers: 
+                adjMat[playerFrom.index, playerTo.index] = self.propDelayBetween(playerFrom, playerTo)
+            #for baseStationTo in playerFrom.connectedBaseStations: 
+            #    adjMat[playerFrom.index, baseStationTo.index] = self.propDelayBetween(playerFrom, baseStationTo)
 
         self.currAdjMat = adjMat
 
@@ -1020,22 +1029,62 @@ class Manager():
 #probably going to use rho and phi more often than purely longitude and latitude 
 #nah lets just always use x,y,z...maybe easier in polar all the time...worry later
 class Player(): 
+    """
+    This class describes any operator that interacts via ISLs (ISLs also include satellite to 
+    base station connections)
 
+    """
     altitude, long, lat = 0,0,0
-    x,y,z = 0,0,0
-    
     theta, phi = 0,0 
+    
+    #store location parameters
+    x,y,z = 0,0,0
 
+    #create storage for who we are connected to 
+    connectedToPlayers = []
+    
     def __init__(self, xIn, yIn, zIn): 
         self.x, self.y, self.z = xIn, yIn, zIn 
 
     def getCoords(self): 
         return self.x, self.y, self.z 
+    
+    def connectToPlayer(self, playerToConnectTo, polarRegionRestriction = True):
+        """
+        Function for connecting to a different player 
+
+        Inputs: 
+        playerToConnectTo: who you are forming the comm link with 
+        polarRegionRestriction: are we restricting what region we can form this connection with
+
+        Output: 
+        boolean saying if the connection was formed or not
+
+        Effect: 
+        Connection formed between players 
+        """ 
+        
+        #if we have regional restriction for connection 
+        if(polarRegionRestriction): 
+            lats = myMath.cartesian_to_geodetic(*playerToConnectTo.getCoords(), 6371) 
+            
+            if(lats[0] > 70 or lats[0] < -70): 
+                return False 
+
+            selfLats = myMath.cartesian_to_geodetic(*self.getCoords(), 6371) 
+            
+            if(selfLats[0] > 70 or selfLats[0] < -70): 
+                return False 
+
+        #create connection (this in one way right now)
+        self.connectedToPlayers = self.connectedToPlayers + [playerToConnectTo]
+
+        return True
 
 #LEO (low earth orbit) describes the lowest orbiting set of satellites 
 class LEO(Player): 
 
-    def __init__(self, xIn = 0, yIn = 0, zIn = 0, planeIndex = 0, subSatIndex = 0):
+    def __init__(self, xIn = 0, yIn = 0, zIn = 0, planeIndex = 0, subSatIndex = 0, normal_vector = []):
         """
         Init function for LEO.
         Just pass off coordinates to parent "Player" 
@@ -1043,6 +1092,7 @@ class LEO(Player):
         xIn, yIn, zIn: coordinates in 3d space 
         planeIndex: number plane we are in in walker star 
         subSatIndex: number satellite we are in in a single plane 
+        normal_vector: vector determining the circular path of the satellite around the earth 
         
         """
         super().__init__(xIn, yIn, zIn)
@@ -1057,11 +1107,17 @@ class LEO(Player):
         self.numberISLlinksAllowed = 2  
 
         #satellites we are connected to 
-        self.connectedSats = [] 
+        #self.connectedSats = [] 
 
         #base stations we are connected to
         #base station itself will probably do the connecting/disconnecting  
-        self.connectedBaseStations = []
+        #self.connectedBaseStations = []
+
+        #store the normal vector determining our circular path 
+        self.normVec = normal_vector
+
+        #calculate orbital period (just to store, as it wont change over time)
+        self.orbitPeriod = myMath.satelliteOrbitalPeriod(self.x, self.y, self.z)
 
     def updatePosition(self, timeDiff): 
         """
@@ -1075,44 +1131,53 @@ class LEO(Player):
         updates our position
         
         """
-        self.x, self.y, self.z = myMath.calculate_next_position([self.x, self.y, self.z], timeDiff)
-
-    def connectToSat(self, satToConnectTo, polarRegionRestriction = True): 
-        """
-        Just connect to a given satellite using your internals
-
-        Inputs: 
-        satToConnectTo: ... 
-        polarRegionRestriction: do not allow connection if satellite to connect
-        is above 70N or below 70S 
-
-        Outputs: 
-        boolean designating if we made the connection or not 
-        """
-        #if we have the restriction, enable it 
+        #self.x, self.y, self.z = myMath.calculate_next_position([self.x, self.y, self.z], timeDiff)
         
-        if(polarRegionRestriction): 
-            lats = myMath.cartesian_to_geodetic(*satToConnectTo.getCoords(), 6371) 
-            
-            if(lats[0] > 70 or lats[0] < -70): 
-                return False 
+        #get angle diff from two positions 
+        angleRadDiff = 2*np.pi*timeDiff/self.orbitPeriod
 
-            selfLats = myMath.cartesian_to_geodetic(*self.getCoords(), 6371) 
+        #calculate new position
+        self.x, self.y, self.z = myMath.calculate_new_position(self.normVec, 
+                                                               [self.x, self.y, self.z], 
+                                                               angleRadDiff)
+
+
+    # def connectToSat(self, satToConnectTo, polarRegionRestriction = True): 
+    #     """
+    #     Just connect to a given satellite using your internals
+
+    #     Inputs: 
+    #     satToConnectTo: ... 
+    #     polarRegionRestriction: do not allow connection if satellite to connect
+    #     is above 70N or below 70S 
+
+    #     Outputs: 
+    #     boolean designating if we made the connection or not 
+    #     """
+    #     #if we have the restriction, enable it 
+        
+    #     if(polarRegionRestriction): 
+    #         lats = myMath.cartesian_to_geodetic(*satToConnectTo.getCoords(), 6371) 
             
-            if(selfLats[0] > 70 or selfLats[0] < -70): 
-                return False 
+    #         if(lats[0] > 70 or lats[0] < -70): 
+    #             return False 
+
+    #         selfLats = myMath.cartesian_to_geodetic(*self.getCoords(), 6371) 
+            
+    #         if(selfLats[0] > 70 or selfLats[0] < -70): 
+    #             return False 
             
         
-        self.connectedSats = self.connectedSats + [satToConnectTo]
-        return True 
+    #     self.connectedSats = self.connectedSats + [satToConnectTo]
+    #     return True 
 
-    def connectToBaseStation(self, baseStationToConnectTo): 
-        """
-        Just connect to a given basesattion using your internals
+    # def connectToBaseStation(self, baseStationToConnectTo): 
+    #     """
+    #     Just connect to a given basesattion using your internals
 
-        baseStationToConnectTo: ... 
-        """
-        self.connectedBaseStations = self.connectedBaseStations + [baseStationToConnectTo]        
+    #     baseStationToConnectTo: ... 
+    #     """
+    #     self.connectedBaseStations = self.connectedBaseStations + [baseStationToConnectTo]        
 
 
 #base station class desribes the players on the ground that arent moving and act as forwarders 
@@ -1138,13 +1203,13 @@ class baseStation(Player):
 
         self.connectedBaseStations = []
 
-    def connectToSat(self, satToConnectTo): 
-        """
-        Just connect to a given satellite using your internals
+    # def connectToSat(self, satToConnectTo): 
+    #     """
+    #     Just connect to a given satellite using your internals
 
-        satToConnectTo: ... 
-        """
-        self.connectedSats = self.connectedSats + [satToConnectTo]    
+    #     satToConnectTo: ... 
+    #     """
+    #     self.connectedSats = self.connectedSats + [satToConnectTo]    
 
     def isSatelliteInView(self, satelliteCoords): 
         """

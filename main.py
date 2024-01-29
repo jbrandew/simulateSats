@@ -45,10 +45,10 @@ simmer = myClasses.Simulator(lemmeManage)
 simmer.timeFrameSequencing(10, 3, 10)
 
 #now, examining those in view 
-#view = simmer.getSatsAndPlanesInViewOfBaseStation()
+view = simmer.getSatsAndPlanesInViewOfBaseStation()
 
 #also, plot the connections and so forth 
-simmer.multiPlot() 
+#simmer.multiPlot() 
 
 #get adjacency matrix 
 adjMat = lemmeManage.generateAdjacencyMatrix() 

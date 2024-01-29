@@ -585,15 +585,34 @@ then call multiplot function with ax given
 then display outside of the func animation call 
 
 
+get next position is not working because we are not giving it the tangential velocity for each satellite
+each satellites tangential velocity is the same 
 
 
+next step: 
+just take the code for calculate new position with the angle diff.....and the normal vector
+then combine functions to give the modified new position function, see it used in animation data.... 
+yea...later on create policy for reconnection, maybe do throughput analysis over time 
 
+okay, so time frame structure is done. next steps. could either: 
+-implement policies for what to connect to/changing topology
+-modify simulation environment to include additional features (look at previous ranking)  
 
+Yea, start with sun exclusion angle. Then, work into changing topology policies.
 
+So, sun exclusion angle: 
+min angle between satellite connection and sun that we need to have to protect satellites in optical comms
+-can also kind of be used for RF comms as well 
+ 
+Thought: 
+want to place restriction on any ISL formation 
+need to modify structure for better compactness 
 
+testing: 
+current in view array 
+[(12, 11), (10, 9)]
 
-
-
+after: 
 
 
 

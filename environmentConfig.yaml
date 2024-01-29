@@ -10,3 +10,6 @@ BaseStationLocations:
   - [82.5, -62.3] 
   - [70.4, -31.1]
 BaseStationViewAngle: 30
+
+SunExclusionAngle: 5e6 
+SunLocation: [149.6e6, 0, 0]

@@ -1,50 +1,80 @@
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
-from mpl_toolkits.mplot3d import Axes3D
 
-# Function to update the plot for each frame of the animation
-def update(frame):
-    # Clear the previous plot
-    #line[0].remove()
-    ax.cla() 
-    #plt.clf() 
+def calculate_new_position(radius, normal_vector, current_position, angle_rad):
+    # Calculate the rotation matrix using the normal vector
+    rotation_matrix = np.array([[np.cos(angle_rad) + normal_vector[0]**2 * (1 - np.cos(angle_rad)),
+                                 normal_vector[0] * normal_vector[1] * (1 - np.cos(angle_rad)) - normal_vector[2] * np.sin(angle_rad),
+                                 normal_vector[0] * normal_vector[2] * (1 - np.cos(angle_rad)) + normal_vector[1] * np.sin(angle_rad)],
+                                [normal_vector[1] * normal_vector[0] * (1 - np.cos(angle_rad)) + normal_vector[2] * np.sin(angle_rad),
+                                 np.cos(angle_rad) + normal_vector[1]**2 * (1 - np.cos(angle_rad)),
+                                 normal_vector[1] * normal_vector[2] * (1 - np.cos(angle_rad)) - normal_vector[0] * np.sin(angle_rad)],
+                                [normal_vector[2] * normal_vector[0] * (1 - np.cos(angle_rad)) - normal_vector[1] * np.sin(angle_rad),
+                                 normal_vector[2] * normal_vector[1] * (1 - np.cos(angle_rad)) + normal_vector[0] * np.sin(angle_rad),
+                                 np.cos(angle_rad) + normal_vector[2]**2 * (1 - np.cos(angle_rad))]])
 
-    # Update the data for the 3D parametric surface (here, a helix)
-    t = np.linspace(0, 4 * np.pi, 100)
-    x = np.sin(t + frame * 0.1)
-    y = np.cos(t + frame * 0.1)
-    z = t
+    # Calculate the new position using the rotation matrix
+    new_position = np.dot(rotation_matrix, np.array(current_position))
+
+    return new_position
+
+# Example usage
+radius = 5.0
+normal_vector = [0.0, 0.0, 1.0]
+current_position = [5.0, 0.0, 0.0]
+angle_rad = np.pi / 2.0
+
+new_position = calculate_new_position(radius, normal_vector, current_position, angle_rad)
+print("New Position:", new_position)
+
+
+
+# import numpy as np
+# import matplotlib.pyplot as plt
+# from matplotlib.animation import FuncAnimation
+# from mpl_toolkits.mplot3d import Axes3D
+
+# # Function to update the plot for each frame of the animation
+# def update(frame):
+#     # Clear the previous plot
+#     #line[0].remove()
+#     ax.cla() 
+#     #plt.clf() 
+
+#     # Update the data for the 3D parametric surface (here, a helix)
+#     t = np.linspace(0, 4 * np.pi, 100)
+#     x = np.sin(t + frame * 0.1)
+#     y = np.cos(t + frame * 0.1)
+#     z = t
     
-    # Plot the updated 3D parametric surface as a wireframe
-    ax.plot(x, y, z, color='b', label='Helix', linewidth=2)[0]
+#     # Plot the updated 3D parametric surface as a wireframe
+#     ax.plot(x, y, z, color='b', label='Helix', linewidth=2)[0]
     
-    # Set plot labels and title
-    ax.set_xlabel('X-axis')
-    ax.set_ylabel('Y-axis')
-    ax.set_zlabel('Z-axis')
-    ax.set_title('3D Helix Animation')
+#     # Set plot labels and title
+#     ax.set_xlabel('X-axis')
+#     ax.set_ylabel('Y-axis')
+#     ax.set_zlabel('Z-axis')
+#     ax.set_title('3D Helix Animation')
     
-    # Display legend
-    ax.legend()
+#     # Display legend
+#     ax.legend()
 
-# Set up the initial 3D plot
-fig = plt.figure()
-ax = fig.add_subplot(111, projection='3d')
+# # Set up the initial 3D plot
+# fig = plt.figure()
+# ax = fig.add_subplot(111, projection='3d')
 
-# Create an empty line to be updated in the animation
-line = [ax.plot([], [], [], color='b', label='Helix', linewidth=2)[0]]
+# # Create an empty line to be updated in the animation
+# line = [ax.plot([], [], [], color='b', label='Helix', linewidth=2)[0]]
 
-# Set the axis limits
-ax.set_xlim([-1.5, 1.5])
-ax.set_ylim([-1.5, 1.5])
-ax.set_zlim([0, 4 * np.pi])
+# # Set the axis limits
+# ax.set_xlim([-1.5, 1.5])
+# ax.set_ylim([-1.5, 1.5])
+# ax.set_zlim([0, 4 * np.pi])
 
-# Create the animation with 100 frames, each lasting 50 milliseconds
-animation = FuncAnimation(fig, update, frames=100, interval=50, fargs=(line,))
+# # Create the animation with 100 frames, each lasting 50 milliseconds
+# animation = FuncAnimation(fig, update, frames=100, interval=50, fargs=(line,))
 
-# Display the animation
-plt.show()
+# # Display the animation
+# plt.show()
 
 
 

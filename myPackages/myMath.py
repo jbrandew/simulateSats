@@ -16,26 +16,42 @@ from datetime import datetime, timedelta
 #some of the functions (such as the Walker one) may be more implementation 
 #focused 
 
+def calculate_normal_vector(point1, point2):
+
+    # Calculate normal vector
+    normal_vector = np.cross(np.array(point1), np.array(point2))
+
+    # Normalize the normal vector
+    normal_vector /= np.linalg.norm(normal_vector)
+
+    return normal_vector
+
 def satelliteOrbitalPeriod(x, y, z): 
     #this assumes circular orbit 
     # Constants
     G = 6.67430e-11  # Gravitational constant in m^3 kg^(-1) s^(-2)
     M = 5.972e24     # Mass of the Earth in kg
-    R = 6371e3       # Earth's radius in meters
-    h = 1000       # Altitude in meters
+    #R = 6371e3       # Earth's radius in meters
+    #h = 1000       # Altitude in meters
 
-    distance_from_center = np.sqrt(x**2 + y**2 + z**2)
-    altitude = distance_from_center - R
+    #combined radius of the orbit (radius of the earth with altitude of satellite) 
+    totalRad = np.sqrt(x**2 + y**2 + z**2)
+
+    #h = distance_from_center - R
 
     # Calculate orbital speed
-    v = np.sqrt(G * M / (R + h))
+    v = np.sqrt(G * M / (totalRad))
 
     # Calculate orbital period
-    T = 2 * np.pi * (R + h) / v
+    T = 2 * np.pi * (totalRad) / v
     
     return T
 
 def calculate_next_position(current_position, time_difference):
+
+    """
+    This function is not great because it assumes a constant normal vector orientation :D 
+    """
     # Unpack current position
     x, y, z = current_position
     orbital_period = satelliteOrbitalPeriod(x,y,z)
@@ -56,6 +72,36 @@ def calculate_next_position(current_position, time_difference):
     
     return [new_x, new_y, new_z]
 
+def calculate_new_position(normal_vector, current_position, angle_rad):
+    """
+    This function is heavily used in calculating the next position for each satellite, given
+    the satellite is following a circular orbit. 
+
+    Inputs: 
+    normal_vector: this determines the orientation of the circular path of the satellite 
+    current_position: where the satellite is at currently in 3d space (xyz) 
+    angle_rad: in radians, the angle we want to shift the satellite by in 3d space
+
+    Outputs: 
+    new_position: xyz of the satellite in 3d space at the new time frame 
+    """
+    
+    # Calculate the rotation matrix using the normal vector
+
+    rotation_matrix = np.array([[np.cos(angle_rad) + normal_vector[0]**2 * (1 - np.cos(angle_rad)),
+                                 normal_vector[0] * normal_vector[1] * (1 - np.cos(angle_rad)) - normal_vector[2] * np.sin(angle_rad),
+                                 normal_vector[0] * normal_vector[2] * (1 - np.cos(angle_rad)) + normal_vector[1] * np.sin(angle_rad)],
+                                [normal_vector[1] * normal_vector[0] * (1 - np.cos(angle_rad)) + normal_vector[2] * np.sin(angle_rad),
+                                 np.cos(angle_rad) + normal_vector[1]**2 * (1 - np.cos(angle_rad)),
+                                 normal_vector[1] * normal_vector[2] * (1 - np.cos(angle_rad)) - normal_vector[0] * np.sin(angle_rad)],
+                                [normal_vector[2] * normal_vector[0] * (1 - np.cos(angle_rad)) - normal_vector[1] * np.sin(angle_rad),
+                                 normal_vector[2] * normal_vector[1] * (1 - np.cos(angle_rad)) + normal_vector[0] * np.sin(angle_rad),
+                                 np.cos(angle_rad) + normal_vector[2]**2 * (1 - np.cos(angle_rad))]])
+
+    # Calculate the new position using the rotation matrix
+    new_position = np.dot(rotation_matrix, np.array(current_position))
+
+    return new_position
 
 
 def spherical_to_cartesian(r, theta, phi):
@@ -198,6 +244,8 @@ def generateWalkerStarConstellationPoints(
     Im very confused by phaseParameter. If (pP*360/t)*num planes != 360, I thought
     we had 2 adjacent planes offset by alot -> we dont. Its fine. Because each plane 
     is periodic, adjacent planes will match up with angle period of 360/(t/numplanes)
+
+    Nvm its fine, phasing parameter has been figured out 
     """
 
     #alright, now that we have intro done, lets work with the calculation 
@@ -226,7 +274,10 @@ def generateWalkerStarConstellationPoints(
 
     #create storage for all points
     # storage will be: numPlanes, numPointsPerPlane ^ 3 
-    bigStore = np.ones([numPlanes, numSatellitesPerPlane, 3])
+    walkerPoints = np.ones([numPlanes, numSatellitesPerPlane, 3])
+    
+    #create storage for normal vectors, one for each plane 
+    normVecs = [0]*numPlanes
 
     #in this loop, for each plane we are going to do 3 rotations. 
     # 1. rotate about the z axis for the phasing parameter angle result 
@@ -251,9 +302,13 @@ def generateWalkerStarConstellationPoints(
         xRotateAngle = 0
         basePointsCopy = rotate_3d_points(basePointsCopy, [xRotateAngle,yRotateAngle,zRotateAngle])
 
-        bigStore[planeInd] = basePointsCopy.T
+        walkerPoints[planeInd] = basePointsCopy.T
 
-    return bigStore 
+        #also, calculate the normal vector for each respective circular path 
+        #then, you can use the same normal vector for each path 
+        normVecs[planeInd] = calculate_normal_vector(walkerPoints[planeInd,0], walkerPoints[planeInd,1]) 
+
+    return walkerPoints, normVecs
 
 def calculate_angle(point1, point2, point3):
     vector1 = [point2[0] - point1[0], point2[1] - point1[1], point2[2] - point1[2]]

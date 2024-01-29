@@ -114,7 +114,7 @@ def plot_line_segments(pair_of_points_list, ax = []):
 
 
 #trying for pipeline of sphere, walker star, base stations 
-def multiPlot(radius, satPoints, baseStationPoints, links, axisLimit = 8000, fig = [], ax = []): 
+def multiPlot(radius, satPoints, baseStationPoints, links, axisLimit = 8000, fig = [], ax = [], showFigure = False): 
     """
     Function to plot all players and links. Plotting with the globe doesnt work very well, 
     as it tends to absorb links/players graphically...so for now just make the radius very small 
@@ -124,6 +124,7 @@ def multiPlot(radius, satPoints, baseStationPoints, links, axisLimit = 8000, fig
     satPoints: xyz of all satellites 
     baseStationPoints: xyz of all base stations 
     links: connections to plot using line segments 
+    showFigure: do we output the figure at the end? 
     """
     #get figure and axes to use for all this 
     if(fig==[]): 
@@ -146,6 +147,9 @@ def multiPlot(radius, satPoints, baseStationPoints, links, axisLimit = 8000, fig
     
     #plot links 
     plot_line_segments(links, ax)
+
+    if(showFigure):
+        plt.show() 
      
 
 class GraphicsView:
