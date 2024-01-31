@@ -171,6 +171,15 @@ how do me measure throughput/performance of a certain policy/compared to baselin
 
 -if im constrainted on uplink or crosslink capacity -> how does that change components/policy 
 
+More questions: 
+-essentially all the topologies involve only ISLs for satellites that are moving in relatively the same direction (no northbound-southbound
+connections are used). Is there any reason for this? 
+-this means that the general policy/average use case is the same between time varying and not, as the ISLs always remain the same regardless of moving in time. 
+-why are IPO ISLs allowed to violate the polar region constraint, but inter plane ISLs are not allowed to? 
+-for ISLs that move in and out of violating constraints like polar region or sun exclusion angle, how should we approach the reconnction method?
+are they just "not used" while violating the constraint, or are they fully disconnected and then reconnected? 
+-are polar links allowed if they are to a base station? 
+
 
 
 

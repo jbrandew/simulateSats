@@ -16,6 +16,20 @@ from datetime import datetime, timedelta
 #some of the functions (such as the Walker one) may be more implementation 
 #focused 
 
+def angle_between_vectors(v, w):
+    """
+    Range is 0 -> 180 (so mirrors at 180)
+    """
+    dot_product = np.dot(v, w)
+    magnitude_v = np.linalg.norm(v)
+    magnitude_w = np.linalg.norm(w)
+
+    cos_theta = dot_product / (magnitude_v * magnitude_w)
+    angle_radians = np.arccos(cos_theta)
+    angle_degrees = np.degrees(angle_radians)
+
+    return angle_degrees
+
 def calculate_normal_vector(point1, point2):
 
     # Calculate normal vector
@@ -362,6 +376,64 @@ def cartesian_to_geodetic(x, y, z, radius):
     longitude = math.degrees(longitude)
 
     return latitude, longitude, altitude
+
+def distance(point1, point2):
+    sum = 0
+    for ind in range(len(point1)):
+        sum+= (point1[ind] - point2[ind]) ** 2
+                
+    return sum ** 0.5
+
+# def satDistance(sat1, sat2):
+#     coords1 = sat1.getCoords() 
+#     coords2 = sat2.getCoords() 
+#     return ((coords1[0] - coords2[0]) ** 2 + (coords1[1] - coords2[1]) ** 2 + (coords1[2] - coords2[2])) ** 0.5
+
+
+def find_closest_points(points, m):
+    """
+    This could possibly be optimized greatly as the state of the 
+    points is very dependent iteration to iteration
+    """
+    result = {}
+
+    for i, current_point in enumerate(points):
+        # Initialize a min heap to store the m closest points
+        min_heap = []
+
+        for j, other_point in enumerate(points):
+            if i != j:
+                dist = distance(current_point, other_point)
+                heapq.heappush(min_heap, (dist, other_point))
+
+        # Get the m closest points by popping from the min heap
+        result[i] = [point for _, point in heapq.nsmallest(m, min_heap)]
+
+    return result
+
+def find_closest_satsBad(sats, m):
+    """
+    This could possibly be optimized greatly as the state of the 
+    points is very dependent iteration to iteration
+    """
+    result = {}
+
+    for current_sat in sats:
+        # Initialize a min heap to store the m closest points
+        min_heap = []
+
+        for other_sat in sats:
+            if current_sat != other_sat:
+                dist = satDistance(current_sat, other_sat)
+                heapq.heappush(min_heap, (dist, other_sat))
+
+        # Get the m closest points by popping from the min heap
+        result[current_sat] = [point for _, point in heapq.nsmallest(m, min_heap)]
+
+    return result
+
+
+
 
 
 

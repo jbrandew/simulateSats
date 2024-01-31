@@ -34,79 +34,32 @@ lemmeManage = myClasses.Manager(constellationType="walkerDelta",
                                 constellationConfig=constellationConfig,
                                 baseStationLocations = configData['BaseStationLocations'], 
                                 fieldOfViewAngle = configData['BaseStationViewAngle'], 
-                                phasingParemeter = configData['phasingParameter'])
+                                phasingParemeter = configData['phasingParameter'],
+                                sunExclusionAngle= configData['SunExclusionAngle'],
+                                sunLocation=configData['SunLocation'])
 
 #connect a certain topology 
-lemmeManage.connect2ISL() 
+#lemmeManage.connectSpiralTopologySimple() 
 
 #get simulator 
 simmer = myClasses.Simulator(lemmeManage)
 
-simmer.timeFrameSequencing(10, 3, 10)
+#simmer.manager.updateTopology("Closest", "InView")
+#simmer.multiPlot() 
+
+#avLength, avgTime, _ = simmer.simulateTransmits(100)
+#pdb.set_trace()
+
+simmer.timeFrameSequencing(15, 10, 20)
 
 #now, examining those in view 
-view = simmer.getSatsAndPlanesInViewOfBaseStation()
+#view = simmer.getSatsAndPlanesInViewOfBaseStation()
 
 #also, plot the connections and so forth 
 #simmer.multiPlot() 
 
 #get adjacency matrix 
 adjMat = lemmeManage.generateAdjacencyMatrix() 
-
-#simulate effect of satellite failure on path failure 
-#rate = simmer.simulatePathFailureFast(25, 100, 100)
-#print("Hello :D")
-#print(rate)
-#pdb.set_trace()
-
-
-#this gives me the # rows that have a non inf value 
-#non_inf_rows = np.sum(~np.isinf(adjMat).any(axis=1))
-
-#print("Number of rows wit non-infinite values:", non_inf_rows)
-
-#plotUsageAnalysis() 
-
-# avgLength, avgTime, maxTime = simmer.simulateTransmits(1000)
-# print("Avg # of links used:" + str(avgLength))
-# print("Time in ms: "+ str(avgTime))
-# print("Max Time: "+str(maxTime))
-
-
-
-
-# numTrials = 1000
-# #2 = num base stations
-# setOftoAndFro = np.random.randint(0,numLEOs + 2, size =(numTrials, 2))
-# totalTime = 0
-# ind = 0 
-# maxTime = 0
-# totalLength = 0 
-# for set in setOftoAndFro: 
-    
-#     ind+=1
-#     time = myMath.dijkstra(adjMat, set[0], set[1])
-#     totalTime+=time
-#     print(ind)
-#     print(time)
-#     if(maxTime < time): 
-#         maxTime = time
-
-#     #totalLength+=len(path)
-#     #print(totalTime)
-
-# avgTime = totalTime/numTrials 
-# print("Time in ms: "+ str(avgTime*1000))
-# print("Max Time: "+str(maxTime))
-#print("Average Length: "+str(totalLength/numTrials))
-
-
-#pseudoCapacity = lemmeManage.getPseudoCapacity(1000)
-
-# with open('pseudoCapacity.npy', 'rb') as f:
-
-#     a = np.load(f)
-
 
 
 def plotUsageAnalysis():

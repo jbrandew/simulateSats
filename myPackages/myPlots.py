@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-
+import pdb 
 #hello! this package works with graphics that we need 
 #please note, this usually opts for plotting the object we create,
 #instead of passing the figure object as a return of the function 
@@ -93,7 +93,9 @@ def plotPoints(points, ax = []):
         ax.scatter(point[0], point[1], point[2], c = "red", s = 50, zorder = 2)
    
 
-def plot_line_segments(pair_of_points_list, ax = []):
+def plot_line_segments(pair_of_points_list, 
+                       numLinks, 
+                       ax = []):
 
     if(ax == []): 
         fig = plt.figure()
@@ -104,7 +106,9 @@ def plot_line_segments(pair_of_points_list, ax = []):
         ax.set_zlabel('Z-axis')
         ax.set_title('3D Line Segments Plot')
 
-    for pair in pair_of_points_list:
+    for ind, pair in enumerate(pair_of_points_list):
+        if(ind > numLinks): 
+            break 
         # Extract coordinates of the two points in each pair
         x1, y1, z1 = pair[0]
         x2, y2, z2 = pair[1]
@@ -114,7 +118,15 @@ def plot_line_segments(pair_of_points_list, ax = []):
 
 
 #trying for pipeline of sphere, walker star, base stations 
-def multiPlot(radius, satPoints, baseStationPoints, links, axisLimit = 8000, fig = [], ax = [], showFigure = False): 
+def multiPlot(radius, 
+              satPoints, 
+              baseStationPoints, 
+              links,
+              numLinks,  
+              axisLimit = 8000, 
+              fig = [], 
+              ax = [], 
+              showFigure = False): 
     """
     Function to plot all players and links. Plotting with the globe doesnt work very well, 
     as it tends to absorb links/players graphically...so for now just make the radius very small 
@@ -125,6 +137,7 @@ def multiPlot(radius, satPoints, baseStationPoints, links, axisLimit = 8000, fig
     baseStationPoints: xyz of all base stations 
     links: connections to plot using line segments 
     showFigure: do we output the figure at the end? 
+    numLinks: how many links we use 
     """
     #get figure and axes to use for all this 
     if(fig==[]): 
@@ -146,7 +159,8 @@ def multiPlot(radius, satPoints, baseStationPoints, links, axisLimit = 8000, fig
     plot_sphere(radius, ax)
     
     #plot links 
-    plot_line_segments(links, ax)
+    #pdb.set_trace() 
+    plot_line_segments(links, min(len(links),numLinks), ax)
 
     if(showFigure):
         plt.show() 
@@ -160,10 +174,12 @@ class GraphicsView:
 
     def update_graphics(self):
         self.ax.cla() 
+        links, numLinks = self.manager.getXYZofLinks(6) 
         multiPlot(0, 
                   self.manager.getSatLocations(), 
                   self.manager.getBaseStationLocations(), 
-                  self.manager.getXYZofLinks(6), 
+                  links,
+                  numLinks,  
                   axisLimit = 8000, 
                   fig = self.fig, 
                   ax = self.ax)

@@ -5,6 +5,7 @@ import numpy as np
 import pdb 
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+import heapq
 
 class Simulator(): 
     """
@@ -21,11 +22,31 @@ class Simulator():
         self.view = myPlots.GraphicsView(self.manager, fig, ax)
 
 
-    def update(self, frame, satTimePerFrame): 
+    def update(self, 
+               frame, 
+               satTimePerFrame, 
+               satPolicy = "Closest",
+               baseStationPolicy = "inView"): 
         """
         update function for frame data 
+
+        Inputs:
+        frame: frame # we are on in the animation 
+        satTimePerFrame: how much time within a frame that the satellite moves
+        satPolicy: how to determine what connections to keep/change overtime
+        baseStationPolicy: how to connect to players as a base station 
+
+        Outputs: 
+
+        Effect: 
+        updated state and graphics
+
         """
+        #update the position of each satellite 
         self.manager.updateConstellationPosition(satTimePerFrame) 
+        #update the connections for each satellite 
+        self.manager.updateTopology(satPolicy, baseStationPolicy)
+        #update the graphics 
         self.view.update_graphics() 
 
 
@@ -73,7 +94,7 @@ class Simulator():
         myPlots.multiPlot(0,
                           self.manager.getSatLocations(), 
                           self.manager.getBaseStationLocations(), 
-                          self.manager.getXYZofLinks(maxNumLinksPerSat=6),
+                          *self.manager.getXYZofLinks(maxNumLinksPerSat=6),
                           showFigure=True)
 
 
@@ -280,7 +301,9 @@ class Manager():
                  constellationConfig, 
                  baseStationLocations, 
                  fieldOfViewAngle, 
-                 phasingParemeter): 
+                 phasingParemeter, 
+                 sunExclusionAngle,
+                 sunLocation): 
         """
         This does the initialization step for internals, as well as generating satellites 
         and base stations from respective locations 
@@ -290,12 +313,17 @@ class Manager():
         constellationConfig: configuration variables needed for creating that constellation
         baseStationLocations: x y z of all relay/baseStations :) 
         phasingParameter: the angular offset/revolution difference between adjacent planes
+        sunExclusionAngle: min angle between line of sight and sun path to ensure stable connection
         """
 
         if(constellationType == "walkerDelta"): 
             walkerPoints, normVecs = myMath.generateWalkerStarConstellationPoints(*constellationConfig) 
         else:
             raise ValueError("Not valid constellation type")
+
+        self.sunExclusionAngle = sunExclusionAngle
+
+        self.sunLocation = sunLocation
 
         #calculate logical parameters based on point dimensions 
         self.numPlanes = np.shape(walkerPoints)[0]
@@ -317,6 +345,70 @@ class Manager():
         #set up storage for adjacency matrix 
         self.currentAdjacencyMatrix =  np.tile(np.Infinity, [self.numLEOs + len(self.baseStations), self.numLEOs + len(self.baseStations)])
 
+    
+    def find_closest_sats(self, m):
+        result = {}
+        raveledSats = np.ravel(self.sats)
+
+        for current_sat in raveledSats:
+            # Initialize a min heap to store the m closest points
+            min_heap = []
+
+            for other_sat in raveledSats:
+                if current_sat != other_sat:
+                    dist = myMath.distance(current_sat.getCoords(), other_sat.getCoords())
+                    
+                    heapq.heappush(min_heap, (dist, other_sat))
+
+            # Get the m closest points by popping from the min heap
+            result[current_sat] = [sat for _, sat in heapq.nsmallest(m, min_heap)]
+
+        return result
+
+
+    def updateTopology(self, 
+                       satPolicy, 
+                       baseStationPolicy): 
+        """
+        Updates the topology based on state 
+        """
+
+        if(satPolicy == "Closest"): 
+            #call that update
+            self.connectSatellitesToClosest() 
+            #need to also connect each base station to all sats in view
+        if(satPolicy == "Retain"):  
+            x = 1   
+        if(baseStationPolicy == "InView"): 
+            self.connectBaseStationsToSatellites()  
+
+
+    def connectSatellitesToClosest(self, maxISLNum = 2): 
+        """
+        Connect each satellite to "maxISLNum" closest satellites 
+
+        Inputs:
+        maxISLNum: max # ISLs we can connect to 
+
+        Outputs: 
+
+        Effect: 
+        Satellites are now connected to the closest players 
+        """
+        #first, get the set of locations for each satellite 
+        #locs = self.getSatLocations
+        #then, get closest to each 
+        closest = self.find_closest_sats(maxISLNum)
+        #then, for each, clear out current connections and connect to that many
+        
+        #if(len(closest.keys) != len(self.sats)): 
+        #    raise Exception("closest computation over != # sats ")
+        #for each satKey in our array 
+        for satKey in closest.keys():
+            #reset the connections 
+            satKey.resetConnecions()
+            #and then connect to the closest "maxISLNum" satellites  
+            satKey.connectedToPlayers = closest[satKey] 
 
     def updateConstellationPosition(self, timeDiff): 
         """
@@ -432,8 +524,8 @@ class Manager():
         # sat1.connectedSats = sat1.connectedSats + [sat2]
         # sat2.connectedSats = sat2.connectedSats + [sat1]
 
-        sat1.connectToPlayer(sat2, polarRegionRestriction)
-        sat2.connectToPlayer(sat1, polarRegionRestriction)
+        sat1.connectToPlayer(sat2, polarRegionRestriction, self.sunExclusionAngle, self.sunLocation)
+        sat2.connectToPlayer(sat1, polarRegionRestriction, self.sunExclusionAngle, self.sunLocation)
 
         return 
 
@@ -538,14 +630,14 @@ class Manager():
         for fromSat in np.ravel(self.sats): 
             #iterate through each satellites connections
             for player in fromSat.connectedToPlayers: 
-                #create link 
-                holdLinks[ind] = np.concatenate([[fromSat.getCoords()], [player.getCoords()]], axis = 0)  
-                ind+=1 
+                #output link if valid 
+                if(self.checkValidConnection(fromSat,player)): 
+                    holdLinks[ind] = np.concatenate([[fromSat.getCoords()], [player.getCoords()]], axis = 0)  
+                    ind+=1 
             # for toBaseStation in fromSat.connectedBaseStations: 
             #     holdLinks[ind] = np.concatenate([[fromSat.getCoords()], [toBaseStation.getCoords()]], axis = 0)
             #     ind+=1               
-
-        return holdLinks
+        return holdLinks, ind 
     
     def generateBaseStations(self, baseStationLocations, fieldOfViewAngle): 
         """
@@ -609,12 +701,13 @@ class Manager():
                 
                 if(baseStation.isSatelliteInView(satellite.getCoords())): 
                     #if we are, connect them both 
-                    baseStation.connectToPlayer(satellite)
-                    satellite.connectToPlayer(baseStation)
+                    baseStation.connectToPlayer(satellite, True, self.sunExclusionAngle, self.sunLocation)
+                    satellite.connectToPlayer(baseStation, True, self.sunExclusionAngle, self.sunLocation)
+
 
             for baseStationTo in self.baseStations:  
                 if(baseStation != baseStationTo): 
-                    baseStation.connectToPlayer(baseStation)
+                    baseStation.connectToPlayer(baseStation, True, self.sunExclusionAngle, self.sunLocation)
                     #baseStation.connectedBaseStations = baseStation.connectedBaseStations + [baseStationTo]
 
     def stochasticFailure(self, numSatellitesFail): 
@@ -917,73 +1010,12 @@ class Manager():
                 #for forward case:  
                 if(planeInd % 2 == 0): 
                     satOfPrevPlane = self.sats[(planeInd + 1 ) % self.numPlanes, smallSatInd]
-                    self.sats[planeInd, smallSatInd].connectToPlayer(satOfPrevPlane)
+                    self.sats[planeInd, smallSatInd].connectToPlayer(satOfPrevPlane, True, self.sunExclusionAngle, self.sunLocation)
                 
                 #for back case: 
                 else: 
                     satOfNextPlane = self.sats[(planeInd - 1) % self.numPlanes, smallSatInd]
-                    self.sats[planeInd, smallSatInd].connectToPlayer(satOfNextPlane)  
-
-
-
-    def connectModifiedSpiralTopology(self): 
-        """
-
-        THIS DOESNT WORK, AS SHOWN BY GRAPHIC. i think the error has to do with mirrored
-        effect... yea
-        errors have to do with the fact that when we iterate through, we do both cases
-
-        Similar topology to original spiral, but this time after connecting to 
-        3 satellites, iterating through you "hop down" one link iteration 
-        so that each spiral remains at roughly the same latitude 
-
-        Effect: 
-        Conect all sats in modified spiral topology 
-        """
-        #first connect in the basic 2ISL case 
-        self.connect2ISL() 
-
-        #then, connect to adjacent planes 
-        #iterate through a certain plane, and then satellites 
-        for smallSatInd in range(self.numSatPerPlane):  
-            indJump = 0 
-
-            for planeInd in range(self.numPlanes):   
-                #uhhh...connect satellite to adjacent ones 
-
-                if(indJump == 1 or indJump == 2): 
-                    #for forward case:  
-                    satOfPrevPlane = self.sats[(planeInd - 1 ) % self.numPlanes, smallSatInd]
-                    self.sats[planeInd, smallSatInd].connectToSat(satOfPrevPlane, True)
-                    
-                    #for back case: 
-                    satOfNextPlane = self.sats[(planeInd + 1) % self.numPlanes, smallSatInd]
-                    self.sats[planeInd, smallSatInd].connectToSat(satOfNextPlane, True)  
-
-                #in case where we are at the "bottom corner" of the spiral 
-                if(indJump == 0): 
-                    #for forward case:  
-                    satOfPrevPlane = self.sats[(planeInd - 1 ) % self.numPlanes, (smallSatInd + 1) % self.numSatPerPlane]
-                    self.sats[planeInd, smallSatInd].connectToSat(satOfPrevPlane, True)
-                    
-                    #for back case: 
-                    satOfNextPlane = self.sats[(planeInd + 1) % self.numPlanes, smallSatInd]
-                    self.sats[planeInd, smallSatInd].connectToSat(satOfNextPlane, True)  
-
-                #in case where we are at the final sat of the spiral line 
-                if(indJump == 3): 
-                    #for forward case:  
-                    satOfPrevPlane = self.sats[(planeInd - 1 ) % self.numPlanes, smallSatInd]
-                    self.sats[planeInd, smallSatInd].connectToSat(satOfPrevPlane, True)
-                    
-                    #for back case: 
-                    satOfNextPlane = self.sats[(planeInd + 1) % self.numPlanes, (smallSatInd - 1) % self.numSatPerPlane]
-                    self.sats[planeInd, smallSatInd].connectToSat(satOfNextPlane, True)                
-
-                #inc and reset appropriately 
-                indJump+=1 
-                indJump = indJump % 4 
-
+                    self.sats[planeInd, smallSatInd].connectToPlayer(satOfNextPlane, True, self.sunExclusionAngle, self.sunLocation)  
 
     def generateAdjacencyMatrix(self): 
         """
@@ -1012,11 +1044,13 @@ class Manager():
         for playerInd in range(len(allPlayers)): 
             allPlayers[playerInd].index = playerInd 
 
-
         for playerFrom in allPlayers:
             #iterate through the players satellites and base stations  
-            for playerTo in playerFrom.connectedToPlayers: 
-                adjMat[playerFrom.index, playerTo.index] = self.propDelayBetween(playerFrom, playerTo)
+            for playerTo in playerFrom.connectedToPlayers:
+                #only use the connections if its valid 
+                if(self.checkValidConnection(playerTo, playerFrom)):  
+                    adjMat[playerFrom.index, playerTo.index] = self.propDelayBetween(playerFrom, playerTo)
+            
             #for baseStationTo in playerFrom.connectedBaseStations: 
             #    adjMat[playerFrom.index, baseStationTo.index] = self.propDelayBetween(playerFrom, baseStationTo)
 
@@ -1024,6 +1058,18 @@ class Manager():
 
         return adjMat
 
+    def checkValidConnection(self, player1, player2): 
+            #if(polarRegionRestriction): 
+        lats1 = myMath.cartesian_to_geodetic(*player1.getCoords(), 6371) 
+
+        if(lats1[0] > 70 or lats1[0] < -70): 
+            return False 
+
+        lats2 = myMath.cartesian_to_geodetic(*player2.getCoords(), 6371) 
+        if(lats2[0] > 70 or lats2[0] < -70): 
+            return False 
+        
+        return True
 
 #player class describes any operator on or above the earth 
 #probably going to use rho and phi more often than purely longitude and latitude 
@@ -1049,14 +1095,22 @@ class Player():
     def getCoords(self): 
         return self.x, self.y, self.z 
     
-    def connectToPlayer(self, playerToConnectTo, polarRegionRestriction = True):
+    def resetConnecions(self): 
+        self.connectedToPlayers = []
+
+    def connectToPlayer(self, 
+                        playerToConnectTo, 
+                        polarRegionRestriction = True, 
+                        sunExclusionAngle = 0,
+                        sunLocation = [0,0,0]):
         """
-        Function for connecting to a different player 
+        Function for connecting to a different player. This is one directional. 
 
         Inputs: 
         playerToConnectTo: who you are forming the comm link with 
         polarRegionRestriction: are we restricting what region we can form this connection with
-
+        sunExclusionAngle: what min angle needed between LOS path and sun to connect 
+        
         Output: 
         boolean saying if the connection was formed or not
 
@@ -1065,7 +1119,8 @@ class Player():
         """ 
         
         #if we have regional restriction for connection 
-        if(polarRegionRestriction): 
+        if(False): 
+        #if(polarRegionRestriction): 
             lats = myMath.cartesian_to_geodetic(*playerToConnectTo.getCoords(), 6371) 
             
             if(lats[0] > 70 or lats[0] < -70): 
@@ -1075,6 +1130,19 @@ class Player():
             
             if(selfLats[0] > 70 or selfLats[0] < -70): 
                 return False 
+
+        #first, get the vector of this vector to sun 
+        toSunVec = np.subtract(np.array(self.getCoords()), np.array(sunLocation))
+        toSatVec = np.subtract(np.array(self.getCoords()), np.array(playerToConnectTo.getCoords()))
+
+        #get difference in angle: 
+        angle = myMath.angle_between_vectors(toSunVec, toSatVec) 
+        #if we are below that angle 
+        if(angle < sunExclusionAngle):
+            #then dont make connection
+            #note, in this system where we have the polar region restriction usually, 
+            #you dont really interfere with this all that often   
+            return False 
 
         #create connection (this in one way right now)
         self.connectedToPlayers = self.connectedToPlayers + [playerToConnectTo]
@@ -1119,6 +1187,17 @@ class LEO(Player):
         #calculate orbital period (just to store, as it wont change over time)
         self.orbitPeriod = myMath.satelliteOrbitalPeriod(self.x, self.y, self.z)
 
+    def distance(self, other):
+        # Your distance calculation logic
+        selfCoords = self.getCoords()
+        otherCoords = other.getCoords() 
+        return myMath.distance(selfCoords, otherCoords)
+
+    def __lt__(self, other):
+        # Implement less-than comparison based on some criterion (e.g., distance)
+        return self.distance(other) < other.distance(self)
+    
+
     def updatePosition(self, timeDiff): 
         """
         Based on current position and time diff,
@@ -1141,43 +1220,7 @@ class LEO(Player):
                                                                [self.x, self.y, self.z], 
                                                                angleRadDiff)
 
-
-    # def connectToSat(self, satToConnectTo, polarRegionRestriction = True): 
-    #     """
-    #     Just connect to a given satellite using your internals
-
-    #     Inputs: 
-    #     satToConnectTo: ... 
-    #     polarRegionRestriction: do not allow connection if satellite to connect
-    #     is above 70N or below 70S 
-
-    #     Outputs: 
-    #     boolean designating if we made the connection or not 
-    #     """
-    #     #if we have the restriction, enable it 
-        
-    #     if(polarRegionRestriction): 
-    #         lats = myMath.cartesian_to_geodetic(*satToConnectTo.getCoords(), 6371) 
-            
-    #         if(lats[0] > 70 or lats[0] < -70): 
-    #             return False 
-
-    #         selfLats = myMath.cartesian_to_geodetic(*self.getCoords(), 6371) 
-            
-    #         if(selfLats[0] > 70 or selfLats[0] < -70): 
-    #             return False 
-            
-        
-    #     self.connectedSats = self.connectedSats + [satToConnectTo]
-    #     return True 
-
-    # def connectToBaseStation(self, baseStationToConnectTo): 
-    #     """
-    #     Just connect to a given basesattion using your internals
-
-    #     baseStationToConnectTo: ... 
-    #     """
-    #     self.connectedBaseStations = self.connectedBaseStations + [baseStationToConnectTo]        
+      
 
 
 #base station class desribes the players on the ground that arent moving and act as forwarders 

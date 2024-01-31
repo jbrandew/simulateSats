@@ -613,6 +613,75 @@ current in view array
 [(12, 11), (10, 9)]
 
 after: 
+matches
+
+Next: 
+change connection method to account for solar thingy 
+
+Where should sun location be stored? computation -> manager 
+Thought: where should we be passing in location of sun....
+
+So, sunExclusionAngle done. What next? Reconnection policy...
+
+Needed: 
+policy for checking if a satellite connection is still valid over period of time...
+like, between frames, it doesnt check if connections are valid. 
+
+Also needed: 
+get server running setup, and then use x11 forwarding (per chatgpt) to have the displays still shown on this computer 
+
+
+What topologies do we have?
+-spiral
+-every nth connection spiral  
+-zig zag
+-ladder 
+
+So, what do we do? 
+1. Modify the existing process to check if there are any connections that violate the polar constraint. 
+-actually, modify entire approach to ISL. always connect, then only display/use if it doesnt violate it the constraint
+-after asking them question about ISLs for planes, will see about implementation method  
+2. Examine throughput analysis for each with time varying....
+3. 
+
+Thought: 
+-not sure how to best analyze ISLs
+-thought: dont use polar region restriction in forming the ISLs. only check the polar region restriction once we are examining throughput or we are graphing the data. 
+
+note: 
+currently simulate transmits doesnt work as intended because ISLs above polar region are used, even with IPO connections. So wait to see what advisor says about optimal policy. 
+
+Next: 
+work with consistent BER, and get avg throughput rate of packets 
+...maybe work with SNR 
+
+Variables to consider for calculating SNR of a connection: 
+-path loss
+-received power 
+-noise
+-BER
+basically, just using friszs transmission theroem 
+
+idea: 
+-record set of metadata for each packet transmitted
+-then, at the end of the simulation, calculate throughput...
+-nah, then wed have to store alot of states for each set...unless we wanted to sim. in blocks 
+
+
+Next actually: 
+implement policy for connecting to nearest 4 players for each player 
+at each time step, reconnect to nearest 4 
+compare stuff at that time 
+
+thought: 
+we are at times getting closer to a situation that involves having a one-directional link....
+
+problem: need to impleemnt closest points method for...objects...not just numbers yay i did it 
+and its not super duper computationally intense....
+
+what next? figure out gnu radio stuff....
+
+
 
 
 

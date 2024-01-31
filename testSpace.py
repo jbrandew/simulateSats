@@ -1,30 +1,66 @@
 import numpy as np
+import heapq
+import pdb 
 
-def calculate_new_position(radius, normal_vector, current_position, angle_rad):
-    # Calculate the rotation matrix using the normal vector
-    rotation_matrix = np.array([[np.cos(angle_rad) + normal_vector[0]**2 * (1 - np.cos(angle_rad)),
-                                 normal_vector[0] * normal_vector[1] * (1 - np.cos(angle_rad)) - normal_vector[2] * np.sin(angle_rad),
-                                 normal_vector[0] * normal_vector[2] * (1 - np.cos(angle_rad)) + normal_vector[1] * np.sin(angle_rad)],
-                                [normal_vector[1] * normal_vector[0] * (1 - np.cos(angle_rad)) + normal_vector[2] * np.sin(angle_rad),
-                                 np.cos(angle_rad) + normal_vector[1]**2 * (1 - np.cos(angle_rad)),
-                                 normal_vector[1] * normal_vector[2] * (1 - np.cos(angle_rad)) - normal_vector[0] * np.sin(angle_rad)],
-                                [normal_vector[2] * normal_vector[0] * (1 - np.cos(angle_rad)) - normal_vector[1] * np.sin(angle_rad),
-                                 normal_vector[2] * normal_vector[1] * (1 - np.cos(angle_rad)) + normal_vector[0] * np.sin(angle_rad),
-                                 np.cos(angle_rad) + normal_vector[2]**2 * (1 - np.cos(angle_rad))]])
+hold = np.arange(15)
+hold = np.reshape(hold, [5,3])
+for element in hold: 
+    print(element) 
+# def distance(point1, point2):
+#     return ((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2) ** 0.5
 
-    # Calculate the new position using the rotation matrix
-    new_position = np.dot(rotation_matrix, np.array(current_position))
+# def find_closest_points(points, m):
+#     result = {}
 
-    return new_position
+#     for i, current_point in enumerate(points):
+#         # Initialize a min heap to store the m closest points
+#         min_heap = []
 
-# Example usage
-radius = 5.0
-normal_vector = [0.0, 0.0, 1.0]
-current_position = [5.0, 0.0, 0.0]
-angle_rad = np.pi / 2.0
+#         for j, other_point in enumerate(points):
+#             if i != j:
+#                 dist = distance(current_point, other_point)
+#                 pdb.set_trace() 
+#                 heapq.heappush(min_heap, (dist, other_point))
 
-new_position = calculate_new_position(radius, normal_vector, current_position, angle_rad)
-print("New Position:", new_position)
+#         # Get the m closest points by popping from the min heap
+#         result[i] = [point for _, point in heapq.nsmallest(m, min_heap)]
+
+#     return result
+
+# # Example usage:
+# points = [(0, 0), (1, 1), (2, 2), (3, 3), (4, 4)]
+# m_closest_points = find_closest_points(points, 2)
+
+# pdb.set_trace() 
+
+# for i, closest_points in m_closest_points.items():
+#     print(f"Closest points to {points[i]}: {closest_points}")
+
+# def calculate_new_position(radius, normal_vector, current_position, angle_rad):
+#     # Calculate the rotation matrix using the normal vector
+#     rotation_matrix = np.array([[np.cos(angle_rad) + normal_vector[0]**2 * (1 - np.cos(angle_rad)),
+#                                  normal_vector[0] * normal_vector[1] * (1 - np.cos(angle_rad)) - normal_vector[2] * np.sin(angle_rad),
+#                                  normal_vector[0] * normal_vector[2] * (1 - np.cos(angle_rad)) + normal_vector[1] * np.sin(angle_rad)],
+#                                 [normal_vector[1] * normal_vector[0] * (1 - np.cos(angle_rad)) + normal_vector[2] * np.sin(angle_rad),
+#                                  np.cos(angle_rad) + normal_vector[1]**2 * (1 - np.cos(angle_rad)),
+#                                  normal_vector[1] * normal_vector[2] * (1 - np.cos(angle_rad)) - normal_vector[0] * np.sin(angle_rad)],
+#                                 [normal_vector[2] * normal_vector[0] * (1 - np.cos(angle_rad)) - normal_vector[1] * np.sin(angle_rad),
+#                                  normal_vector[2] * normal_vector[1] * (1 - np.cos(angle_rad)) + normal_vector[0] * np.sin(angle_rad),
+#                                  np.cos(angle_rad) + normal_vector[2]**2 * (1 - np.cos(angle_rad))]])
+
+#     # Calculate the new position using the rotation matrix
+#     new_position = np.dot(rotation_matrix, np.array(current_position))
+
+#     return new_position
+
+# # Example usage
+# radius = 5.0
+# normal_vector = [0.0, 0.0, 1.0]
+# current_position = [5.0, 0.0, 0.0]
+# angle_rad = np.pi / 2.0
+
+# new_position = calculate_new_position(radius, normal_vector, current_position, angle_rad)
+# print("New Position:", new_position)
 
 
 
