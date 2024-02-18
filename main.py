@@ -5,7 +5,8 @@ import myPackages.myPlots as myPlots
 import myPackages.myMath as myMath 
 import myPackages.myRandom as myRandom 
 import pdb 
-import myClasses.classes as myClasses
+import myClasses.Simulator as Simulator
+import myClasses.Manager as Manager
 
 #read in the config file 
 with open("environmentConfig.yaml", "r") as stream: 
@@ -14,7 +15,6 @@ with open("environmentConfig.yaml", "r") as stream:
         configData = yaml.safe_load(stream)
     except yaml.YAMLError as exc: 
         print(exc) 
-
 
 #now that we have the coordinates for all the satellites, lets proceed. 
 #first verify by using the two relays set up and looking at # sats in view per relay
@@ -29,21 +29,26 @@ constellationConfig = [
     configData['orbitAltitudeLEO'] +  configData['earthRadius']    
 ]
 
-#create manager 
-lemmeManage = myClasses.Manager(constellationType="walkerDelta",
-                                constellationConfig=constellationConfig,
-                                baseStationLocations = configData['BaseStationLocations'], 
-                                fieldOfViewAngle = configData['BaseStationViewAngle'], 
-                                phasingParemeter = configData['phasingParameter'],
-                                sunExclusionAngle= configData['SunExclusionAngle'],
-                                sunLocation=configData['SunLocation'])
+#format data for getting manager 
+managerData = {
+    "constellationType": "walkerDelta",
+    "constellationConfig": constellationConfig,
+    "baseStationLocations": configData['BaseStationLocations'],
+    "fieldOfViewAngle": configData['BaseStationViewAngle'],
+    "phasingParameter": configData['phasingParameter'],
+    "sunExclusionAngle": configData['SunExclusionAngle'],
+    "sunLocation": configData['SunLocation'],
+    "earthRadius": configData['earthRadius']
+}
 
 #connect a certain topology 
 #lemmeManage.connectSpiralTopologySimple() 
 
 #get simulator 
-simmer = myClasses.Simulator(lemmeManage)
+simmer = Simulator.Simulator(managerData)
+simmer.manager.connectSpiralTopologySimple() 
 
+#lemmeManage.connect2ISL()
 #simmer.manager.updateTopology("Closest", "InView")
 #simmer.multiPlot() 
 
@@ -59,7 +64,7 @@ simmer.timeFrameSequencing(15, 10, 20)
 #simmer.multiPlot() 
 
 #get adjacency matrix 
-adjMat = lemmeManage.generateAdjacencyMatrix() 
+#adjMat = lemmeManage.generateAdjacencyMatrix() 
 
 
 def plotUsageAnalysis():

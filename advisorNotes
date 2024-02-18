@@ -173,12 +173,193 @@ how do me measure throughput/performance of a certain policy/compared to baselin
 
 More questions: 
 -essentially all the topologies involve only ISLs for satellites that are moving in relatively the same direction (no northbound-southbound
-connections are used). Is there any reason for this? 
--this means that the general policy/average use case is the same between time varying and not, as the ISLs always remain the same regardless of moving in time. 
+connections are used). Is there any reason for this? (other than minimizing the # of changes in topology)
 -why are IPO ISLs allowed to violate the polar region constraint, but inter plane ISLs are not allowed to? 
 -for ISLs that move in and out of violating constraints like polar region or sun exclusion angle, how should we approach the reconnction method?
 are they just "not used" while violating the constraint, or are they fully disconnected and then reconnected? 
 -are polar links allowed if they are to a base station? 
+
+Notes:
+-this means that the general policy/average use case is the same between time varying and not, as the ISLs always remain the same regardless of moving in time. well, its an average over distance between satellites in the same plane/2
+
+gnu radio: complexity level too intense -> abstract it 
+
+packet level: TCP routing 
+-(ARQ etc.) 
+-specific policies for diff environemnts. 
+
+given topology -> determine
+stress test loading with different topologies 
+-&response to stress/breaking
+-traffic loading scenarios
+	-specific distribution for traffic demands based 	on population densities 
+	-each person -> specific BW requested (maybe 	stochastically gen.) 
+
+-get into traffic bottlenecks from routing 
+-even possibly get into static traffic loading (with omniscient knowing) -> saturation location 
+
+BER, function of:
+-distance
+-interference from other users that have proximally close paths
+	-optical links at sats->low interference 
+	-RF interference. from uplink 
+-
+
+capacity of given link -> allows abstraction of packet 
+level comms 
+
+
+Adapting rate to the SNR...longer links -> smaller available data rate/BW efficiency 
+-link models
+-SDA : optical modes for some links 
+-link budgets for sats
+-starlink user terminal gain/directionality/link budgets
+
+physical limitations of directional connections
+(not necessarily ruled out) 
+dense cluster at polar -> connections are more difficult at polar level for between planes (harder coordination)
+lower length of connection -> less value in a hop 
+reestablish -> still have that overhead 
+polar links for gateway are allowed -> less overhead 
+(ground station # is limited, valuable #) 
+
+ring of ISLs with normal towards the sun are affected by exclu. 
+
+change housing 
+-check which university the housing is at (check if theres AC) 
+
+Thought process: 
+in dealing with link budgets, we have the following model: 
+
+What did Dr. Wolf say? 
+-abstract it to the link budget model. 
+-so, we have a specified power constraint. then, based on min SNR functionality and parameters such as 
+antenna type and maybe other user interference, characterize each link by: 
+	-an equation with min power and corresponding capacity, as well as equation for capacity at each level of power allocation 
+	-this will use the normal link budget equation
+-then, each satellite has: 
+	-a set of characterized possible links based on global constellation knowledge (this doesnt go into inter satellite interference) 
+	-a given power they can divide among some chosen set of links 
+
+concerns: 
+-this doesnt go into any joint behavior. ex. what to do if a satellite tries to make a connection with another satellite but that other 
+satellite already has a max # of connections 
+-needed discrimination among chosen satellites for "singular diversity"...( stochasticness may be nice here for a policy i develop specifically,
+if im looking outside the realm of RL) 
+
+so, next steps: 
+implement link budget model
+-specifically optical link budgets (look into multiuser interference for optical connections)
+implement greedy (maxing output capacity, verify its the same as nearest) 
+simulate net throughput/average latency with single packet case (averaging over time frames) 
+	-not sure how to get into simulating traffic/possible overhaul 
+	-maybe, since the relative time of satellites traveling vs the path of a packet is very different, we could look at 
+	monte carlo set of constellation states, and then for each of those constellations, look at traffic properties  
+simulating SNR for link budget model optimization with other user interference may require wider topology/state information
+
+notes:
+-prioritizing fairness vs throughput -> different loss models/prioritization in policy for RL 
+
+time sequencing -> each satellite has a set of links 
+
+more specific next steps: 
+-find content for link budgets for optical connections
+-look into multiuser interference for optical connections 
+	-apparently you dont see much with it 
+-create class for ISL that characterizes:
+	-getting current min power for connection 
+	-given power, what capacity can you provide 
+	-...maybe some metric of "stability" over time 
+-look into the type of theory for creating network based on these....
+
+Questions: 
+-which model would you prefer i use? 
+https://www.mathworks.com/help/satcom/ug/optical_satellite_communication_link_budget_analysis.html
+https://arxiv.org/pdf/2204.13177.pdf
+or something else?
+-in the capacity formula, there is the notion of what bandwidth we use for the connection. If users in optical communications
+do not face inter user interference, then what is the actual bandwidth thats used? cause, if there is no interference, why couldnt we use 
+the whole spectrum? 
+	-optical -> limited more from hardware constraints (can use any bandwidth) 
+	-the "shot" thing with low enough SNR -> not sampling enough photons
+	-power limited on optical links vs BW links 
+-with capacity and arbitrary low error, why do we have the parameter of "link margin" 
+	-It gives us the receive power, which is used in capacity 
+	-asking for link budget model 
+-is there a good algorithm in which to solve the problem outlined below? 
+say i have a graph with a set of weighted edges
+then, say that each node has a constrained degree/# of edges it has 
+then, say i want to choose a subset of weights in which the average path length between nodes is minimized. 
+	-minmimizing diameter -> what to do (diameter is actually just weight of 1) 
+
+-is the event structure/way im using to reconcile multiple time dependent processes ok? 
+	
+
+what i was trying to do: 
+-have real time dependency for simulated results. as in, 1 second passes in real world may incur 2 minutes in simulation, or something similar. would require. the problem with this is it accounting for stuff like computation time, it would be very hard to synchronize the many processes that involve: packet location, status of servers, location of satellites, etc. 
+
+what i think im going to do: 
+-each user processes time a different way, and then each has a type of event depending on time resolution of time frame procedure, and we have an "event processor." The accuracy of results may then heavily depend on the resolution of time. Examples: 
+-if i have two packets traveling over the air, and each has a travel time of 1 and 2 secs respectively. If i have a time frame length of 3 secs, then at the next time frame, both packets arrive at the server at the same time. 
+-if i have 10 packets waiting to be processed at the server, and the server has a exp. interdeparture time, then for the certain time frame, i can simulate how many packets are processed within that time frame, which will be an accurate method based on memoryless system... 
+
+-do users that are on the earth use the nearest satellite, or the satellite associated with the shortest path? 
+-if i have a certain power for outgoing edge, and certain power for ingoing edge allocated for each, should this be more of a directed
+graph optimization then? 
+
+each user has a time event with a specific time stamp -> process it in the event queue 	
+-chain of events (metrics collected, etc.) 
+-could discretize/assign resolution of some processes
+-so just stack of events 
+
+
+Okay, so we have the problem of: 
+-each link has a set of bandwidth efficiencies, based on discretized parts of receive power 
+-we have n*n possible links, where n = number of satellites. this is not limited by LOS, etc. 
+-we need to choose a subset of which that gives us the shortest average path length, and enact a policy to do so 
+
+okay, said algoritm doesnt exist it seems like
+
+
+thoughts: 
+does the sub problem solution contribute to the optimal larger solution? 
+how do we simplify this? -> remove constraints for now. 
+
+
+given n edges we can pick, what method minimizes the inter node path length? (without the previous constraints)
+
+bidirectional links (distance is really the only thing discriminating between links) 
+
+could examine flow vs packet level for capacity evaluation 
+-age of information 
+-could also make when packets are sent out stochastic as well 
+
+RL: could maximize own stuff greedily, but then also have a penalization term for affecting others in the network
+-aggregating local policies at a head honcho
+-could have different local models depending on the constellation/location 
+-could have "group level personalization" for different satellite models 
+
+the idea of "flow splitting" depending on packet size....
+
+[5]	X. Wang, Z. Dai, and Z. Xu, “Leo satellite network routing algorithm based on reinforcement learning,” 2021 IEEE 4th International Conference on Electronics Technology (ICET), 2021. doi:10.1109/icet51757.2021.9451072
+
+and look at others
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

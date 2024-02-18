@@ -16,6 +16,154 @@ from datetime import datetime, timedelta
 #some of the functions (such as the Walker one) may be more implementation 
 #focused 
 
+def closest_point(points, target_point):
+    distances = np.linalg.norm(points - target_point, axis=1)  # Compute Euclidean distances
+    closest_index = np.argmin(distances)  # Find index of the closest point
+    closest_point = points[closest_index]  # Get the closest point
+    return closest_point
+
+def generate_points_on_sphere_mostly_uniform(num_points, radius):
+
+    #this method creates mostly uniform points across the sphere
+    #surface. to have it completely uniform, would need a 
+    #more computationally intense projection/monte carlo square method
+    
+    #note: the "intuitively" uniform method is below and is not actually uniform
+
+    # Generate random angles for latitude and longitude
+    theta = np.arccos(2 * np.random.uniform(0, 1, num_points) - 1)  # Latitude angle with cosine distribution
+    phi = np.random.uniform(0, 2 * np.pi, num_points)  # Longitude angle
+
+    # Convert spherical coordinates to Cartesian coordinates
+    x = radius * np.sin(theta) * np.cos(phi)
+    y = radius * np.sin(theta) * np.sin(phi)
+    z = radius * np.cos(theta)
+
+    # Return the points as a NumPy array
+    return np.column_stack((x, y, z))
+
+
+def generate_points_on_sphere_not_uniform(num_points, radius):
+    # Generate random angles for latitude and longitude
+    theta = np.random.uniform(0, np.pi, num_points)  # Latitude angle
+    phi = np.random.uniform(0, 2 * np.pi, num_points)  # Longitude angle
+
+    # Convert spherical coordinates to Cartesian coordinates
+    x = radius * np.sin(theta) * np.cos(phi)
+    y = radius * np.sin(theta) * np.sin(phi)
+    z = radius * np.cos(theta)
+
+    # Return the points as a NumPy array
+    return np.column_stack((x, y, z))
+
+def calculateCapacity(
+        noisePower, 
+        receivePower, 
+        operatingBandwidth, 
+        linkMargin = 1
+
+): 
+    """
+    Just return capacity 
+
+    noisePower: sigma^2, power of noise 
+    receivePower: power of received signal 
+    operatingBandwidth: bandwidth we can use 
+    linkMargin: divisor to account for min above dB for power 
+    """
+    return operatingBandwidth*np.log2(1+noisePower/(receivePower/linkMargin)) 
+
+def calculateReceivePowerSimple(
+        transmitPower, 
+        operatingWavelength, 
+        linkDistance
+): 
+    """
+    Calculate some stuff and return receive power 
+
+    Inputs: 
+    transmitPower: :D 
+    operating wavelength: :D, in nm  
+    linkDistance: distance between the two satellites, in km  
+
+    Outputs: 
+    receive power 
+    """
+
+    #work with path loss 
+    Lps = (operatingWavelength/(4*np.pi*linkDistance))**2
+
+    return transmitPower*Lps    
+
+def generatePointsEvenlyAcrossSphere(numPoints): 
+
+    return 
+
+def calculateISLReceivePowerComplex(
+        transmitPower, 
+        linkDistance, 
+        etaR = 1, 
+        etaT = 1, 
+        divAngle = 0, 
+        rxDiam = 1, 
+        operatingWavelength = 1550, 
+        transmitPointingError = 0, 
+        txPointingError = 0, 
+        rxPointingError = 0
+
+): 
+    """
+    Calculate the receive power of a transferred signal in an optical connection.
+    We are using a model thats quite similar to the RF model. 
+
+    Not fully implemented :D 
+
+    Using this model: 
+    https://arxiv.org/pdf/2204.13177.pdf
+
+    Heavy descriptions of each are as follows 
+
+    Inputs: 
+    Pt: transmit power 
+
+    etaT, etaR: optics efficiency of transmit/receive 
+    -essentially a ratio for Transmit Optical power vs input power 
+
+    GT: transmitter gain 
+    -GT: 16/(divergence angle^2)
+    -divergence angle is the "spread" of the outgoing connection
+
+    GR: receiver gain 
+    -GR: (Dr*Pi/lamda)^2
+    -Dr: receiver telescope diameter in mm 
+    -lambda: operating wavelength 
+
+    LT: tx pointing loss
+    -LT: exp(-GT(theta T)^2) 
+    -GT: transmit gain 
+    -theta T: transmitter pointing error in rads
+    so this is how far "angle wise" the beam is from its intended path 
+
+    LR: receiver pointing loss 
+    -LR: exp(-GR(theta R)^2)
+    -GR receive gain 
+    -theta R: receive pointing error in rads 
+    so, this is how far the receive 
+    
+    LPS: free space path loss, (lambda/(4*pi*dss)^2), where dss = link distance, km
+    -lambda: operating wavelength, in nm 
+    -dss: distance between satellites the connection is between, in km      
+
+    Outputs: 
+    Pr: receive power 
+
+    """
+    GT = 16/(divAngle**2) 
+    GR = (rxDiam*np.pi/operatingWavelength)**2
+    LT = np.exp(16/(txPointingError**2))
+    
+    return 
+
 def angle_between_vectors(v, w):
     """
     Range is 0 -> 180 (so mirrors at 180)
@@ -549,9 +697,6 @@ def dijkstraAgain(graph, start):
                 distances[neighbor] = distances[current_node] + weight
 
     return distances
-
-
-
 
 def floyd_warshall(graph):
     """

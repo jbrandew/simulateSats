@@ -681,6 +681,109 @@ and its not super duper computationally intense....
 
 what next? figure out gnu radio stuff....
 
+okay, so how to do that? i need to get a base case going for 
+
+not doing gnu radio stuff anymore. New thought process:
+-so we are trying to test the effectiveness of a topology/network when we have a specific power allocation & choice of topology. 
+-how do we test this? base case: 
+
+-given a topology
+-with random power allocation 
+-have a # of users randomly spread across the globe, all try to transmit data 
+
+different methods for simulating that: 
+1. processing time for batch of data. given a # of transmits, look at how long it takes for
+all data to be processed if each satellite has a given rate of processing and there exists a 
+certain capacity for each ISL based on the power allocation. (for now, since we arent sure 
+about how power/BW allocation affects the capacity, lets just assume a constant max rate) 
+
+2. reconciling the time dependent processes of satellites moving, users transmitting data, 
+packets being processed at terminals, packets being sent. So could have different processes tracking different sets of data: 
+Process a: tracking and updating satellite location 
+Process b: pre determining the message launch time for each user/location, and then communicating that with others 
+Process c: tracking when satellites process data. based on each sats comp power and queue
+length, send out data to a diff sat. 
+
+3. Or, destroy pure time dependency: 
+step 1. Create a set of messages to be sent with time tags/locations for each 
+step 2. With a given time resolution and time frame, look at if each packet is 
+processed/needs to transfer.
+step 3. Within this, keep track of how many packets are processed within the time frame we have 
+
+I think we should detach real world time dependency from simulation/processing time dependency entirely.
+Have a time set. Have a time resolution.
+Perform initial config, and: 
+1. get initial positions of satellites
+2. get a # of packets information -> time stamps for transmit, location from which packet is sent
+ 
+And then, at each time step:
+1. Change locations of satellites (if its too small relatively, might not do this. Might just repeat the 
+trial and  have randomly spaced locations/intervals) 
+2. Check each packet to see if the event they currently have is done occurring (existence, transmit, processing, etc.)
+-existence: calculate shortest path (maybe in the future revise this to have shortest path take capacity into account)
+-transmit: message will be in optical transmit for a certain length of time (this is based on the initial location) 
+-processing: message will be processed from poisson process at each interrim location  
+3. Once a packet has reached the end destination it stores info like end time, # hops, etc. 
+4. Then, once all packets are processed compute relevant statistics 
+
+
+Packet data type: 
+phase: [dormant, in transmit, in process, in queue for transmit, finished] 
+-amount of time in dormant determined by scheduled send
+-amount of time in transmit determined by distance between satellites
+-amount of time in process determined by process rate of satellites
+-amount of time in queue for transmit determined by respective capacity of link 
+triggeredEvent
+
+What am i thinking about? 
+the idea of how im going about processing events is difficult. Do i iterate through packets, players, what...?
+
+if i iterate through packets: 
+
+for each packet, checkForEvent. 
+
+check for event for servers. 
+for each server, simulate "numPackets processed" given amount of time (from time frame) 
+then, assign that number of packets the "processed" event and remove them from queue
+(this works between time frames from markov property) 
+
+then, check for event for packets 
+depending on phase, checkForEvent means diff behavior. 
+If packet was in dormant: if time > scheduled wake up, then return needTransmit, get assigned path 
+and go into in transmit mode. 
+If packet was in transmit: if time > scheduled transmit, then add to corresponding satellite 
+If packet was in process: if told by satellite/server that its processed, enter in transmit  
+
+
+Question: 
+what actually is capacity? its how many packets we can transmit over noisy channel with arb. low error. 
+So, it deals with how fast we can send packets after processing 
+
+Random thought: 
+updates to satellite position and current queue states of satellites/servers would possibly make the optimal routing table 
+out date, even to the extreme case of making some links non valid when they are considered valid. Kind of need a hyperparameter
+with respect to rate of updating the routing table with respect to changing conditions. 
+Additionally: 
+within the update state process, there are certain components i could parallelize (checking state change, updating position, etc.) 
+
+Random thought: 
+need to make this as basic of a case as possible. So, compute all paths initially, only based on distance. Can compute paths
+later with adaptable table, etc. 
+
+check point: 
+need to look at what order to handle events in and continue implementation 
+
+Hello. Today is 2/18. I am now beginning work on some research stuff. I'm trying to calm down and proceed. Waht am i doing? 
+In the meeting, I suggested: 
+-an event tree where different events have a priority in being processed. At each time step, I see if i can add and then add the respective events. 
+he suggested: 
+-an almost continuous event tree, where some events are periodically added to the tree based on their respective resolutions. Then, some events, like packets being sent, trigger a chain. So each event being processed creates a different event with a different time stamp. Events are always ordered with respect to the time value. 
+
+Im going to draw it out to discuss the event stack. 
+
+
+
+
 
 
 
