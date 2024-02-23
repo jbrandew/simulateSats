@@ -17,10 +17,11 @@ from datetime import datetime, timedelta
 #focused 
 
 def closest_point(points, target_point):
+    #return index, then actual point value 
     distances = np.linalg.norm(points - target_point, axis=1)  # Compute Euclidean distances
     closest_index = np.argmin(distances)  # Find index of the closest point
     closest_point = points[closest_index]  # Get the closest point
-    return closest_point
+    return closest_index, closest_point
 
 def generate_points_on_sphere_mostly_uniform(num_points, radius):
 
@@ -168,10 +169,12 @@ def angle_between_vectors(v, w):
     """
     Range is 0 -> 180 (so mirrors at 180)
     """
+
     dot_product = np.dot(v, w)
+    if(dot_product == 0): 
+        return 180 
     magnitude_v = np.linalg.norm(v)
     magnitude_w = np.linalg.norm(w)
-
     cos_theta = dot_product / (magnitude_v * magnitude_w)
     angle_radians = np.arccos(cos_theta)
     angle_degrees = np.degrees(angle_radians)
@@ -202,11 +205,15 @@ def satelliteOrbitalPeriod(x, y, z):
     #h = distance_from_center - R
 
     # Calculate orbital speed
-    v = np.sqrt(G * M / (totalRad))
+    #totalRad = 0 in the init step beforehand 
+    if(totalRad == 0): 
+        v = 0
+        T = 0
+    else: 
+        v = np.sqrt(G * M / (totalRad))
+        T = 2 * np.pi * (totalRad) / v
 
     # Calculate orbital period
-    T = 2 * np.pi * (totalRad) / v
-    
     return T
 
 def calculate_next_position(current_position, time_difference):
@@ -679,7 +686,7 @@ def dijkstraWithPath(adj_matrix, start, end):
     while current_node != -1:
         path.insert(0, current_node)
         current_node = parent[current_node]
-
+    
     return path, distances[end]
 
 def dijkstraAgain(graph, start):

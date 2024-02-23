@@ -1,7 +1,7 @@
 #Hello :D 
 
 import yaml 
-import myPackages.myPlots as myPlots
+import myClasses.myPlots as myPlots
 import myPackages.myMath as myMath 
 import myPackages.myRandom as myRandom 
 import pdb 
@@ -46,16 +46,21 @@ managerData = {
 
 #get simulator 
 simmer = Simulator.Simulator(managerData)
-simmer.manager.connectSpiralTopologySimple() 
+#simmer.manager.connectSpiralTopologySimple() 
+simmer.manager.updateTopology("Retain", "InView")
+
+#avLength, avgTime, _ = simmer.simulateTransmits(50)
+#pdb.set_trace()
 
 #lemmeManage.connect2ISL()
 #simmer.manager.updateTopology("Closest", "InView")
-#simmer.multiPlot() 
+simmer.multiPlot() 
+exit() 
 
-#avLength, avgTime, _ = simmer.simulateTransmits(100)
-#pdb.set_trace()
+print("here")
+simmer.manager.executeChainSimulation(1,1,10)
 
-simmer.timeFrameSequencing(15, 10, 20)
+#simmer.timeFrameSequencing(15, 10, 20)
 
 #now, examining those in view 
 #view = simmer.getSatsAndPlanesInViewOfBaseStation()

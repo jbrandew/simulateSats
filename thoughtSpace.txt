@@ -782,16 +782,43 @@ he suggested:
 Im going to draw it out to discuss the event stack. 
 
 
+what are we doing? trying to figure out what i was doing before....
+i was testing for the most basic case, single packet transmission event sequence 
 
 
+seems like alot of the use cases is...possibly working, but sometimes i get the event where i cant find a path between nodes.
+
+so, need to establish
+1. what could be wrong
+2. how i should approach solving this :) 
+
+1: 
+djikstra implementation is incorrect
+topology is not correctly set up 
+usage of start and end locations is incorrectly used somehow....
+
+2: 
+try different topologies and different djikstra implementations. 
+compute average latency scenario, and see if its finite. 
+
+also, look at how exactly you are getting a single value to begin with
 
 
+need to connect base stations probably...
+what am i confused about..?
 
+how satellites are getting connected to a bunch of other satellites in these two function calls...
 
+what am i frustrated by?
+every satellite and base station is connected to 44 others 
+this feels impossible since the actual function is only called 36*2 = 2 times 
 
+what am i confused by?
+getting more than 2 links for each satellite, when i should only be getting the base stations connecting to those in view
 
+seems like the correction is correct, so getting xyz of links may be wrong 
 
-
+nevermind, it was correct, just how i was debugging was wrong
 
 
 
