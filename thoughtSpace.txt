@@ -820,7 +820,15 @@ seems like the correction is correct, so getting xyz of links may be wrong
 
 nevermind, it was correct, just how i was debugging was wrong
 
+problem: 
+the simulated transmission will be inf for the polar regions that dont even have the 2 isl thing 
 
+what are we doing/what are we confused about? 
+was confused as to why only had 2 links for each...
+
+actually, its fine that we have 2 links for each. there is just something wrong about how we are plotting. 
+also, confused as to why we are getting 3*links for xyz 
+thats just the max size. its fine :) 
 
 
 

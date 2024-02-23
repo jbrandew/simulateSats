@@ -47,10 +47,11 @@ managerData = {
 #get simulator 
 simmer = Simulator.Simulator(managerData)
 #simmer.manager.connectSpiralTopologySimple() 
+simmer.manager.connect2ISL() 
 simmer.manager.updateTopology("Retain", "InView")
 
-#avLength, avgTime, _ = simmer.simulateTransmits(50)
-#pdb.set_trace()
+avLength, avgTime, _ = simmer.simulateTransmits(50)
+pdb.set_trace()
 
 #lemmeManage.connect2ISL()
 #simmer.manager.updateTopology("Closest", "InView")
@@ -88,3 +89,13 @@ def plotUsageAnalysis():
     plt.xlabel('Average Propagation Delay to BS')
     plt.ylabel('Pseudo Measure of Usage')
     plt.title('Simulated 1000 Transmissions')
+
+hold = simmer.manager.sats
+total = 0 
+for sat in np.ravel(hold):
+    if(len(sat.connectedToPlayers) != 2): 
+        print(len(sat.connectedToPlayers))
+    total+=len(sat.connectedToPlayers)
+
+check, _ = simmer.manager.getXYZofLinks()
+pdb.set_trace() 
