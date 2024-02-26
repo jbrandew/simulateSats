@@ -55,9 +55,9 @@ simmer.manager.connectSpiralTopologySimple()
 simmer.manager.connectBaseStationsToSatellites() 
 #simmer.manager.updateTopology("Retain", "InView")
 
-avLength, avgTime, _ = simmer.simulateTransmits(100)
-print("Non Chained Path Sim Time")
-print(avgTime)
+#avLength, avgTime, _ = simmer.simulateTransmits(100)
+#print("Non Chained Path Sim Time")
+#print(avgTime)
 #pdb.set_trace() 
 
 #lemmeManage.connect2ISL()
@@ -65,7 +65,7 @@ print(avgTime)
 #simmer.multiPlot() 
 #exit() ''[] 
 
-hold = simmer.manager.executeChainSimulation(100,1,10)
+hold = simmer.manager.executeChainSimulation(1000,1,0)
 print("Chained Simulation Time")
 print(np.average(hold))
 pdb.set_trace() 

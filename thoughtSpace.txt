@@ -905,6 +905,26 @@ the best reason:
 pseudo uniformly generating across globe vs across satellites is much different in terms of avg path length. 
 satellites are much more clustered in some areas than others, compared to the pseudo uniform generation across the globe
 
+also would be cool to mention difficulty of uniform globe point generation (concentrated circles) 
+-idea: could space out circles enough within resolution proportional to their area/density....
+good job :D 
+
+what next? 
+work on uhh.....
+packet collision throughput analysis 
+might need to work on server stuff for actual analysis 
+
+avg for chained simulation of 1000 packets sent at same time: 
+.0932 
+same as before obviously, because we havent handled collision events/waiting at queue :)
+
+
+
+
+
+
+
+
 
  
 
