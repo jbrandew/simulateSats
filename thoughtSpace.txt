@@ -830,16 +830,80 @@ actually, its fine that we have 2 links for each. there is just something wrong 
 also, confused as to why we are getting 3*links for xyz 
 thats just the max size. its fine :) 
 
+grep -rn is such a nice command for finding instances of code thats used 
+
+
+aight, it feels like we fixed alot of things wrong. 
+now what do we do 0_o 
+the actual work lol
+
+uhhh 
+right 
+the chained simulation 
+
+current problems: 
+-something wrong with chained simulation
+-might not be taking care of case with getting the same sat for start and end...
+-packetArriveTimes not saving correctly
+-in general, transmit time is wrong, might be calculating prop delay incorrectly 
+
+current problem: 
+-only packet ind 99 is currently working/saving transmit data 
+-found the problem 
+
+next: change each step to appending to the dictionary 
 
 
 
 
 
+data from chained simulation: 
+(Pdb) hold
+array([ 2.80285116,  7.79804571,  0.89046214,  6.35594686,  5.38951575,
+        3.00952569,  1.3636941 ,  5.14487082,  3.17009137,  8.56859301,
+        1.21703844,  4.86472933,  7.68289497,  2.03718684,  5.4306661 ,
+        7.28809461,  7.91055246,  4.66839381,  8.87175644,  2.49912488,
+        1.47666982,  1.23696718,  3.50524599,  1.71757178,  4.48352852,
+        6.01140213,  0.22738539,  4.00082775,  9.52357383, 10.05908251,
+        1.89591938,  2.86962536,  5.92044754,  6.01056003,  9.00850085,
+        7.67314721,  5.09524875,  4.07511049,  0.80271968,  8.32031818,
+        6.03895279,  4.90350598,  2.76238535,  0.17943794,  3.16207319,
+        2.88183919,  6.69344394,  9.19686221,  9.28444732,  4.79591493,
+        0.45785681,  2.22904452,  6.07178185,  9.81240788,  8.22766517,
+        5.9400777 ,  3.70641136,  8.68106941,  8.32285854,  9.8583144 ,
+        3.41107443,  0.68637016,  4.61507499,  4.43108279, 10.02516587,
+        3.01008192,  5.55710303,  9.67023598,  1.158667  ,  2.12655334,
+        3.92592175,  4.95075859,  0.49410206,  8.00237623,  4.87870434,
+        9.00738291,  1.17970325,  5.89226674,  7.80433027,  4.58812001,
+        3.07568422,  5.43577001,  5.67761362,  5.53649327,  9.15575667,
+        9.74581276, 10.05873836,  3.1128527 ,  9.49708654,  8.17644883,
+        6.92431029,  4.25399974,  6.62295377,  8.78450463,  1.88593599,
+        2.3648051 ,  6.77564975,  8.44378254,  4.4436374 ,  9.52300191])
+(Pdb)
+avg: 5.3 
 
+data from normal transmission simulation: 
+.062 
 
+So, probably something different in how we calculate path time differences in each. How to troubleshoot? 
+-when i calculate the path for packet to be sent, also calculate the path and see if it matches with the previous....
+-...compare summmmmmmmmmmmmmmmmmmmm rate 
+-wait i think i got it. i think its cause i was just returning time of occurence, not difference in time! 
 
+new one:
+avg of normal data transmit: 
+.0582 
 
+avg of other transmit: 
+.0946 
 
+possible reasons: 
+additionally have to go from ground to satellite -> 2 more stops that could be further. 
+the two sets of paths/locations are generated independently 
+
+the best reason: 
+pseudo uniformly generating across globe vs across satellites is much different in terms of avg path length. 
+satellites are much more clustered in some areas than others, compared to the pseudo uniform generation across the globe
 
 
  

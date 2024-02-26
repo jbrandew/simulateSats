@@ -8,6 +8,9 @@ import pdb
 import myClasses.Simulator as Simulator
 import myClasses.Manager as Manager
 
+#just need a little bit of computation...just a little bit 
+import numpy as np 
+
 #read in the config file 
 with open("environmentConfig.yaml", "r") as stream: 
     #attempt to read out 
@@ -46,21 +49,27 @@ managerData = {
 
 #get simulator 
 simmer = Simulator.Simulator(managerData)
-#simmer.manager.connectSpiralTopologySimple() 
-simmer.manager.connect2ISL() 
-simmer.manager.updateTopology("Retain", "InView")
+#connect satellites 
+simmer.manager.connectSpiralTopologySimple() 
+#connect base stations to satellites in view 
+simmer.manager.connectBaseStationsToSatellites() 
+#simmer.manager.updateTopology("Retain", "InView")
 
-avLength, avgTime, _ = simmer.simulateTransmits(50)
-pdb.set_trace()
+avLength, avgTime, _ = simmer.simulateTransmits(100)
+print("Non Chained Path Sim Time")
+print(avgTime)
+#pdb.set_trace() 
 
 #lemmeManage.connect2ISL()
 #simmer.manager.updateTopology("Closest", "InView")
-simmer.multiPlot() 
+#simmer.multiPlot() 
+#exit() ''[] 
+
+hold = simmer.manager.executeChainSimulation(100,1,10)
+print("Chained Simulation Time")
+print(np.average(hold))
+pdb.set_trace() 
 exit() 
-
-print("here")
-simmer.manager.executeChainSimulation(1,1,10)
-
 #simmer.timeFrameSequencing(15, 10, 20)
 
 #now, examining those in view 
