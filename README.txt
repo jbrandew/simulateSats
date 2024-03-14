@@ -1,3 +1,32 @@
+Hi Jun :D 
+Here are a couple basic use cases you can have fun with: 
+
+Plotting Topologies: 
+A topology is essentially a structure of how a set of satellites are connected. 
+
+You can connect different topologies in the following function format: 
+simmer.manager.<function related to topology you want to connect>() 
+
+This function could be: 
+"connectSpiralTopologySimple()" 
+"connect2ISL()" 
+"connectZigZagTopology()" 
+
+And then, you can make a pretty plot of the connections using the "multiplot" function. 
+
+Simulating Transmissions: 
+
+You can simulate a set # of transmissions with different properties. These functions could be: 
+
+"executeChainSimulationWithCollisions()"
+-this simulates a bunch of transmits from users across the globe, and uses the exponential distributions to 
+model the process rate of packets at satellites or base stations
+"simulateTransmits(100)" 
+-this simulates n transmits without collisions/process wait time at servers 
+
+Uh yea, good luck and have fun looking around. 
+
+
 Command to set python path on start: 
 export PYTHONPATH=`pwd` or /home/jbrandew/projects/simulateSats
 
