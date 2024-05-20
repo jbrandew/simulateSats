@@ -1,0 +1,56 @@
+Thought process: 
+
+Specific Tasks: 
+Simulation Structure Construction
+
+Non ML Dynamic Routing for packets and topology changes:
+ 
+
+
+Questions: 
+is there an analogous algorithm from OSPF for instead changes in topology over time? 
+i guess, what results in a change in topology? 
+	-each server periodically updates adjacent servers with routing table/graph information
+	-based on some threshold distance, works to change topology 
+
+
+Dynamic Source Routing: 
+-soure routing: original sender decides path
+-adaptively allows connections to form .... (on demand) 
+
+
+partly distributed/centralized
+try fully centralized/fully distributed 
+-mention splits the difference (allowing other models existence) 
+
+federated learning vs centralized RL -> updates submodels...
+will compare fully each 
+
+test methods with static toplogy (ex. 4 nearest neighbors) 
+
+
+visualization on state/rewards
+(state info/action/location
+
+show equations in context of images/where theyre performing/operating
+
+
+cell coverage work/beam angle work....
+-definitely need in action sppace, how to cover
+-beam small vs big -> harder to handle demand
+	-beam small -> bigger rate, smaller place...
+
+-fixed beam size -> what cells are each going to cover 
+-can avoid RF interference problem for now...
+-some notion of how to decide each....
+
+-how our RL framework addresses these things 
+-possibly just extension...., but different variables, harder to optimize over
+
+explain relation to other papers
+explain what a non fair solution look like and why is that a problem
+	-need uniform converage 
+	-pointing that out in the importance of fairness
+
+slack paper illustrations 
+colored/highlighted words for key phrases

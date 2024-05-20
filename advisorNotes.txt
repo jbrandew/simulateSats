@@ -345,28 +345,53 @@ the idea of "flow splitting" depending on packet size....
 
 and look at others
 
+Notes for working on presentation/outline: 
+presentation:
 
 
 
+Japan:
+cant start PHD over there from fullbright 
+need to decide between sigint and ml with satcomms stuff
+not sure if phd is hard to get at japan 
+boren fellowship: do research while doing language intensive program
+japan is competitive :( 
+could apply as phd student while in the USA 
 
+project proposal isnt necessarily stringent/something you will be held to
+need someone to say they would be excited to work with me 
+cold emailing or advisor connections 
 
+https://www.findaphd.com/guides/phd-funding-japan
 
+possible location wise compression...
 
+5/9
+allows hybrid administtions 
+tailor components to each constellation, then just train them together
+inherent TDMA from constraint for beamsteering
+stovepiped .... 
 
+different challenge between commercial and DoD -> cant use the same solution for each
+-so commercial has offline learning -> can plan in advance (have backup ones as well) 
+-then the general pros are shown 
+federated learning -> pass up the model to central entity, so different from QMix 
+need one slide version of problem statement
+look at his version of problem statement / utlity function
+make consistent 
+graphic with nodes/edges in graph and satellites 
 
+possibly another network for beam steering
+have the action of one network be the inputs for another network 
 
+can create a baseline/use OSPF for a different component 
+matching graph set: matching to the optimal solution....
 
-
-
-
-
-
-
-
-
-
-
-
-
+come up with a succinct problem statement that makes more sense
+bring up components a level
+a bit too technical for modeling components 
+might not even need to give formulas
+can walk through overview instead...just mark the model slide up 
+condense slides for RL context more 
 
 

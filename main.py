@@ -50,7 +50,10 @@ managerData = {
 #get simulator 
 simmer = Simulator.Simulator(managerData)
 #connect satellites 
-simmer.manager.connectSpiralTopologySimple() 
+simmer.manager.connectSpiralTopologySimple(ISL2Done=True) 
+
+simmer.multiPlot() 
+pdb.set_trace() 
 #connect base stations to satellites in view 
 simmer.manager.connectBaseStationsToSatellites() 
 #simmer.manager.updateTopology("Retain", "InView")
@@ -65,7 +68,7 @@ simmer.manager.connectBaseStationsToSatellites()
 #simmer.multiPlot() 
 #exit() ''[] 
 
-hold = simmer.manager.executeChainSimulation(1000,1,0)
+hold = simmer.manager.executeChainSimulationWithCollisions(100,1,0,True)
 print("Chained Simulation Time")
 print(np.average(hold))
 pdb.set_trace() 

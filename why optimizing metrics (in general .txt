@@ -1,0 +1,45 @@
+why optimizing metrics (in general why a priority/problem) 
+definitely go into more of reasoning behind distributed vs centralized approach
+
+more just general contextualization 
+
+comparison in reactivity ability in this scheme vs others
+-dynamic traffic events/outages 
+-@ context possible weaknesses 
+
+look into reward approaches
+-cite existing work for RL space for their reward approaches
+-in general more grounding for RL reward creation, especially wireless app.
+
+more context of why we are even using RL in this 
+-(as distributed/local info)
+-complexity of modeling as a whole 
+
+have RL adaptive topology changes rather than scheduled consideration
+-forgetting previous delay distributions 
+-testing method for robustness against weaknesses such as cata. forgetting
+-specifically for Q networks 
+
+dimensionality vs forgetfulness weakness 
+-discuss tradeoff
+LEO context 
+
+figure edit for outcomes 
+slight spiecifc tasks
+
+cone coverage with ISL switching -> multi regional converage -> etc. 
+-examine increase in compelxity and convergenc
+
+more visuals for motivation/context 
+RL in general setup/visual
+
+
+https://ieeexplore.ieee.org/abstract/document/9473585
+https://ieeexplore.ieee.org/abstract/document/9787338
+https://ieeexplore.ieee.org/abstract/document/10330597
+
+
+lab background @ experience (sats for ML training) 
+
+visual important 
+https://ieeexplore.ieee.org/abstract/document/10436088

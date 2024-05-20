@@ -1,0 +1,36 @@
+Presentation Editing To Do: 
+Reasoning for RL 
+-reactivity/adaptiveness (learning from events) 
+-allows easier distributed 
+-Can learn beyond human invented algorithms 
+-High dimensional state space/Complex analysis 
+
+Reasoning for distributed 
+-centralization makes expansion more difficult 
+-each agent has a limited environment view 
+-
+
+Reference previous approaches to rewards with papers in my lab :D 
+
+Lab background in distributed and RL learning 
+
+Visuals for RL reasoning/training/general setup 
+
+Additionally: note about convergence in mu lti RL training -> centralized training...decentralized execution....
+
+
+#1: reward: sum rate of cells with penalty from interference of one cell to adjacent cells 
+#2: reward: data rate of used codeword - # clipped elements 
+#3: reward: 	
+
+
+Should we have a reward that....
+
+
+
+(equations for measuring metrics)  
+
+
+https://purdue.ca1.qualtrics.com/jfe/form/SV_afNGjVTl7nV1sW2
+
+

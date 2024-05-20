@@ -917,16 +917,354 @@ might need to work on server stuff for actual analysis
 avg for chained simulation of 1000 packets sent at same time: 
 .0932 
 same as before obviously, because we havent handled collision events/waiting at queue :)
+-rmk: calculating actual acc. results for collision analysis might be hard. 
+
+next step: 
+expand event structure to incorporate waiting at queues. 
+how to do this? 
+-each satellite/base station has queue to process...
+-no. each satellite has preassigned array of times that each packet will be done processing by 
+-so, each 
 
 
+-at "arrive at constellation" or "arrive at next player", based upon the corresponding server's last time of serviced packet, add a 
+"ready for transmit" event on to the queue
+-so, this "ready for transmit" event will trigger creation of "arrive at next player" event 
+
+to implement this: 
+-make array for each player to store the "doneProcessing" array 
+-create new event type "readyForTransmit" which will spawn either of the two arriveAt events
+-change arrive event method to create ready for transmit instead of arriveAt events 
+-
 
 
+cases that packetFinishProcessing must handle: 
+1. start = end, or end of path 
+2. not at end currently 
+
+code state isnt great in that function.  hmmm....
+
+there are a couple fundamental flaws i need to iterate out. like this is wrong: 
+
+                timeOfOccurence = event.timeOfOccurence + self.currAdjMat[event.kargs["currentIndexInPath"],
+                                                                       event.kargs["currentIndexInPath"]+1]
 
 
-
-
-
+whats current problem?
+out of range when indexing across the path 
+might pull original state and just copy paste that in, and revise anything else necessary. heres the correct one: 
+                fromPlayer = event.kargs["pathToTake"][event.kargs["currentIndexInPath"]]
+                toPlayer = event.kargs["pathToTake"][event.kargs["currentIndexInPath"]+1]
+                timeOfOccurence = event.timeOfOccurence + self.currAdjMat[fromPlayer, toPlayer]
  
 
+
+Results for collision data: 
+Chained Simulation Time, 1,100,0, True 
+1.056597011932644
+
+1,100,0, False
+0.1613479675435029
+
+Much more for collision enabled data. 
+
+100,1,0,True
+0.277818265707779
+
+Slightly more, but still much less for packets sent out that are spread out across users 
+
+To do next: 
+graphic with snapshots of simulation state at different time points. Color coding to show server length at a specific point in time.
+implement location varying and update with frames for adjacency matrix  
+start examining RL algorithms and how they would apply to this :) 
+so happy with the progress working now. 
+
+Notes for the meeting: 
+uniform across sphere
+uniform across satellites vs points on globe
+very pretty functionality working 
+show to do next
+
+look into parallelizing discrete event simulation 
+possibly look into single satellite going over 
+
+remote work...? lol
+model based vs model free approaches 
+SDN orchestration....
+-software defined networking 
+geographical hotspots optzimiaton over varying concentration of traffic....how do you reconfigure network etc.
+
+to implement:
+location varying
+packet error tag -> behavior -> bad dont do this 
+restriction on topology creation based on SNR -> 3dB (margin hyperparameter) 
+centilation/flux variation for optical links 
+optical link budget 
+
+metrics: 
+throughput, delay, age of information (minimize this) 
+want high quality track on age of info.. (queing delays for too much info vs age of info) 
+-something to optimize over 
+-when its beneficial to have older age of info
+-wait to react to something until its older (context of previous info) 
+
+satellites especially susceptible to near/far....kinda ...
+
+grid of coverage -> 4 color reuse (no color touches itself, graph coloring) 
+notion of compatbilte transmitters 
+
+Rmk: might be able to use modified version of stable matching for the ISL formation/handshaking
+
+Paper notes from Dr. Wolf, for this paper
+https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=9838251
+
+Differences between theirs and ours: 
+-they dont examine the distributed case that we seek to do (ie, they know global topology for multi planning)
+	-or maybe they do...cause they examine multi agent RL 
+
+-seems like they dont have time varying training...they say they train "orbit by orbit" but im not exactly sure what that entails 
+	-they uh...have this "switching cost" so i do think they have time frame diff data...
+-uhh...we can vary the # of ISL connections instead of having 4 consistently 
+-they dont discuss approaches for combining models from sub problems, more just this stable matching approach
+to reconcile multiple individual user connections 
+-they use a "matching algorithm" to reconcile the decisions from multiple models
+	-we could use...hmm....
+-uh how do they form a matching graph...
+	-yea, not sure how that fits into the fact that they loop over the agents, and each agent seems to make its choice ind. of other agents
+-not sure why they chose deterministic instead of stochastic policy... 
+
+overall, im really struggling to find effective differences between what they do and what we are intending to do. 
+ 
+-how do they make decisions? 
+	-switching cost
+	-rate for a specific SNR between sats....nvm 
+
+what they lack in their decisions: 
+	-Quality of service for packets (latency, maybe above threshold SNR & (1/BER)) 
+	-usage of base stations 
+	-
+also, they dont train in different event cases (outages, specific user distributions) but instead opt for average throughput rather than packet
+to packet basis (so they are only training within "movement events")  
+
+i just started reviewing RL stuff recently, so hopefully more differences soon...
+
+essential differences between ours and theirs: 
+1. varying # of ISLs
+2. fundamental difference in approach, with capacity flow vs packet level transmits
+	-this also entails having ability to change user distribution across the earth 
+	-as well as other stuff (5), like overall integration of training into time sequencing 
+		-
+3. they dont examine comibining models/generalizing across satellites, instead opting for graph matching at each time step
+4. they use det. policy while we could use stochastic 
+5. nothing about age of information/transmit of server status to others (linked to 2) 
+6. Different RL approaches...need more RL experience to say more 
+7. they talk about using fairness vs maxing capacity in the intro, but in the utility of the graph, it doesnt seem to implement any notion of that 
+	-so we could use that our loss func. more...
+
+-is the non aggregated case the upper bound on the federated learning case? (like training on all little ones vs training one big one on all) 
+	-yes
+	-training one big model on all data is the upper bound on the split training with edge networks
+	-we could look at aggregating....
+-we would look at end to end type metrics is a bigger thing (QoS, etc.) 
+-we could look at the fairness...they are really just maxing SNRs etc. kind of weirdly 
+-could look into more of a stochastic approach 
+-how to enforce optimization consntraint....bidirectional
+	-have a penalty term for when you try to form a link with someone who doesnt want to form a link with you 
+	-in their case its directed 
+	-it could be directed in our case 
+	-its actually undirected in our case
+		-so how to model that? 
+		-need bidirectional anyways 
+
+Ground to satellite: 
+-RF instead of optical (optical bad with clouds and many users) 
+-so may need different model/interference 
+-with cell network -> have coverage cells
+-in sat case -> have phased array with coverage beams -> limitations on elevation angle/field of view connections 
+	-natr -> sub sat point. 
+		-sat has FoV (to lim of earth). not practical place to cover (low elevation, Ph arr angle) 
+		-"scan loss" with pointing to FoV 
+		-accessing from extreme angle -> bad, seeing skewed. beam patterns will lose gain/broaden out) 
+			-can draw hard limit with degrees of a certain param. 
+	-elevation limit on the terminals (elevation angle limit for each (ocean -> 10 degrees, land -> 25 degrees etc.) 
+	-angle off natr etc. 
+	-256 beams of certain beam width (each beam has some capacity) 
+	-multiple sats in view -> some users with one sat, others at other sat. 
+	-with one sat -> beams are using the same BW 
+	-"beam rolloff"
+	-may have computational constarint for how many beams con be connected at the same time 
+-may need to coordinate with others to provide coverage 
+-beam width varies
+	-higher freq -> can focus beam better (better for power control/distribution) 
+		-then better antenna gain....
+		-larger antenna -> better gain..., but smaller coverage cell 
+		-better reuse (can switch within between connected directions...) 
+
+Problem formulation (with federated learning): 
+-20 min presentation...30 min Q and A (possible back up material needed) 
+-be clear with how fed. learning comes into this. 
+-1 year cant do much :D 
+
+this should partly be in the advisor notes section :) 
+
+What are we doing now? Formulating some of the approaches: 
+-Class structure 
+-Event structure 
+-Possible reward function formula including: 
+	-Multi stage reward shaping 
+	-Heuristics 
+-Defining in context of data structures (graphs, heaps...?) 
+-DQN qualities/functions 
+	-update for actor/critics 
+
+R = \sum_{n=1}^{N} \left( \frac{1}{T_{\text{pp}_n}} \right) - \beta \cdot \text{# edge switches} + - \zeta \cdot \text{# packets dropped} + \alpha \cdot \frac{\text{Max}(T_{\text{pp window}})}{\text{Min}(T_{\text{pp window}})} 
+
+
+somehow visualize the two different networks, with training/update loop 
+-be very clear about implementation and details 
+need some graphics that are like the ones in the papers 
+
+to do: 
+1. look at email from MIT people for meeting and paperwork -> done 
+2. revise slides for presentation -> done 
+3. watch ECE679 lectures 
+3. ECE679 Homework 
+4. complete results for ECE679
+5. write paper
+
+
+Will do these over the next 4 weeks. 
+
+today: 
+3 hours work 
+starting 6PM 
+
+Thoughts for working on research presentation: 
+done
+
+linear algebra thoughts:
+inverse = transpose for orthogonal matrix because transpose means swapping rows and cols, which effectively inverts
+the transformation for orthogonal matrix
+	-its like changing your reference point/perspective in orientation 
+
+composition of linear transforms = multiply 
+decomposition = difficult, depends on motivation 
+
+symmetric along diagonal -> EVecs are orthogonal
+-means transforms are symmetric across 45 degree in 2D -p--- eh maybe
+orthogonal EVecs means there is always an inverse
+
+so every matrix can be thought of as a transform. SVD allows you to represent it as rotation, scale, rotation 
+
+
+Thought process: 
+
+Specific Tasks: 
+Simulation Structure Construction
+
+Non ML Dynamic Routing for packets and topology changes:
+ 
+
+
+Questions: 
+is there an analogous algorithm from OSPF for instead changes in topology over time? 
+i guess, what results in a change in topology? 
+	-each server periodically updates adjacent servers with routing table/graph information
+	-based on some threshold distance, works to change topology 
+
+
+Dynamic Source Routing: 
+-soure routing: original sender decides path
+-adaptively allows connections to form .... (on demand) 
+
+
+partly distributed/centralized
+try fully centralized/fully distributed 
+-mention splits the difference (allowing other models existence) 
+
+federated learning vs centralized RL -> updates submodels...
+will compare fully each 
+
+test methods with static toplogy (ex. 4 nearest neighbors) 
+
+
+visualization on state/rewards
+(state info/action/location
+
+show equations in context of images/where theyre performing/operating
+
+thought: if i have a model where agents communicate with each other but train 
+
+need to examine basic case with graph model changing topology over time
+
+
+started work at 6:30. Break at 7:20 
+
+federated learning seems to be the same as centralized learning, but here "Centralized learning" includes the component where agents interact with each other 
+
+
+Hello :) 
+Starting session at 3:45 
+break at 4:35
+
+Just need two more sessions :D 
+
+Thought: 
+within QMix: 
+the mixing network takes in the values output of all other value networks and outputs a net value. 
+it uses the bellman equation, with instead of Q', we have the Q' net, so its the output of the mixing network when the input is the set of next values for each individual Q network...
+
+Thought: apply QMix but in a distributed manner. Just do QMix but only with respect to neighbors, and only utilize the gradient thats for your own network. Would be nice, as neighbor's choices are probably the most important anyways.
+
+ 
+Notes for presentation: 
+-talking about why we need this learning based solution
+-packet choices are more important with higher latency
+-be more precise with graphics -> like communicating back to the earth when training 
+-illustrating each satellite is one agent, and work with transmitting data back to ground, where the mixing network 
+
+-visualizing execution vs training where data lives and flows 
+-need to be more formal with graphics created 
+-
+
+experience creation slide is fine -> but show whats the agent in this case / (location on ground vs air) 
+
+example proof of concept slide is fine 
+
+the ones to make for scratch are ones for our algorithm 
+
+show difference in setup for central training vs 
+more detailed labeling for images 
+
+
+Better visualization for training vs execution 
+
+Hidden Markov models maybe for graphics for RL Context state ....
+
+
+Changed slides: 9, 10, 11, 15, 16 
+He has graphics for beam coverage changing. 
+Prefer not to do more work without his update so we dont overlap. Is that reasonable? 
+
+
+Problem with taxes: 
+
+Creation of Problem:
+I filed in Ohio mistakenly because thats where my parents lived. I actually lived in Indiana, as I went to grad school. I guess it might also be important to note that I lived in Virginia until August when I moved to Indiana for grad school. 
+
+Attempt: 
+Tried to refile, but within H & R block, it doesn't allow removal of states within refiling/creating addendum. 
+
+Possible next step: 
+I could file with a different agency and just remove Ohio, but Im worried about what happens if I file with two different agencies at different times, with different properties of the filing. Plus, I think I still need to somehow resolve the thing with Ohio. 
+
+Estimated cost if I dont fix this: 
+~$1600
+
+
+
+Alright, gotta go to grocery and cook fod
+
+hello. starting 6:13. i dont really care when we end. 
 
 
