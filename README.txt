@@ -51,3 +51,11 @@ view/GraphicsView: contains plotting functionality
 model/Manager: contains computational components 
 controller/Simulator: contains simulation processes, functioning as the 
 interface between model/manager and the view/GraphicsView
+
+General code structure: 
+main: has necessary config and runs general execution requests 
+Manager: has functions for initialization and runtime updates of topology, including satellites and base stations. This includes simulation execution types. Also contains all the useful actual objects 
+Player: interface/general implementations for stuff like base stations and satellites. also has necessary data structures, like PQueue that are used within player implementations
+Simulator: contains execution protocols. Currently has overlap with Manager. (not great) Assumes already initialized framework, then operates on that framework for simulations 
+event: will contain all types of events that could occur in the environment 
+
