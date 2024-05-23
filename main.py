@@ -52,10 +52,10 @@ simmer = Simulator.Simulator(managerData)
 #connect satellites 
 simmer.manager.connectSpiralTopologySimple(ISL2Done=True) 
 
-simmer.multiPlot() 
-pdb.set_trace() 
+#simmer.multiPlot() 
+
 #connect base stations to satellites in view 
-simmer.manager.connectBaseStationsToSatellites() 
+#simmer.manager.connectBaseStationsToSatellites() 
 #simmer.manager.updateTopology("Retain", "InView")
 
 #avLength, avgTime, _ = simmer.simulateTransmits(100)
@@ -64,16 +64,16 @@ simmer.manager.connectBaseStationsToSatellites()
 #pdb.set_trace() 
 
 #lemmeManage.connect2ISL()
-#simmer.manager.updateTopology("Closest", "InView")
+simmer.manager.updateTopology("Closest", "None")#could be InView not None
 #simmer.multiPlot() 
 #exit() ''[] 
 
-hold = simmer.manager.executeChainSimulationWithCollisions(100,1,0,True)
-print("Chained Simulation Time")
-print(np.average(hold))
-pdb.set_trace() 
-exit() 
-#simmer.timeFrameSequencing(15, 10, 20)
+#hold = simmer.manager.executeChainSimulationWithCollisions(100,1,0,True)
+#print("Chained Simulation Time")
+#print(np.average(hold))
+#pdb.set_trace() 
+#exit() 
+simmer.timeFrameSequencing(15, 10, 20)
 
 #now, examining those in view 
 #view = simmer.getSatsAndPlanesInViewOfBaseStation()

@@ -204,7 +204,6 @@ class Player:
             #you dont really interfere with this all that often   
             return False 
 
-        #create connection, currently one way  
         self.connectedToPlayers.add(playerToConnectTo)# = self.connectedToPlayers + [playerToConnectTo]
         #playerToConnectTo.connectedToPlayers.add(self)
 

@@ -555,6 +555,13 @@ class Manager():
         return 
 
     def find_closest_sats(self, m):
+        """
+        Function to get the closest m satellites to all other satellites 
+
+        input: # of satellites we want
+        output: the m closest satellites to a satellite, repeated for all satellites 
+        
+        """
         result = {}
         raveledSats = np.ravel(self.sats)
 
@@ -609,14 +616,13 @@ class Manager():
         closest = self.find_closest_sats(maxISLNum)
         #then, for each, clear out current connections and connect to that many
         
-        #if(len(closest.keys) != len(self.sats)): 
-        #    raise Exception("closest computation over != # sats ")
         #for each satKey in our array 
         for satKey in closest.keys():
             #reset the connections 
-            satKey.resetConnecions()
-            #and then connect to the closest "maxISLNum" satellites  
-            satKey.connectedToPlayers = closest[satKey] 
+            satKey.resetConnections()
+            #and then connect to the closest "maxISLNum" satellites 
+            #convert to set as thats what connectedToPlayers works with 
+            satKey.connectedToPlayers = set(closest[satKey]) 
 
     def updateConstellationPosition(self, timeDiff): 
         """
