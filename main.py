@@ -44,18 +44,40 @@ managerData = {
     "earthRadius": configData['earthRadius']
 }
 
-#connect a certain topology 
-#lemmeManage.connectSpiralTopologySimple() 
-
 #get simulator 
 simmer = Simulator.Simulator(managerData)
-#connect satellites 
-simmer.manager.connectSpiralTopologySimple(ISL2Done=True) 
 
-#simmer.multiPlot() 
+#connect satellites 
+simmer.manager.connectSpiralTopologySimple(ISL2Done=False) 
 
 #connect base stations to satellites in view 
-#simmer.manager.connectBaseStationsToSatellites() 
+simmer.manager.connectBaseStationsToSatellites() 
+
+#optionally plot the configuration for debugging 
+#simmer.multiPlot() 
+
+#simmer.manager.updateTopology("Closest", "None")
+#simmer.timeFrameSequencing(15, 10, 20)
+
+#so then, test the generalSimulationMethod
+hold = simmer.executeGeneralSimulation()
+
+#debug to examine validity
+print(hold)
+pdb.set_trace() 
+
+
+
+
+
+
+
+
+
+
+
+
+
 #simmer.manager.updateTopology("Retain", "InView")
 
 #avLength, avgTime, _ = simmer.simulateTransmits(100)
@@ -85,6 +107,9 @@ simmer.timeFrameSequencing(15, 10, 20)
 #adjMat = lemmeManage.generateAdjacencyMatrix() 
 
 
+
+#should probably be in the plots stuff...
+#apparently utils = personal math stuff...
 def plotUsageAnalysis():
 
     with open('pseudoCapacity.npy', 'rb') as f:

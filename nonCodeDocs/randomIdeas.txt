@@ -1,0 +1,3 @@
+Have modified adjacency matrix that has value for each node, representing additional distance to all other nodes in which that node is connected to. (So like for processing time/q-ing delay at a satellite)
+^ nah, just have an additional "wait time" for each, and create additional parameter within dijkstraWithPath for the server waits :D 
+

@@ -6,6 +6,29 @@
 #event types with others: 
 #update topology, update satellite position, ...
 
+"""
+Current Event Types: 
+
+Packet Specific: 
+Packet Sent
+Packet Arrive at Constellation
+Packet Arrive at Next Player
+Packet Arrive At Destination
+Packet Finish Processing 
+
+Constellation Specific: 
+Update adjacency matrix for process times
+Update adjacency matrix for changing distance 
+Update adjacency matrix for topology 
+
+Environment: 
+Weather 
+Attack 
+
+Currently I only have the packet specific events implemented. 
+
+"""
+
 class Event: 
     """
     This class represents all possible occurences, which can spawn other events

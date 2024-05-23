@@ -74,6 +74,52 @@ class Manager():
         #set up storage for adjacency matrix 
         self.currAdjMat =  np.tile(np.Infinity, [self.numLEOs + len(self.baseStations), self.numLEOs + len(self.baseStations)])
 
+        #set up storage for anticipated waiting times at each location 
+        self.waitTimes = np.zeros(self.numLEOs + len(self.baseStations))
+
+    def updatePathData(self,
+                        oldTime, 
+                        newTime): 
+        """
+        Update our adjacency matrix for satellites based on the new reference time. Assumes that the simulation starts at time 0. 
+
+        Inputs: 
+        oldTime: time of the last update 
+        newTime: current time/what we are "updating to" 
+
+        Outputs:
+        Effect: 
+        properly updated state and adj matrix 
+        """
+
+        #update the constellation position
+        self.updateConstellationPosition(newTime - oldTime)
+        #after that, update the adjacency matrix
+        self.currAdjMat = self.generateAdjacencyMatrix()
+        #update the waiting times for each of the servers
+        self.updateWaitTimes()
+
+
+    def updateWaitTimes(self): 
+        """
+        This just maps the stored "anticipated" emptying out of queue of each player to the waitTimes here 
+
+        Inputs: None
+        Outputs: None
+        Effect: updates the "anticipated times" 
+        """
+
+        #so for each satellite, update the finish time 
+        #indexing through all players, so ravel the satellites...
+        for satInd, checkSat in enumerate(np.ravel(self.sats)):
+            self.waitTimes[satInd] = checkSat.finishProcessingTime
+        
+        #then, do the same thing with base stations 
+        for baseStationInd, baseStation in enumerate(self.baseStations): 
+            self.waitTimes[satInd + baseStationInd] = baseStation.finishProcessingTime 
+
+
+
     def createPacketSet(self,
                         numPeople,
                         numPacketsPerPerson,
@@ -830,8 +876,6 @@ class Manager():
         as well as the actual connected satellites (with ISLs) 
         Please note, this assumes each one has a line of path sight to each connected satellite. 
 
-        TO DO: set diagonal = 0 
-        
         Output: adjacency matrix where dist = prop delay 
         -note: should have 0s on diagonal, and should be symmetric about the diagonal 
         """
@@ -855,9 +899,10 @@ class Manager():
             for playerTo in playerFrom.connectedToPlayers:
                 #only use the connections if its valid  
                 adjMat[playerFrom.index, playerTo.index] = self.propDelayBetween(playerFrom, playerTo)
-            
-            #for baseStationTo in playerFrom.connectedBaseStations: 
-            #    adjMat[playerFrom.index, baseStationTo.index] = self.propDelayBetween(playerFrom, baseStationTo)
+        
+        #set diagonal to 0
+        for playerInd in range(len(adjMat)): 
+            adjMat[playerInd, playerInd] = 0
 
         self.currAdjMat = adjMat
 
