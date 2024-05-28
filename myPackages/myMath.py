@@ -654,6 +654,17 @@ def dijkstra(adj_matrix, start, end):
 
     return distances[end]
 
+
+def dijkstraWithNodeValuesAndPath(adj_matrix, nodeValues, start, end):
+    
+    #modify adjacency matrix by adding to row and column, but taking out the overlap 
+    for ind, value in enumerate(nodeValues): 
+        adj_matrix[ind] +=value
+        adj_matrix[:,ind] +=value
+        adj_matrix[ind,ind] -=value
+
+    return dijkstraWithPath(adj_matrix, start, end)
+
 def dijkstraWithPath(adj_matrix, start, end):
     num_nodes = len(adj_matrix)
     visited = [False] * num_nodes

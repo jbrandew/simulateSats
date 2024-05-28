@@ -8,6 +8,9 @@ from matplotlib.animation import FuncAnimation
 import heapq
 from myClasses.Player import * 
 from myClasses.Manager import * 
+import time
+
+import threading
 
 class Simulator(): 
     """
@@ -37,6 +40,85 @@ class Simulator():
     #                            numPacketsPerPerson,
     #                            simulationTime)
 
+    def visualizeSimulation(self, 
+                           kargs):
+        """
+        Wrapper for visualizing simulation in real time. 
+
+        Inputs:
+        kargs: refer to executeGeneralSimulation
+
+        Outputs:
+        times and visualized processing 
+        """
+
+        #create lock for multithreading 
+        lock = threading.Lock()
+
+        #then, append the lock information for executing the simulation 
+        kargs["visualizerOn"] = lock
+
+        #create threads for processing processing
+        simulationThread = threading.Thread(target=self.executeGeneralSimulation, kwargs = kargs)
+
+        # Start computation thread
+        simulationThread.start()
+    
+        #have main thread be the visualization
+        #self.showVisualization(lock)
+
+
+    def plotCurrentState(self,
+                         plotQueueSizes = False,
+                         accessLock = None): 
+        """
+        Getting statistics to pass on to view function for graphing. 
+        This has some computations, so it belongs in simulator, and not in myPlots
+
+        
+
+        Inputs: multithreading lock, as the main thread needs to access data that the computation thread may change. 
+        Outputs: None
+        Effect: information passed to view 
+        """
+
+        #get basic stats about environment
+        satelliteLocations = self.manager.getSatLocations()
+        baseStationLocations = self.manager.getBaseStationLocations()
+        links, numLinks = self.manager.getXYZofLinks(6) 
+        pointSizes = []
+
+        #get the queue sizes 
+        if(plotQueueSizes):
+            #so, then compute the relative size of each queue
+            queueFinishTimes = self.manager.queueFinishTimes
+            relativeFinish = queueFinishTimes - self.currentTime
+
+            #then, get the normalized factor 
+            pointSizes = (relativeFinish - min(relativeFinish)) / (max(relativeFinish) - min(relativeFinish))
+
+        self.view.multiplot(0,
+                            satelliteLocations,
+                            baseStationLocations,
+                            links,
+                            numLinks,
+                            pointSizes)
+        
+
+    def showVisualization(self,
+                          accessLock): 
+        """
+        Just visualiving current state using FuncAnimation
+        """
+        hold = FuncAnimation(self.view.fig, 
+                             self.updateGraphicsMore, 
+                             frames=100, 
+                             interval=0.1)       
+        plt.show() 
+
+        return 
+
+
 
     def executeGeneralSimulation(self,
                                  initialTopology = "IPO",
@@ -51,7 +133,8 @@ class Simulator():
                                  weatherEnabled = "False", 
                                  adjMatrixUpdateInterval = -100, 
                                  outageFrequency = None, 
-
+                                 
+                                 visualizerOn = None
                                  ): 
         
         """
@@ -70,6 +153,12 @@ class Simulator():
         weatherEnabled: do i have stuff like....uh idk i need to implement this later. Might include like rainstorms or higher radiation from the sun 
         adjMatrixUpdateInterval: how often we update the postition of satellites in the constellation. Mostly used as you would think. 
         outageFrequency: how often we have satellites that break.     
+
+        visualizerOn: if we want to visualize the state of the satellites queues and the links, then we get a lock for resources 
+
+        Outputs: 
+        deliveryTimes: how long it took to send each packet that we initially created. 
+
         """
         
         #this is the initialization section 
@@ -118,15 +207,20 @@ class Simulator():
 
         #first, create the reference time for when to update environment parameters 
         updateReferenceTime = 0 
-
+        
         #while we arent empty in the eventQueue
         while not eventQueue.is_empty(): 
 
             #get the next event 
             event = eventQueue.pop()
 
+            #coordinate current time
+            self.currentTime = event.timeOfOccurence
+
             #if our time is outside this interval, then update correspondingly 
             if(event.timeOfOccurence > updateReferenceTime + adjMatrixUpdateInterval): 
+                #this updates at least as often as necessary
+                #this is because it updates when the time constraint is violated, and then updates to the timing that created the violation
                 self.manager.updatePathData(updateReferenceTime, event.timeOfOccurence)
                 updateReferenceTime = event.timeOfOccurence 
 
@@ -141,13 +235,24 @@ class Simulator():
                  
                 closestSatIndToEnd, _ = myMath.closest_point(satLocs,
                                                           event.kargs["endLocation"])
-                #then, get the path: 
-                #use adjacency matrix to get the path for each 
-                pathToTake , _ = myMath.dijkstraWithPath(self.manager.currAdjMat, 
-                                                     closestSatIndToStart,
-                                                     closestSatIndToEnd)
                 
+                #then, get the waitTimes for each using our currentTime 
+                #TODO: you really dont need to compute this every time, could approximate somehow 
+                waitTimes = np.maximum(self.manager.queueFinishTimes - self.currentTime, 0)
+
+                #use adjacency matrix to get the path for each 
+                pathToTake , _ = myMath.dijkstraWithNodeValuesAndPath(self.manager.currAdjMat, 
+                                                                      waitTimes,
+                                                                      closestSatIndToStart,
+                                                                      closestSatIndToEnd)
+
+                # pathToTake , _ = myMath.dijkstraWithPath(self.manager.currAdjMat, 
+                #                                          closestSatIndToStart,
+                #                                          closestSatIndToEnd)
+                               
+
                 if len(pathToTake) == 1 and closestSatIndToStart!=closestSatIndToEnd:
+                    pdb.set_trace()
                     raise Exception("couldnt find path between start and end node")
 
                 #create event for arriving at next player. (so arriving at constellation)
@@ -179,7 +284,6 @@ class Simulator():
                 #get the finish processing time 
                 endProcessTime = satelliteWeAreAt.generateProcessingOneMorePacketTime(event.timeOfOccurence, queingDelaysEnabled) 
 
-                #pdb.set_trace()
                 #then, create the time of occurence based on this process time
                 timeOfOccurence = endProcessTime 
 
@@ -283,8 +387,8 @@ class Simulator():
         self.manager.updateConstellationPosition(satTimePerFrame) 
         #update the connections for each satellite 
         self.manager.updateTopology(satPolicy, baseStationPolicy)
-        #update the graphics 
-        self.view.update_graphics() 
+        #plot current state 
+        self.plotCurrentState() 
 
 
     def timeFrameSequencing(self, timeRatio, FPS, animationDuration): 
@@ -314,6 +418,7 @@ class Simulator():
         #this "func animation" works with both updating positions and plotting 
         #each frame  
 
+        #so, we pass in: the figure to use for updating, the function to call each frame/time, # frames / updates, time per frame, and the args within the function
         hold = FuncAnimation(self.view.fig, 
                       self.update, 
                       frames=numFrames, 
@@ -323,17 +428,6 @@ class Simulator():
         plt.show() 
 
         return 
-
-    def multiPlot(self): 
-        """
-        Just plot current satellites, base stations, and ISLs
-
-        Input: none
-        Output: plot posted to GUI 
-        
-        """
-        self.view.multiplot() 
-
 
     def getSatsAndPlanesInViewOfBaseStation(self):
         """
@@ -470,8 +564,7 @@ class Simulator():
                         break 
 
         #compute the avg rate of failure 
-        #uhhh...this should work. it makes sense.
-        #pdb.set_trace()  
+        #uhhh...this should work. it makes sense. 
         avgRateOfFailure = totalPathsFailed/(numPathsEvaluated*numGroupsOfSatFailures)
         return avgRateOfFailure
 
@@ -867,7 +960,6 @@ class Simulator():
                 #get the finish processing time 
                 endProcessTime = satelliteWeAreAt.generateProcessingOneMorePacketTime(event.timeOfOccurence, packetCollisionEnabled) 
 
-                #pdb.set_trace()
                 #then, create the time of occurence based on this process time
                 timeOfOccurence = endProcessTime 
 
@@ -917,5 +1009,5 @@ class Simulator():
 
 
         #then, finally just return the difference between the two. 
-        #pdb.set_trace() 
+ 
         return packetArriveTimes - packetSendTimes

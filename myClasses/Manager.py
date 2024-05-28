@@ -75,7 +75,7 @@ class Manager():
         self.currAdjMat =  np.tile(np.Infinity, [self.numLEOs + len(self.baseStations), self.numLEOs + len(self.baseStations)])
 
         #set up storage for anticipated waiting times at each location 
-        self.waitTimes = np.zeros(self.numLEOs + len(self.baseStations))
+        self.queueFinishTimes = np.zeros(self.numLEOs + len(self.baseStations))
 
     def updatePathData(self,
                         oldTime, 
@@ -97,10 +97,10 @@ class Manager():
         #after that, update the adjacency matrix
         self.currAdjMat = self.generateAdjacencyMatrix()
         #update the waiting times for each of the servers
-        self.updateWaitTimes()
+        self.updateQueueFinishTimes()
 
 
-    def updateWaitTimes(self): 
+    def updateQueueFinishTimes(self): 
         """
         This just maps the stored "anticipated" emptying out of queue of each player to the waitTimes here 
 
@@ -112,11 +112,11 @@ class Manager():
         #so for each satellite, update the finish time 
         #indexing through all players, so ravel the satellites...
         for satInd, checkSat in enumerate(np.ravel(self.sats)):
-            self.waitTimes[satInd] = checkSat.finishProcessingTime
+            self.queueFinishTimes[satInd] = checkSat.finishProcessingTime
         
         #then, do the same thing with base stations 
         for baseStationInd, baseStation in enumerate(self.baseStations): 
-            self.waitTimes[satInd + baseStationInd] = baseStation.finishProcessingTime 
+            self.queueFinishTimes[satInd + baseStationInd] = baseStation.finishProcessingTime 
 
 
 
@@ -173,9 +173,10 @@ class Manager():
                 #then, get the closest satellite to the end 
                 closestSatIndToEnd = myMath.closest_point(satLocs, endLocations[overallPacketInd])
                 #then, use adjacency matrix to get the path for each 
-                pathToTake = myMath.dijkstraWithPath(self.currAdjMat, 
-                                                     closestSatIndToStart,
-                                                     closestSatIndToEnd)
+                pathToTake = myMath.dijkstraWithNodeValuesAndPath(self.currAdjMat,
+                                                                  self.queueFinishTimes, 
+                                                                  closestSatIndToStart,
+                                                                  closestSatIndToEnd)
 
                 #create dict for packet parameters 
                 packetParams = {'startLocation' : startLocations[overallPacketInd],

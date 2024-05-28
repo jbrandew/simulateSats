@@ -24,7 +24,7 @@ def plot3d(pointsToPlot):
     ax.plot(pointsToPlot[0,:], pointsToPlot[1,:], pointsToPlot[2,:] )
     plt.show()
         
-def plotWalkerStar(allPlanes, ax = []): 
+def plotWalkerStar(allPlanes, ax = [], pointSizes = []): 
     """
     This function works with just plotting all the points in a walker star constellation.
     Inputs are planes with points in the xyz space 
@@ -41,14 +41,15 @@ def plotWalkerStar(allPlanes, ax = []):
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
 
-    #start plotting the points in the planes 
-    for planeInd in range(np.shape(allPlanes)[0]): 
-        #get the set of points for one plane 
-        onePlanePointSet = allPlanes[planeInd]
-        #plot the set of points  
-        ax.scatter(onePlanePointSet[:,0], onePlanePointSet[:,1], onePlanePointSet[:,2], c = "black", s = 10, zorder = 2)
+    #reshape points across planes
+    points = np.reshape(allPlanes, [360,3])
 
-    # #show the plot 
+    #then scatter based on how many sizes we have 
+    if(len(pointSizes) == 0): 
+        ax.scatter(points[:,0], points[:,1], points[:,2], c = "black", s = 10, zorder = 2)
+    else: 
+        ax.scatter(points[:,0], points[:,1], points[:,2], c = "black", s = pointSizes, zorder = 2)
+
     #plt.show()
 
 def plot_sphere(radius=1, ax = []):
@@ -115,78 +116,73 @@ def plot_line_segments(pair_of_points_list,
 
         # Plot the line segment for each pair
         ax.plot([x1, x2], [y1, y2], [z1, z2], marker='o', c = "black", markersize = 0)
-
-
-#trying for pipeline of sphere, walker star, base stations 
-def multiPlot(radius, 
-              satPoints, 
-              baseStationPoints, 
-              links,
-              numLinks,  
-              axisLimit = 8000, 
-              fig = [], 
-              ax = [], 
-              showFigure = False): 
-    """
-    Function to plot all players and links. Plotting with the globe doesnt work very well, 
-    as it tends to absorb links/players graphically...so for now just make the radius very small 
-
-    Inputs: 
-    radius: radius of the globe 
-    satPoints: xyz of all satellites 
-    baseStationPoints: xyz of all base stations 
-    links: connections to plot using line segments 
-    showFigure: do we output the figure at the end? 
-    numLinks: how many links we use 
-    """
-    #get figure and axes to use for all this 
-    if(fig==[]): 
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-    
-    # Set axis limits
-    ax.set_xlim([-axisLimit, axisLimit])  # Adjust the limits for the X-axis
-    ax.set_ylim([-axisLimit, axisLimit])  # Adjust the limits for the Y-axis
-    ax.set_zlim([-axisLimit, axisLimit])  # Adjust the limits for the Z-axis
-
-    #plot satellites   
-    plotWalkerStar(satPoints, ax)
-
-    #plot base stations 
-    plotPoints(baseStationPoints, ax)
-
-    #plot sphere 
-    plot_sphere(radius, ax)
-    
-    #plot links 
-    #pdb.set_trace() 
-    plot_line_segments(links, min(len(links),numLinks), ax)
-
-    if(showFigure):
-        plt.show() 
      
 
 class GraphicsView:
+    #really shouldnt have access to manager
     def __init__(self, manager, fig, ax):
         self.manager = manager
         self.fig = fig 
         self.ax = ax 
-
-    def update_graphics(self):
-        self.ax.cla() 
-        links, numLinks = self.manager.getXYZofLinks(6) 
-        multiPlot(0, 
-                  self.manager.getSatLocations(), 
-                  self.manager.getBaseStationLocations(), 
+        
+    #trying for pipeline of sphere, walker star, base stations 
+    def multiplot(self, 
+                  radius, 
+                  satPoints, 
+                  baseStationPoints, 
                   links,
                   numLinks,  
-                  axisLimit = 8000, 
-                  fig = self.fig, 
-                  ax = self.ax)
+                  pointSizes = [],
+                  axisLimit = 8000,
+                  showFigure = True,
+                  ): 
+        """
+        Function to plot all players and links. Plotting with the globe doesnt work very well, 
+        as it tends to absorb links/players graphically...so for now just make the radius very small 
+
+        Inputs: 
+        radius: radius of the globe 
+        satPoints: xyz of all satellites 
+        baseStationPoints: xyz of all base stations 
+        links: connections to plot using line segments 
+        numLinks: how many links we use 
+        pointSizes: how large each point should be 
+        showFigure: do we output the figure at the end? 
+
+        """
+
+        #first, clear axes
+        self.ax.cla()
+
+        #get figure and axes to use for all this 
+        if(self.fig==[]): 
+           self.fig = plt.figure()
+           self.ax = self.fig.add_subplot(111, projection='3d')
         
-    def multiplot(self): 
-        self.update_graphics()
-        plt.show() 
+        # Set axis limits
+        self.ax.set_xlim([-axisLimit, axisLimit])  # Adjust the limits for the X-axis
+        self.ax.set_ylim([-axisLimit, axisLimit])  # Adjust the limits for the Y-axis
+        self.ax.set_zlim([-axisLimit, axisLimit])  # Adjust the limits for the Z-axis
+
+        #plot satellites   
+        plotWalkerStar(satPoints, self.ax, pointSizes)
+
+        #plot base stations 
+        plotPoints(baseStationPoints, self.ax)
+
+        #plot sphere 
+        plot_sphere(radius, self.ax)
+        
+        #plot links 
+        #pdb.set_trace() 
+        plot_line_segments(links, min(len(links),numLinks), self.ax)
+
+        if(showFigure):
+            plt.show() 
+
+    # def multiplot(self): 
+    #    self.update_graphics()
+    #    plt.show() 
 
 
 

@@ -51,20 +51,40 @@ simmer = Simulator.Simulator(managerData)
 simmer.manager.connectSpiralTopologySimple(ISL2Done=False) 
 
 #connect base stations to satellites in view 
-simmer.manager.connectBaseStationsToSatellites() 
+#simmer.manager.connectBaseStationsToSatellites() 
 
 #optionally plot the configuration for debugging 
-#simmer.multiPlot() 
+#simmer.plotCurrentState() 
 
 #simmer.manager.updateTopology("Closest", "None")
-#simmer.timeFrameSequencing(15, 10, 20)
+simmer.timeFrameSequencing(15, 10, 20)
+
+#pdb.set_trace() 
 
 #so then, test the generalSimulationMethod
-hold = simmer.executeGeneralSimulation()
+#hold = simmer.executeGeneralSimulation()
+
+kargs = {"initialTopology": "IPO",
+"routingPolicy": None,
+"topologyPolicy": None,
+
+"numPeople": 100,
+"numPacketsPerPerson": 1,
+"simulationTime": 0.0001,
+
+"queingDelaysEnabled": "False",
+"weatherEnabled": "False",
+"adjMatrixUpdateInterval": -100,
+"outageFrequency": None,
+
+"visualizerOn": None
+}
+
+#hold = simmer.visualizeSimulation(kargs)
+
 
 #debug to examine validity
-print(hold)
-pdb.set_trace() 
+#print(hold)
 
 
 
