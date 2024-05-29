@@ -64,24 +64,29 @@ simmer.manager.connectSpiralTopologySimple(ISL2Done=False)
 #so then, test the generalSimulationMethod
 #hold = simmer.executeGeneralSimulation()
 
-kargs = {"initialTopology": "IPO",
+simulationArgs = {"initialTopology": "IPO",
 "routingPolicy": None,
 "topologyPolicy": None,
 
-"numPeople": 100,
+"numPeople": 1,
 "numPacketsPerPerson": 1,
-"simulationTime": 0.0001,
+"packetSendTimeFrame": 1,
 
 "queingDelaysEnabled": "False",
 "weatherEnabled": "False",
 "adjMatrixUpdateInterval": -100,
-"outageFrequency": None,
-
-"visualizerOn": None
+"outageFrequency": None
 }
 
-hold = simmer.visualizeSimulation(kargs)
+visualizerArgs = {
+"visualizerOn": True,
+"visualizeTime": 10,
+"FPS":2
+}
 
+hold = simmer.simulateWithVisualizer(simulationArgs, visualizerArgs)
+
+quit()
 
 #debug to examine validity
 #print(hold)
@@ -106,7 +111,7 @@ hold = simmer.visualizeSimulation(kargs)
 #pdb.set_trace() 
 
 #lemmeManage.connect2ISL()
-simmer.manager.updateTopology("Closest", "None")#could be InView not None
+#simmer.manager.updateTopology("Closest", "None")#could be InView not None
 #simmer.multiPlot() 
 #exit() ''[] 
 
@@ -115,7 +120,7 @@ simmer.manager.updateTopology("Closest", "None")#could be InView not None
 #print(np.average(hold))
 #pdb.set_trace() 
 #exit() 
-simmer.timeFrameSequencing(15, 10, 20)
+#simmer.timeFrameSequencing(15, 10, 20)
 
 #now, examining those in view 
 #view = simmer.getSatsAndPlanesInViewOfBaseStation()

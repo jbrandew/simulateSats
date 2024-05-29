@@ -1,16 +1,21 @@
-import math 
+#custom classes import 
 import myClasses.myPlots as myPlots
 import myPackages.myMath as myMath 
+from myClasses.Player import * 
+from myClasses.Manager import *
+
+#processing classes 
+import math 
 import numpy as np 
+import heapq
+import time
+import copy 
+
+#plotting classes 
 import pdb 
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-import heapq
-from myClasses.Player import * 
-from myClasses.Manager import * 
-import time
 
-import threading
 
 class Simulator(): 
     """
@@ -31,94 +36,136 @@ class Simulator():
         ax = fig.add_subplot(111, projection='3d') 
         self.view = myPlots.GraphicsView(self.manager, fig, ax)
 
-    # def executeChainSimulation(self,
-    #                            numPeople,
-    #                            numPacketsPerPerson,
-    #                            simulationTime):
+    class SimulationSnapshot(): 
+        """
+        This class just gives a snapshot of the environment we are in.
+        Used for visualization purposes later on. 
+        Probably will be used for RL training down the line as well. 
+        """
+
+        def __init__(self, manager, view, currentTime):
+            #first store the manager and the view 
+            self.manager = manager
+            self.view = view 
+            self.currentTime = currentTime
+            #then, store the actual data 
+            self.snapshot()  
+            return 
         
-    #     self.manager.executeChainSimulation(numPeople,
-    #                            numPacketsPerPerson,
-    #                            simulationTime)
+        def snapshot(self): 
+            """
+            Just take a snapshot of the manager state. 
+            So, any info taken here will be used for visualization purposes
 
-    def visualizeSimulation(self, 
-                           kargs):
+            Do slight amount of processing so we can visualize queue lengths  
+
+            """
+
+            self.satelliteLocations = copy.deepcopy(self.manager.getSatLocations())
+            self.baseStationLocations = copy.deepcopy(self.manager.getBaseStationLocations())
+            links, numLinks = self.manager.getXYZofLinks(6) 
+            self.links = copy.deepcopy(links)
+            self.numLinks = copy.deepcopy(numLinks) 
+            self.queueFinishTimes = copy.deepcopy(self.manager.queueFinishTimes[0:self.manager.numLEOs])
+
+            #here, we are doing a slight amount of processing for better visualization. 
+            relativeFinish = self.queueFinishTimes - self.currentTime
+
+            #if we are in the initial state/no packets in there, then just give normal 
+            if( max(relativeFinish) == min(relativeFinish) ):
+                self.pointSizes = 10*np.ones(self.manager.numLEOs)
+            else: 
+                #then, get the normalized factor, ranging pointSizes from 10 to 20 
+                self.pointSizes = ((relativeFinish - min(relativeFinish)) / (max(relativeFinish) - min(relativeFinish)) + 1)*10
+
+        def selfPlot(self): 
+            self.view.multiplot(0,
+                    self.satelliteLocations,
+                    self.baseStationLocations,
+                    self.links,
+                    self.numLinks)                     
+                 
+
+
+    def simulateWithVisualizer(self, 
+                               simulationArgs,
+                               visualizerArgs):
         """
-        Wrapper for visualizing simulation in real time. 
+        function to simulate and visualize the results
 
-        Inputs:
-        kargs: refer to executeGeneralSimulation
-
-        Outputs:
-        times and visualized processing 
+        simulationArgs: refer to executeGeneralSimulation
+        visualizerArgs: refer to showVisualization
         """
+         
+        #if we are going to visualize, we need snapshots within the event stack 
+        simulationArgs["takeSnapshots"] = visualizerArgs["visualizerOn"]
 
-        #create lock for multithreading 
-        lock = threading.Lock()
+        #if we are enabling a visualizer 
+        if(visualizerArgs["visualizerOn"]): 
+            
+            #first reset the increment for which snapshot to display
+            #this may be deprecated, I think im using the "frame" thing from now on 
+            self.snapshotInd = 0 
 
-        #then, append the lock information for executing the simulation 
-        kargs["visualizerOn"] = lock
+            #first get how much in simulation time the frames should be spaced between each other
+            #so get the period that we are sending packets over 
+            packetSendTimeFrame = simulationArgs["packetSendTimeFrame"]
+        
+            #then get how many frames we have 
+            numFrames = visualizerArgs["visualizeTime"] * visualizerArgs["FPS"]
 
-        #create threads for processing
-        simulationThread = threading.Thread(target=self.executeGeneralSimulation, kwargs = kargs)
+            #then, we have an "adjustment factor" to account for visualizing the environment while the packets are being processed/going through the network
+            simulationTimeBetweenFrames = packetSendTimeFrame*3/(numFrames)
+            simulationArgs["simulationTimeBetweenSnapshots"] = simulationTimeBetweenFrames
+            simulationArgs["numEnvironmentSnapshots"] = numFrames
 
-        # Start computation thread
-        simulationThread.start()
+            #set up storage for the snapshots by creating list, with one entry allotted for one frame  
+            self.snapshotStorage = [0]*numFrames
+
+        #after getting that, do the computation in the event stack
+        self.executeGeneralSimulation(**simulationArgs)
     
         #have main thread be the visualization
-        #self.showVisualization(lock)
+        self.showVisualization(**visualizerArgs)
 
-
-    def plotCurrentState(self,
-                         plotQueueSizes = False,
-                         accessLock = None): 
-        """
-        Getting statistics to pass on to view function for graphing. 
-        This has some computations, so it belongs in simulator, and not in myPlots
-
-        
-
-        Inputs: multithreading lock, as the main thread needs to access data that the computation thread may change. 
-        Outputs: None
-        Effect: information passed to view 
-        """
-
-        #get basic stats about environment
-        satelliteLocations = self.manager.getSatLocations()
-        baseStationLocations = self.manager.getBaseStationLocations()
-        links, numLinks = self.manager.getXYZofLinks(6) 
-        pointSizes = []
-
-        #get the queue sizes 
-        if(plotQueueSizes):
-            #so, then compute the relative size of each queue
-            queueFinishTimes = self.manager.queueFinishTimes
-            relativeFinish = queueFinishTimes - self.currentTime
-
-            #then, get the normalized factor 
-            pointSizes = (relativeFinish - min(relativeFinish)) / (max(relativeFinish) - min(relativeFinish))
-
-        self.view.multiplot(0,
-                            satelliteLocations,
-                            baseStationLocations,
-                            links,
-                            numLinks,
-                            pointSizes)
-        
 
     def showVisualization(self,
-                          accessLock): 
+                          visualizerOn,
+                          visualizeTime,
+                          FPS):
         """
-        Just visualiving current state using FuncAnimation
-        """
+        Function to plot the ending results of the simulation, using snapshots from the actual simulation execution. 
+
+        Inputs: 
+        visualizerOn: enabling the visualization process
+        visualizeTime: how long we want to take to display results 
+        FPS: frames per second 
+        
+        Outputs: 
+
+        Effect: 
+        Plots in 3D the traffic, position of satellites, etc. in time varying capacity 
+        """ 
+
+        #please note, that even tho it looks like "hold" isnt used, its auto erased from memory if not assigned. So keep it there. 
+        #also note, this auto gives a "frame" variable to the plotSnapshotFromStorage function 
+        #also note, interval is in milliseconds 
         hold = FuncAnimation(self.view.fig, 
-                             self.updateGraphicsMore, 
-                             frames=100, 
-                             interval=0.1)       
+                      self.plotSnapshotFromStorage, 
+                      frames=FPS*visualizeTime, 
+                      interval=1000/FPS)       
         plt.show() 
 
-        return 
+    def plotCurrentState(self): 
+        #first take snapshot 
+        snapshot = self.SimulationSnapshot(self.manager, self.view, 0)
+        #then plot it for the current time 
+        snapshot.selfPlot()    
 
-
+    def plotSnapshotFromStorage(self, frame): 
+        #the "frame" 
+        #plot the aleadry stored snapshot 
+        self.snapshotStorage[frame].selfPlot()
 
     def executeGeneralSimulation(self,
                                  initialTopology = "IPO",
@@ -127,14 +174,16 @@ class Simulator():
                                  
                                  numPeople = 100,
                                  numPacketsPerPerson = 1,
-                                 simulationTime = .0001,                            
+                                 packetSendTimeFrame = .0001,                            
 
                                  queingDelaysEnabled = "False", 
                                  weatherEnabled = "False", 
                                  adjMatrixUpdateInterval = -100, 
                                  outageFrequency = None, 
                                  
-                                 visualizerOn = None
+                                 takeSnapshots = False, 
+                                 simulationTimeBetweenSnapshots = None, 
+                                 numEnvironmentSnapshots = None
                                  ): 
         
         """
@@ -147,20 +196,21 @@ class Simulator():
 
         numPeople: how many people requesting packets sent 
         numPacketsPerPerson: how many packets each person is requesting to transmit
-        simulationTime: how long we are running the simulation for 
+        packetSendTimeFrame: over how long of period do we send packets
 
         queingDelaysEnabled: do I account for how long it takes to process packets at a server? Or am I just concerned with the propagation delay? 
         weatherEnabled: do i have stuff like....uh idk i need to implement this later. Might include like rainstorms or higher radiation from the sun 
         adjMatrixUpdateInterval: how often we update the postition of satellites in the constellation. Mostly used as you would think. 
         outageFrequency: how often we have satellites that break.     
 
-        visualizerOn: if we want to visualize the state of the satellites queues and the links, then we get a lock for resources 
+        takeSnapshots: are we taking snapshots of the simulation environment over time? 
+        simulationTimeBetweenSnapshots: how long to wait between taking snapshots 
+        numEnvironmentSnapshots: how many snapshots to take 
 
         Outputs: 
         deliveryTimes: how long it took to send each packet that we initially created. 
 
         """
-        
         #this is the initialization section 
 
         #get satellite locations
@@ -188,7 +238,7 @@ class Simulator():
 
         #next, get random times for sending the packets out 
         packetSendTimes = np.random.uniform(0, 
-                                            simulationTime, 
+                                            packetSendTimeFrame, 
                                             (numPeople*numPacketsPerPerson,))
         
         #get storage for when the packets arrive 
@@ -205,6 +255,20 @@ class Simulator():
                                 kargs)
                 eventQueue.push(queueEvent)
 
+        #then, create the snapshot events if we are supposed to 
+        if(takeSnapshots):
+            #create the time stamps for all 
+            snapshotTimes = np.arange(0, numEnvironmentSnapshots*simulationTimeBetweenSnapshots, simulationTimeBetweenSnapshots)
+
+            #for each snapshot
+            for snapshotInd in range(numEnvironmentSnapshots): 
+
+                kargs = {"snapshotInd":snapshotInd}
+                queueEvent = Event(snapshotTimes[snapshotInd],
+                                   "takeSnapshot",
+                                   kargs)
+                eventQueue.push(queueEvent)
+        
         #first, create the reference time for when to update environment parameters 
         updateReferenceTime = 0 
         
@@ -225,6 +289,12 @@ class Simulator():
                 updateReferenceTime = event.timeOfOccurence 
 
             #then, iterate through the event types
+            
+            #if its to take the snapshot 
+            if(event.eventType == "takeSnapshot"):
+                #store it in corresponding place 
+                self.snapshotStorage[event.kargs["snapshotInd"]] = self.SimulationSnapshot(self.manager, self.view, self.currentTime)
+
             if event.eventType  == "packetSent":
                 #first, get the satellite closest to start and end 
                 #note, assuming you must use satellite for start and end 
@@ -245,11 +315,6 @@ class Simulator():
                                                                       waitTimes,
                                                                       closestSatIndToStart,
                                                                       closestSatIndToEnd)
-
-                # pathToTake , _ = myMath.dijkstraWithPath(self.manager.currAdjMat, 
-                #                                          closestSatIndToStart,
-                #                                          closestSatIndToEnd)
-                               
 
                 if len(pathToTake) == 1 and closestSatIndToStart!=closestSatIndToEnd:
                     pdb.set_trace()
@@ -490,8 +555,7 @@ class Simulator():
         nextNodeMatrix = myMath.floyd_warshall(self.manager.currAdjMat)
 
         #now, for each group of sats to fail 
-        for ind, group in enumerate(createStorageForGroups): 
-            print(str(ind) + "/" + str(len(createStorageForGroups)))         
+        for ind, group in enumerate(createStorageForGroups):      
 
             #first, generate # pairs corresponding to the # of paths we examine 
             nodePairs = np.random.choice(self.manager.numLEOs, size=[numPathsEvaluated,2])
@@ -548,7 +612,6 @@ class Simulator():
         #now, for each group of sats to fail 
         
         for ind, group in enumerate(createStorageForGroups): 
-            print(str(ind) + "/" + str(len(createStorageForGroups))) 
             #first, generate # pairs corresponding to the # of paths we examine 
             nodePairs = np.random.choice(self.manager.numLEOs, size=[numPathsEvaluated,2])
             
@@ -608,8 +671,6 @@ class Simulator():
             totalLength+=len(path) 
             if(maxTime < time): 
                 maxTime = time 
-
-            print(ind)
 
         avgTime = totalTime/numTrials
         avgLength = totalLength/numTrials
@@ -842,7 +903,7 @@ class Simulator():
             #if the packet is arriving at the destination
             if event.eventType == "packetArriveAtDestination": 
                 #then, store the packet end time 
-                print(event.kargs["packetInd"]  )
+                #prrint(event.kargs["packetInd"]  )
                 packetArriveTimes[event.kargs["packetInd"]] = event.timeOfOccurence
 
         #then, finally just return the difference between the two. 

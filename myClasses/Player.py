@@ -387,6 +387,7 @@ class baseStation(Player):
         return numInView, numDisjointOrbitPlanesInView
     
 class PriorityQueue:
+    #use heaps/heapify here because we are usually working with a nearly sorted array 
     def __init__(self):
         self.queue = []
 
