@@ -77,7 +77,7 @@ class Manager():
         #set up storage for anticipated waiting times at each location 
         self.queueFinishTimes = np.zeros(self.numLEOs + len(self.baseStations))
 
-    def updatePathData(self,
+    def updateEnvironmentAndPathData(self,
                         oldTime, 
                         newTime): 
         """
@@ -91,7 +91,7 @@ class Manager():
         Effect: 
         properly updated state and adj matrix 
         """
-
+        
         #update the constellation position
         self.updateConstellationPosition(newTime - oldTime)
         #after that, update the adjacency matrix

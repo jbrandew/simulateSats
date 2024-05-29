@@ -181,12 +181,12 @@ class Player:
         #if we have regional restriction for connection 
         #if(False): 
         if(polarRegionRestriction): 
-            lats = myMath.cartesian_to_geodetic(*playerToConnectTo.getCoords(), 6371) 
+            lats = myMath.cartesian_to_geodetic(*playerToConnectTo.getCoords(), 6371e3) 
             
             if(lats[0] > 70 or lats[0] < -70): 
                 return False 
 
-            selfLats = myMath.cartesian_to_geodetic(*self.getCoords(), 6371) 
+            selfLats = myMath.cartesian_to_geodetic(*self.getCoords(), 6371e3) 
             
             if(selfLats[0] > 70 or selfLats[0] < -70): 
                 return False 
@@ -272,14 +272,14 @@ class LEO(Player):
         """
         #self.x, self.y, self.z = myMath.calculate_next_position([self.x, self.y, self.z], timeDiff)
         
-        #get angle diff from two positions 
+        #get angle diff from two positions  
         angleRadDiff = 2*np.pi*timeDiff/self.orbitPeriod
 
         #calculate new position
         self.x, self.y, self.z = myMath.calculate_new_position(self.normVec, 
                                                                [self.x, self.y, self.z], 
                                                                angleRadDiff)
-
+        
       
 
 
@@ -371,8 +371,7 @@ class baseStation(Player):
                 #planeNum = satInd/numSatPerPlane 
                 #satNumWithinPlane = natInd%numSatPerPlane 
                 #and then min elevation angle is normal 
-                
-                #pdb.set_trace() 
+                 
                 inView = self.isSatelliteInView(
                     satelliteCoords=satelliteCoordsToCheck[orbitalPlaneInd, satIndInPlane])
                 

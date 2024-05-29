@@ -102,11 +102,7 @@ class Simulator():
 
         #if we are enabling a visualizer 
         if(visualizerArgs["visualizerOn"]): 
-            
-            #first reset the increment for which snapshot to display
-            #this may be deprecated, I think im using the "frame" thing from now on 
-            self.snapshotInd = 0 
-
+        
             #first get how much in simulation time the frames should be spaced between each other
             #so get the period that we are sending packets over 
             packetSendTimeFrame = simulationArgs["packetSendTimeFrame"]
@@ -153,7 +149,8 @@ class Simulator():
         hold = FuncAnimation(self.view.fig, 
                       self.plotSnapshotFromStorage, 
                       frames=FPS*visualizeTime, 
-                      interval=1000/FPS)       
+                      interval=1000/FPS,
+                      repeat = False)       
         plt.show() 
 
     def plotCurrentState(self): 
@@ -178,7 +175,7 @@ class Simulator():
 
                                  queingDelaysEnabled = "False", 
                                  weatherEnabled = "False", 
-                                 adjMatrixUpdateInterval = -100, 
+                                 environmentUpdateInterval = None, 
                                  outageFrequency = None, 
                                  
                                  takeSnapshots = False, 
@@ -200,7 +197,7 @@ class Simulator():
 
         queingDelaysEnabled: do I account for how long it takes to process packets at a server? Or am I just concerned with the propagation delay? 
         weatherEnabled: do i have stuff like....uh idk i need to implement this later. Might include like rainstorms or higher radiation from the sun 
-        adjMatrixUpdateInterval: how often we update the postition of satellites in the constellation. Mostly used as you would think. 
+        environmentUpdateInterval: how often we update the postition of satellites in the constellation. Mostly used as you would think. 
         outageFrequency: how often we have satellites that break.     
 
         takeSnapshots: are we taking snapshots of the simulation environment over time? 
@@ -282,10 +279,10 @@ class Simulator():
             self.currentTime = event.timeOfOccurence
 
             #if our time is outside this interval, then update correspondingly 
-            if(event.timeOfOccurence > updateReferenceTime + adjMatrixUpdateInterval): 
+            if(event.timeOfOccurence > updateReferenceTime + environmentUpdateInterval): 
                 #this updates at least as often as necessary
                 #this is because it updates when the time constraint is violated, and then updates to the timing that created the violation
-                self.manager.updatePathData(updateReferenceTime, event.timeOfOccurence)
+                self.manager.updateEnvironmentAndPathData(updateReferenceTime, event.timeOfOccurence)
                 updateReferenceTime = event.timeOfOccurence 
 
             #then, iterate through the event types

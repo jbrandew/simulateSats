@@ -4,7 +4,7 @@ NumberLEOSatellites: 360
 OrbitalPlanes: 20
 Inclination: 80 
 phasingParameter: 5
-orbitAltitudeLEO: 1000
+orbitAltitudeLEO: 1000000
 earthRadius: 6371
 BaseStationLocations: 
   - [82.5, -62.3] 

@@ -74,7 +74,7 @@ simulationArgs = {"initialTopology": "IPO",
 
 "queingDelaysEnabled": "False",
 "weatherEnabled": "False",
-"adjMatrixUpdateInterval": -100,
+"environmentUpdateInterval": 0.1,
 "outageFrequency": None
 }
 

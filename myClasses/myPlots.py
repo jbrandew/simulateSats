@@ -119,6 +119,11 @@ def plot_line_segments(pair_of_points_list,
      
 
 class GraphicsView:
+    """
+    This class is just for graphing to a given axes. Uses generic util functions as above ^
+    
+    """
+
     #really shouldnt have access to manager
     def __init__(self, manager, fig, ax):
         self.manager = manager
@@ -133,7 +138,7 @@ class GraphicsView:
                   links,
                   numLinks,  
                   pointSizes = [],
-                  axisLimit = 8000,
+                  axisLimit = 8000e3,
                   showFigure = True,
                   ): 
         """

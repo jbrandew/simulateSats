@@ -193,6 +193,7 @@ def calculate_normal_vector(point1, point2):
 
 def satelliteOrbitalPeriod(x, y, z): 
     #this assumes circular orbit 
+    #THIS ASSUMES METERS
     # Constants
     G = 6.67430e-11  # Gravitational constant in m^3 kg^(-1) s^(-2)
     M = 5.972e24     # Mass of the Earth in kg
@@ -201,6 +202,7 @@ def satelliteOrbitalPeriod(x, y, z):
 
     #combined radius of the orbit (radius of the earth with altitude of satellite) 
     totalRad = np.sqrt(x**2 + y**2 + z**2)
+
 
     #h = distance_from_center - R
 
@@ -212,7 +214,7 @@ def satelliteOrbitalPeriod(x, y, z):
     else: 
         v = np.sqrt(G * M / (totalRad))
         T = 2 * np.pi * (totalRad) / v
-
+    
     # Calculate orbital period
     return T
 
@@ -292,7 +294,7 @@ def checkBeyondPolarLat(x, y, z, latBound):
     Return -1 if below the lat 
     """
     
-    lat, _, _ = cartesian_to_geodetic(x,y,z,6371) 
+    lat, _, _ = cartesian_to_geodetic(x,y,z,6371e3) 
     
     if(latBound > 70): 
         return 1 
@@ -434,9 +436,8 @@ def generateWalkerStarConstellationPoints(
     #get the number of points + 1 without the end so that start != end 
     phi = np.linspace(0, 2 * np.pi, numSatellitesPerPlane+1)[:-1] 
     
-    #have the distance from core for radius of circle 
-    #this is just altitude for now...change it later 
-    distFromCore = altitude 
+    #have the distance from core for radius of circle, added with the altitude of the satellite  
+    distFromCore = altitude + 6371e3
 
     #calculate the basic set of points using spherical coordinates 
     basePoints = [distFromCore*np.cos(phi), distFromCore*np.sin(phi), 0*phi] 
@@ -501,7 +502,7 @@ def compute_triangle_angles(point1, point2, point3):
 
     return angle1, angle2, angle3
 
-def geodetic_to_cartesian(latitude, longitude, radius=6371.0):
+def geodetic_to_cartesian(latitude, longitude, radius=6371e3):
     # Convert latitude and longitude from degrees to radians
     lat_rad = math.radians(latitude)
     lon_rad = math.radians(longitude)
