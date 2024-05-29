@@ -57,7 +57,7 @@ simmer.manager.connectSpiralTopologySimple(ISL2Done=False)
 #simmer.plotCurrentState() 
 
 #simmer.manager.updateTopology("Closest", "None")
-simmer.timeFrameSequencing(15, 10, 20)
+#simmer.timeFrameSequencing(15, 10, 20)
 
 #pdb.set_trace() 
 
@@ -80,7 +80,7 @@ kargs = {"initialTopology": "IPO",
 "visualizerOn": None
 }
 
-#hold = simmer.visualizeSimulation(kargs)
+hold = simmer.visualizeSimulation(kargs)
 
 
 #debug to examine validity

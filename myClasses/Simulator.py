@@ -58,7 +58,7 @@ class Simulator():
         #then, append the lock information for executing the simulation 
         kargs["visualizerOn"] = lock
 
-        #create threads for processing processing
+        #create threads for processing
         simulationThread = threading.Thread(target=self.executeGeneralSimulation, kwargs = kargs)
 
         # Start computation thread
