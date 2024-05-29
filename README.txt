@@ -35,7 +35,7 @@ pip install pyyaml pdb math heapq numpy matplotlib
 
 Random notes: 
 based on walker delta 360 (20,18) constellation. 
-most math is done in terms of km (i.e., divide by 3e5 for prop delay)
+most math is done in terms of meters (i.e., divide by 3e8 for prop delay)
 base stations are not connected to other base stations 
 
 Used the following guide to be able to use graphics: 

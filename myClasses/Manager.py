@@ -29,7 +29,11 @@ class Manager():
                  phasingParameter, 
                  sunExclusionAngle,
                  sunLocation,
-                 earthRadius): 
+                 earthRadius,
+                 initialTopology,
+                 routingPolicy,
+                 topologyPolicy
+                 ): 
         """
         This does the initialization step for internals, as well as generating satellites 
         and base stations from respective locations 
@@ -91,7 +95,7 @@ class Manager():
         Effect: 
         properly updated state and adj matrix 
         """
-        
+
         #update the constellation position
         self.updateConstellationPosition(newTime - oldTime)
         #after that, update the adjacency matrix
@@ -445,9 +449,9 @@ class Manager():
         point2 = player2.getCoords()
         
         #working within km so 10e5
-        if( myMath.dist3d(point1, point2)/(3e5) == np.inf ): 
+        if( myMath.dist3d(point1, point2)/(3e8) == np.inf ): 
             pdb.set_trace() 
-        return myMath.dist3d(point1, point2)/(3e5)    
+        return myMath.dist3d(point1, point2)/(3e8)    
 
     def getXYZofLinks(self, maxNumLinksPerSat=6): 
         """

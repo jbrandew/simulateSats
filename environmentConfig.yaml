@@ -1,10 +1,14 @@
 ---
+
+#constellation parameters 
 LEOConstellation: 'Walker Star'
 NumberLEOSatellites: 360
 OrbitalPlanes: 20
 Inclination: 80 
 phasingParameter: 5
 orbitAltitudeLEO: 1000000
+
+#base station and environment parameters 
 earthRadius: 6371
 BaseStationLocations: 
   - [82.5, -62.3] 
@@ -12,3 +16,26 @@ BaseStationLocations:
 BaseStationViewAngle: 10
 SunExclusionAngle: 40
 SunLocation: [149.6e+6, 0, 0]
+
+#topology and routing polocy 
+initialTopology: 'IPO'
+routingPolicy: null
+topologyPolicy: null
+
+#simulation runtime parameters 
+numPeople: 100
+numPacketsPerPerson: 1
+packetSendTimeFrame: 100
+
+queingDelaysEnabled: 'False'
+weatherEnabled: 'False'
+environmentUpdateInterval: 10
+outageFrequency: null
+#takes care of how long we want the visualizer to take data for. Should be greater for more traffic.
+timeFactor: 10
+
+#visualizer parameters 
+visualizerOn: 'True'
+visualizeTime: 10
+FPS: 2 
+

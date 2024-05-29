@@ -68,6 +68,8 @@ class Simulator():
             self.numLinks = copy.deepcopy(numLinks) 
             self.queueFinishTimes = copy.deepcopy(self.manager.queueFinishTimes[0:self.manager.numLEOs])
 
+            print(np.average(self.queueFinishTimes))
+
             #here, we are doing a slight amount of processing for better visualization. 
             relativeFinish = self.queueFinishTimes - self.currentTime
 
@@ -111,7 +113,7 @@ class Simulator():
             numFrames = visualizerArgs["visualizeTime"] * visualizerArgs["FPS"]
 
             #then, we have an "adjustment factor" to account for visualizing the environment while the packets are being processed/going through the network
-            simulationTimeBetweenFrames = packetSendTimeFrame*3/(numFrames)
+            simulationTimeBetweenFrames = packetSendTimeFrame*simulationArgs["timeFactor"]/(numFrames)
             simulationArgs["simulationTimeBetweenSnapshots"] = simulationTimeBetweenFrames
             simulationArgs["numEnvironmentSnapshots"] = numFrames
 
@@ -119,7 +121,7 @@ class Simulator():
             self.snapshotStorage = [0]*numFrames
 
         #after getting that, do the computation in the event stack
-        self.executeGeneralSimulation(**simulationArgs)
+        holdData = self.executeGeneralSimulation(**simulationArgs)
     
         #have main thread be the visualization
         self.showVisualization(**visualizerArgs)
@@ -165,9 +167,6 @@ class Simulator():
         self.snapshotStorage[frame].selfPlot()
 
     def executeGeneralSimulation(self,
-                                 initialTopology = "IPO",
-                                 routingPolicy = None, 
-                                 topologyPolicy = None, 
                                  
                                  numPeople = 100,
                                  numPacketsPerPerson = 1,
@@ -180,7 +179,8 @@ class Simulator():
                                  
                                  takeSnapshots = False, 
                                  simulationTimeBetweenSnapshots = None, 
-                                 numEnvironmentSnapshots = None
+                                 numEnvironmentSnapshots = None,
+                                 timeFactor = None
                                  ): 
         
         """
@@ -322,7 +322,7 @@ class Simulator():
                 #the indexing may possibly be wrong for raveled satellites
                 #but get the eventEndTime by accounting for initial propagation 
                 timeOfOccurence = event.timeOfOccurence + myMath.dist3d(event.kargs["startLocation"],  
-                                                        raveledPlayers[closestSatIndToStart].getCoords())/(3e5)
+                                                        raveledPlayers[closestSatIndToStart].getCoords())/(3e8)
 
                 event.kargs["pathToTake"] = pathToTake
                 event.kargs["lastSatInd"] = closestSatIndToEnd
@@ -367,7 +367,7 @@ class Simulator():
                 if(len(event.kargs["pathToTake"]) == 1 or event.kargs["currentIndexInPath"] is len(event.kargs["pathToTake"])-1): 
                     #then, get the time of occurence of landing at the dest 
                     timeOfOccurence = event.timeOfOccurence + myMath.dist3d(event.kargs["endLocation"],  
-                                                        raveledPlayers[event.kargs["lastSatInd"]].getCoords())/(3e5)
+                                                        raveledPlayers[event.kargs["lastSatInd"]].getCoords())/(3e8)
                     
                     #then, store the data for when the final arrival of the packet happened 
                     packetArriveTimes[event.kargs["packetInd"]] = timeOfOccurence
@@ -813,7 +813,7 @@ class Simulator():
                 #the indexing may possibly be wrong for raveled satellites
                 #but get the eventEndTime by accounting for initial propagation 
                 timeOfOccurence = event.timeOfOccurence + myMath.dist3d(event.kargs["startLocation"],  
-                                                        raveledSats[closestSatIndToStart].getCoords())/(3e5)
+                                                        raveledSats[closestSatIndToStart].getCoords())/(3e8)
 
 
                 event.kargs["pathToTake"] = pathToTake
@@ -832,7 +832,7 @@ class Simulator():
                 if(len(event.kargs["pathToTake"]) == 1): 
                     #then, get the time of occurence of landing at the dest 
                     timeOfOccurence = event.timeOfOccurence + myMath.dist3d(event.kargs["endLocation"],  
-                                                        raveledSats[event.kargs["lastSatInd"]].getCoords())/(3e5)
+                                                        raveledSats[event.kargs["lastSatInd"]].getCoords())/(3e8)
                     #create and push accordingly 
                     queueEvent = Event(timeOfOccurence,
                                        "packetArriveAtDestination",
@@ -869,7 +869,7 @@ class Simulator():
                 if(event.kargs["currentIndexInPath"] is len(event.kargs["pathToTake"])): 
                     #if we are, then create end event. So, first get the last arrival time
                     timeOfOccurence = event.timeOfOccurence + myMath.dist3d(event.kargs["endLocation"],  
-                                                        raveledSats[event.kargs["lastSatInd"]].getCoords())/(3e5)
+                                                        raveledSats[event.kargs["lastSatInd"]].getCoords())/(3e8)
                     
                     queueEvent = Event(timeOfOccurence,
                                        "packetArriveAtDestination",
@@ -994,7 +994,7 @@ class Simulator():
                 #the indexing may possibly be wrong for raveled satellites
                 #but get the eventEndTime by accounting for initial propagation 
                 timeOfOccurence = event.timeOfOccurence + myMath.dist3d(event.kargs["startLocation"],  
-                                                        raveledPlayers[closestSatIndToStart].getCoords())/(3e5)
+                                                        raveledPlayers[closestSatIndToStart].getCoords())/(3e8)
 
                 event.kargs["pathToTake"] = pathToTake
                 event.kargs["lastSatInd"] = closestSatIndToEnd
@@ -1039,7 +1039,7 @@ class Simulator():
                 if(len(event.kargs["pathToTake"]) == 1 or event.kargs["currentIndexInPath"] is len(event.kargs["pathToTake"])-1): 
                     #then, get the time of occurence of landing at the dest 
                     timeOfOccurence = event.timeOfOccurence + myMath.dist3d(event.kargs["endLocation"],  
-                                                        raveledPlayers[event.kargs["lastSatInd"]].getCoords())/(3e5)
+                                                        raveledPlayers[event.kargs["lastSatInd"]].getCoords())/(3e8)
                     
                     #then, store the data for when the final arrival of the packet happened 
                     packetArriveTimes[event.kargs["packetInd"]] = timeOfOccurence

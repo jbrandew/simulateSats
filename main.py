@@ -19,10 +19,6 @@ with open("environmentConfig.yaml", "r") as stream:
     except yaml.YAMLError as exc: 
         print(exc) 
 
-#now that we have the coordinates for all the satellites, lets proceed. 
-#first verify by using the two relays set up and looking at # sats in view per relay
-#to do that, first create two relays 
-
 #format config data for generating constellation
 constellationConfig = [
     configData['NumberLEOSatellites'],
@@ -41,7 +37,30 @@ managerData = {
     "phasingParameter": configData['phasingParameter'],
     "sunExclusionAngle": configData['SunExclusionAngle'],
     "sunLocation": configData['SunLocation'],
-    "earthRadius": configData['earthRadius']
+    "earthRadius": configData['earthRadius'],
+    "initialTopology": configData['initialTopology'],
+    "routingPolicy": configData['routingPolicy'],
+    "topologyPolicy": configData['topologyPolicy'],
+}
+
+#simulator args 
+simulationArgs = {
+    "numPeople": configData['numPeople'],
+    "numPacketsPerPerson": configData['numPacketsPerPerson'],
+    "packetSendTimeFrame": configData['packetSendTimeFrame'],
+    "queingDelaysEnabled": configData['queingDelaysEnabled'],
+    "weatherEnabled": configData['weatherEnabled'],
+    "environmentUpdateInterval": configData['environmentUpdateInterval'],
+    "outageFrequency": configData['outageFrequency'],
+    "timeFactor": configData['timeFactor']
+}
+
+#visualizer args 
+visualizerArgs = {
+    "visualizerOn": configData['visualizerOn'],
+    "visualizeTime": configData['visualizeTime'],
+    "FPS": configData['FPS'],
+
 }
 
 #get simulator 
@@ -49,6 +68,12 @@ simmer = Simulator.Simulator(managerData)
 
 #connect satellites 
 simmer.manager.connectSpiralTopologySimple(ISL2Done=False) 
+
+#then enact simulation and visualize the data 
+hold = simmer.simulateWithVisualizer(simulationArgs, visualizerArgs)
+
+quit()
+
 
 #connect base stations to satellites in view 
 #simmer.manager.connectBaseStationsToSatellites() 
@@ -63,34 +88,6 @@ simmer.manager.connectSpiralTopologySimple(ISL2Done=False)
 
 #so then, test the generalSimulationMethod
 #hold = simmer.executeGeneralSimulation()
-
-simulationArgs = {"initialTopology": "IPO",
-"routingPolicy": None,
-"topologyPolicy": None,
-
-"numPeople": 1,
-"numPacketsPerPerson": 1,
-"packetSendTimeFrame": 1,
-
-"queingDelaysEnabled": "False",
-"weatherEnabled": "False",
-"environmentUpdateInterval": 0.1,
-"outageFrequency": None
-}
-
-visualizerArgs = {
-"visualizerOn": True,
-"visualizeTime": 10,
-"FPS":2
-}
-
-hold = simmer.simulateWithVisualizer(simulationArgs, visualizerArgs)
-
-quit()
-
-#debug to examine validity
-#print(hold)
-
 
 
 

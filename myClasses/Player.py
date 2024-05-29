@@ -102,7 +102,7 @@ class Player:
 
         #this represents when the server will be done processing
         #all packets. Note: may be in the past  
-        self.finishProcessingTime= -1  
+        self.finishProcessingTime = 0  
         
         #this represents the processing rate. 
         self.processRate = 100
@@ -147,6 +147,8 @@ class Player:
             #case two: server is servicing packets: 
             if(timeRequested <= self.finishProcessingTime): 
                 self.finishProcessingTime = interArrivalTime + self.finishProcessingTime
+
+        #pdb.set_trace() 
 
         #after updating our personal finish processing time, return it 
         #for the packet events use :) 
