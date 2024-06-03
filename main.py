@@ -8,6 +8,8 @@ import pdb
 import myClasses.Simulator as Simulator
 import myClasses.Manager as Manager
 
+
+
 #just need a little bit of computation...just a little bit 
 import numpy as np 
 
@@ -69,11 +71,14 @@ simmer = Simulator.Simulator(managerData)
 #connect satellites 
 simmer.manager.connectSpiralTopologySimple(ISL2Done=False) 
 
+#do simple plot
+#simmer.plotCurrentState() 
+simmer.timeFrameSequencing(15, 10, 20)
+
 #then enact simulation and visualize the data 
-hold = simmer.simulateWithVisualizer(simulationArgs, visualizerArgs)
+#hold = simmer.simulateWithVisualizer(simulationArgs, visualizerArgs)
 
 quit()
-
 
 #connect base stations to satellites in view 
 #simmer.manager.connectBaseStationsToSatellites() 

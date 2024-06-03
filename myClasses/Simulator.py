@@ -13,9 +13,11 @@ import copy
 
 #plotting classes 
 import pdb 
+#import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
+import tkinter
 
 class Simulator(): 
     """
@@ -32,9 +34,9 @@ class Simulator():
         self.manager = Manager(**managerData)
         
         #create figure and plot to disploy data 
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d') 
-        self.view = myPlots.GraphicsView(self.manager, fig, ax)
+        self.fig = plt.figure()
+        self.ax = self.fig.add_subplot(111, projection='3d') 
+        self.view = myPlots.GraphicsView(self.manager, self.fig, self.ax)
 
     class SimulationSnapshot(): 
         """
@@ -68,7 +70,7 @@ class Simulator():
             self.numLinks = copy.deepcopy(numLinks) 
             self.queueFinishTimes = copy.deepcopy(self.manager.queueFinishTimes[0:self.manager.numLEOs])
 
-            print(np.average(self.queueFinishTimes))
+            #print(np.average(self.queueFinishTimes))
 
             #here, we are doing a slight amount of processing for better visualization. 
             relativeFinish = self.queueFinishTimes - self.currentTime
@@ -153,6 +155,7 @@ class Simulator():
                       frames=FPS*visualizeTime, 
                       interval=1000/FPS,
                       repeat = False)       
+
         plt.show() 
 
     def plotCurrentState(self): 
@@ -265,7 +268,7 @@ class Simulator():
                                    "takeSnapshot",
                                    kargs)
                 eventQueue.push(queueEvent)
-        
+
         #first, create the reference time for when to update environment parameters 
         updateReferenceTime = 0 
         
@@ -452,6 +455,8 @@ class Simulator():
         #plot current state 
         self.plotCurrentState() 
 
+        #print("asdfasdf")
+
 
     def timeFrameSequencing(self, timeRatio, FPS, animationDuration): 
         """
@@ -480,14 +485,23 @@ class Simulator():
         #this "func animation" works with both updating positions and plotting 
         #each frame  
 
-        #so, we pass in: the figure to use for updating, the function to call each frame/time, # frames / updates, time per frame, and the args within the function
-        hold = FuncAnimation(self.view.fig, 
+        #so, use their version going forward 
+        #1. plot initial figure. data is still saved in self.view.fig 
+        #self.update(0,satTimePerFrame)
+        #holding = self.ax. 
+
+        #2. we have the update function already for a frame 
+        #test = self.fig aoeu 
+ 
+        #3. we pass in: the figure to use for updating, the function to call each frame/time, # frames / updates, time per frame, and the args within the function
+        #pdb.set_trace() 
+        hold = FuncAnimation(self.fig, 
                       self.update, 
                       frames=numFrames, 
                       interval=realTimePerFrame, 
                       fargs = (satTimePerFrame,))
-    
-        plt.show() 
+
+        plt.show()
 
         return 
 

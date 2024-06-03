@@ -49,7 +49,7 @@ def plotWalkerStar(allPlanes, ax = [], pointSizes = []):
         ax.scatter(points[:,0], points[:,1], points[:,2], c = "black", s = 10, zorder = 2)
     else: 
         ax.scatter(points[:,0], points[:,1], points[:,2], c = "black", s = pointSizes, zorder = 2)
-
+    
     #plt.show()
 
 def plot_sphere(radius=1, ax = []):
@@ -182,8 +182,8 @@ class GraphicsView:
         #pdb.set_trace() 
         plot_line_segments(links, min(len(links),numLinks), self.ax)
 
-        if(showFigure):
-            plt.show() 
+        #if(showFigure):
+        #    plt.show() 
 
     # def multiplot(self): 
     #    self.update_graphics()

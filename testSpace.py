@@ -1,49 +1,42 @@
-import math
-import random
+import matplotlib.pyplot as plt
+import numpy as np
 
-def calculate_arc_distance(lat1, lon1, alt1, lat2, lon2, alt2):
-    # Earth's radius in kilometers
-    R_earth = 6371.0
-    
-    # Convert degrees to radians
-    lat1 = math.radians(lat1)
-    lon1 = math.radians(lon1)
-    lat2 = math.radians(lat2)
-    lon2 = math.radians(lon2)
-    
-    # Differences in coordinates
-    delta_lat = lat2 - lat1
-    delta_lon = lon2 - lon1
-    
-    # Haversine formula
-    a = math.sin(delta_lat / 2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(delta_lon / 2)**2
-    central_angle = 2 * math.asin(math.sqrt(a))
-    
-    # Convert altitude from meters to kilometers
-    alt1_km = alt1 / 1000
-    alt2_km = alt2 / 1000
-    
-    # Average altitude
-    avg_alt = (alt1_km + alt2_km) / 2
-    
-    # Calculate the arc distance
-    arc_distance = central_angle * (R_earth + avg_alt)
-    
-    return arc_distance
+import matplotlib.animation as animation
+import pdb
 
-# Generate random coordinates for the two points
-def generate_random_coordinates():
-    latitude = random.uniform(-90, 90)  # Latitude between -90 and 90 degrees
-    longitude = random.uniform(-180, 180)  # Longitude between -180 and 180 degrees
-    altitude = random.uniform(1000, 2000) * 1000  # Altitude between 1000 km and 2000 km above surface
-    return latitude, longitude, altitude
+class DataHolder(): 
+    def __init__(self, x, y): 
+        self.x = x 
+        self.y = y 
 
-# Example usage
-lat1, lon1, alt1 = generate_random_coordinates()
-lat2, lon2, alt2 = generate_random_coordinates()
+        self.currX = x[0]
+        self.currY = y[0]
 
-distance = calculate_arc_distance(lat1, lon1, alt1, lat2, lon2, alt2)
-print(f"Point 1: ({lat1:.2f}°, {lon1:.2f}°) at {alt1/1000:.2f} km altitude")
-print(f"Point 2: ({lat2:.2f}°, {lon2:.2f}°) at {alt2/1000:.2f} km altitude")
-print(f"The arc distance between the two points is approximately {distance:.2f} kilometers.")
-print("Prop delay along arc: " + str(distance*1000/(3e8)))
+fig, ax = plt.subplots()
+t = np.linspace(0, 3, 40)
+g = -9.81
+v0 = 12
+z = g * t**2 / 2 + v0 * t
+
+v02 = 5
+z2 = g * t**2 / 2 + v02 * t
+
+ax.scatter(1, 0, c="b", s=5, label=f'v0 = {v0} m/s')
+line2 = ax.plot(1, 0, label=f'v0 = {v02} m/s')[0]
+ax.set(xlim=[0, 3], ylim=[-4, 10], xlabel='Time [s]', ylabel='Z [m]')
+ax.legend()
+
+dataHolder = DataHolder(t, z2)
+
+#create function to have similar setup 
+def updateData(frame):
+    update(frame)
+    ax.plot(dataHolder.currX, dataHolder.currY)
+
+def update(frame):
+    dataHolder.currX = t[0:frame]
+    dataHolder.currY = z2[0:frame]  
+
+ani = animation.FuncAnimation(fig=fig, func=updateData, frames=40, interval=30)
+plt.show()
+

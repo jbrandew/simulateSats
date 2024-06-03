@@ -25,7 +25,7 @@ topologyPolicy: null
 #simulation runtime parameters 
 numPeople: 100
 numPacketsPerPerson: 1
-packetSendTimeFrame: 100
+packetSendTimeFrame: 10000
 
 queingDelaysEnabled: 'False'
 weatherEnabled: 'False'
