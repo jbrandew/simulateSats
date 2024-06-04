@@ -63,6 +63,7 @@ class Simulator():
 
             """
 
+            #first, get a deep copy of the entire state of our simulation 
             self.satelliteLocations = copy.deepcopy(self.manager.getSatLocations())
             self.baseStationLocations = copy.deepcopy(self.manager.getBaseStationLocations())
             links, numLinks = self.manager.getXYZofLinks(6) 
@@ -70,27 +71,39 @@ class Simulator():
             self.numLinks = copy.deepcopy(numLinks) 
             self.queueFinishTimes = copy.deepcopy(self.manager.queueFinishTimes[0:self.manager.numLEOs])
 
-            #print(np.average(self.queueFinishTimes))
+            #here, we are doing a slight amount of processing for better visualization.
+            #please keep in mind that if the currentTime > queueFinish time, then the queue is done 
+            relativeFinish = np.maximum(self.queueFinishTimes - self.currentTime, 0)
 
-            #here, we are doing a slight amount of processing for better visualization. 
-            relativeFinish = self.queueFinishTimes - self.currentTime
+            #print("max, average, and std dev :)")
+            #print(np.max(relativeFinish))
+            #print(np.average(relativeFinish))
+            #print(np.std(relativeFinish))      
+            
+            print("Argmax")
+            print(np.argmax(relativeFinish))
 
             #if we are in the initial state/no packets in there, then just give normal 
             if( max(relativeFinish) == min(relativeFinish) ):
-                self.pointSizes = 10*np.ones(self.manager.numLEOs)
+                self.sphereColors = np.ones(self.manager.numLEOs)
+                #self.sphereColors = 10*np.ones(self.manager.numLEOs)
             else: 
-                #then, get the normalized factor, ranging pointSizes from 10 to 20 
-                self.pointSizes = ((relativeFinish - min(relativeFinish)) / (max(relativeFinish) - min(relativeFinish)) + 1)*10
+
+                #normalization doesnt really matter cause color map plots regardless, only important part is inverting so that its properly plotted (dimmer color => less traffic to be serviced)
+                #but need mapping to a space of [0,1]
+                self.sphereColors = ((relativeFinish - min(relativeFinish)) / (max(relativeFinish) - min(relativeFinish)))
+
+            #if(np.max(relativeFinish) > 100):
+            #    pdb.set_trace() 
 
         def selfPlot(self): 
             self.view.multiplot(0,
                     self.satelliteLocations,
                     self.baseStationLocations,
                     self.links,
-                    self.numLinks)                     
+                    self.numLinks,
+                    self.sphereColors)                     
                  
-
-
     def simulateWithVisualizer(self, 
                                simulationArgs,
                                visualizerArgs):
@@ -165,6 +178,7 @@ class Simulator():
         snapshot.selfPlot()    
 
     def plotSnapshotFromStorage(self, frame): 
+        print(frame)
         #the "frame" 
         #plot the aleadry stored snapshot 
         self.snapshotStorage[frame].selfPlot()
@@ -225,7 +239,7 @@ class Simulator():
 
         #first, create a priority queue for events  
         #create pQueue 
-        eventQueue = PriorityQueue()
+        eventQueue = PQueue()
 
         #then initialize a set of packets
         #so first, get locations of all the packets, semi evenly spread
@@ -274,6 +288,7 @@ class Simulator():
         
         #while we arent empty in the eventQueue
         while not eventQueue.is_empty(): 
+            #print(eventQueue.length)
 
             #get the next event 
             event = eventQueue.pop()
@@ -287,6 +302,7 @@ class Simulator():
                 #this is because it updates when the time constraint is violated, and then updates to the timing that created the violation
                 self.manager.updateEnvironmentAndPathData(updateReferenceTime, event.timeOfOccurence)
                 updateReferenceTime = event.timeOfOccurence 
+                print("Updating environment")
 
             #then, iterate through the event types
             
@@ -317,7 +333,6 @@ class Simulator():
                                                                       closestSatIndToEnd)
 
                 if len(pathToTake) == 1 and closestSatIndToStart!=closestSatIndToEnd:
-                    pdb.set_trace()
                     raise Exception("couldnt find path between start and end node")
 
                 #create event for arriving at next player. (so arriving at constellation)
@@ -337,6 +352,7 @@ class Simulator():
                 
                 #then, add the new event on the pQ
                 eventQueue.push(queueEvent)
+                
 
             #if our event type is arriving at next player,
             if event.eventType == "packetArriveAtNextPlayer": 
@@ -494,7 +510,6 @@ class Simulator():
         #test = self.fig aoeu 
  
         #3. we pass in: the figure to use for updating, the function to call each frame/time, # frames / updates, time per frame, and the args within the function
-        #pdb.set_trace() 
         hold = FuncAnimation(self.fig, 
                       self.update, 
                       frames=numFrames, 
@@ -797,7 +812,7 @@ class Simulator():
         
         #while we arent empty in the eventQueue
         while not eventQueue.is_empty(): 
-
+        
             #get the next event 
             event = eventQueue.pop()
 

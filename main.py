@@ -73,10 +73,10 @@ simmer.manager.connectSpiralTopologySimple(ISL2Done=False)
 
 #do simple plot
 #simmer.plotCurrentState() 
-simmer.timeFrameSequencing(15, 10, 20)
+#simmer.timeFrameSequencing(15, 10, 20)
 
 #then enact simulation and visualize the data 
-#hold = simmer.simulateWithVisualizer(simulationArgs, visualizerArgs)
+hold = simmer.simulateWithVisualizer(simulationArgs, visualizerArgs)
 
 quit()
 

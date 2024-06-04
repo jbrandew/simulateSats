@@ -24,7 +24,7 @@ def plot3d(pointsToPlot):
     ax.plot(pointsToPlot[0,:], pointsToPlot[1,:], pointsToPlot[2,:] )
     plt.show()
         
-def plotWalkerStar(allPlanes, ax = [], pointSizes = []): 
+def plotWalkerStar(allPlanes, ax = [], sphereColors = []): 
     """
     This function works with just plotting all the points in a walker star constellation.
     Inputs are planes with points in the xyz space 
@@ -45,13 +45,11 @@ def plotWalkerStar(allPlanes, ax = [], pointSizes = []):
     points = np.reshape(allPlanes, [360,3])
 
     #then scatter based on how many sizes we have 
-    if(len(pointSizes) == 0): 
+    if(len(sphereColors) == 0): 
         ax.scatter(points[:,0], points[:,1], points[:,2], c = "black", s = 10, zorder = 2)
     else: 
-        ax.scatter(points[:,0], points[:,1], points[:,2], c = "black", s = pointSizes, zorder = 2)
+        ax.scatter(points[:,0], points[:,1], points[:,2], c=sphereColors, cmap = "plasma", zorder = 2)
     
-    #plt.show()
-
 def plot_sphere(radius=1, ax = []):
 
     #if we arent given the axes, set them up 
@@ -137,7 +135,7 @@ class GraphicsView:
                   baseStationPoints, 
                   links,
                   numLinks,  
-                  pointSizes = [],
+                  sphereColors = [],
                   axisLimit = 8000e3,
                   showFigure = True,
                   ): 
@@ -151,7 +149,7 @@ class GraphicsView:
         baseStationPoints: xyz of all base stations 
         links: connections to plot using line segments 
         numLinks: how many links we use 
-        pointSizes: how large each point should be 
+        sphereColors: how large each point should be 
         showFigure: do we output the figure at the end? 
 
         """
@@ -170,7 +168,7 @@ class GraphicsView:
         self.ax.set_zlim([-axisLimit, axisLimit])  # Adjust the limits for the Z-axis
 
         #plot satellites   
-        plotWalkerStar(satPoints, self.ax, pointSizes)
+        plotWalkerStar(satPoints, self.ax, sphereColors)
 
         #plot base stations 
         plotPoints(baseStationPoints, self.ax)
@@ -179,7 +177,6 @@ class GraphicsView:
         plot_sphere(radius, self.ax)
         
         #plot links 
-        #pdb.set_trace() 
         plot_line_segments(links, min(len(links),numLinks), self.ax)
 
         #if(showFigure):

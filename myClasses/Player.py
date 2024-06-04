@@ -9,20 +9,25 @@ import heapq
 
 import random
 
-class PriorityQueue:
+class PQueue:
     """
     could make this more efficent using the min heap implementation
     below. need to test that against this since that is more likely 
     to be wrong due to increased complexity 
+
+    this cant be named "PriorityQueue" btw due to some conflict 
     """
     def __init__(self):
         self.queue = []
+        self.length = 0
 
     def push(self, item):
+        self.length+=1 
         self.queue.append(item)
         self.queue.sort(key=lambda x: x.timeOfOccurence)
-
+        
     def pop(self):
+        self.length-=1 
         if not self.is_empty():
             return self.queue.pop(0)
         else:
@@ -104,8 +109,9 @@ class Player:
         #all packets. Note: may be in the past  
         self.finishProcessingTime = 0  
         
-        #this represents the processing rate. 
-        self.processRate = 100
+        #this represents the processing rate for all players
+        #should make this modular 
+        self.processRate = 1
 
     def generateProcessingOneMorePacketTime(self, timeRequested, packetCollsionEnabled = True): 
         """
@@ -133,7 +139,6 @@ class Player:
         #then using the reverse solved CDF of the exp. interarr. time
         interArrivalTime = -np.log(1 - random_probability)/(self.processRate)
 
-
         #in no collision case, just return normal int. time 
         if not packetCollsionEnabled: 
             self.finishProcessingTime = interArrivalTime + timeRequested
@@ -145,13 +150,13 @@ class Player:
                 self.finishProcessingTime = interArrivalTime + timeRequested
 
             #case two: server is servicing packets: 
-            if(timeRequested <= self.finishProcessingTime): 
+            # :( if(timeRequested <= self.finishProcessingTime): 
+            else: 
                 self.finishProcessingTime = interArrivalTime + self.finishProcessingTime
-
-        #pdb.set_trace() 
 
         #after updating our personal finish processing time, return it 
         #for the packet events use :) 
+
         return self.finishProcessingTime
 
     def getCoords(self): 

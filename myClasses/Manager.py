@@ -98,11 +98,10 @@ class Manager():
 
         #update the constellation position
         self.updateConstellationPosition(newTime - oldTime)
-        #after that, update the adjacency matrix
-        self.currAdjMat = self.generateAdjacencyMatrix()
         #update the waiting times for each of the servers
         self.updateQueueFinishTimes()
-
+        #after that, update the adjacency matrix. uses the queue finish times and the 
+        self.currAdjMat = self.generateAdjacencyMatrix()
 
     def updateQueueFinishTimes(self): 
         """

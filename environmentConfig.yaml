@@ -23,19 +23,25 @@ routingPolicy: null
 topologyPolicy: null
 
 #simulation runtime parameters 
-numPeople: 100
-numPacketsPerPerson: 1
-packetSendTimeFrame: 10000
+numPeople: 1
+numPacketsPerPerson: 10
+packetSendTimeFrame: 1
 
 queingDelaysEnabled: 'False'
 weatherEnabled: 'False'
-environmentUpdateInterval: 10
+environmentUpdateInterval: 0.05
 outageFrequency: null
 #takes care of how long we want the visualizer to take data for. Should be greater for more traffic.
-timeFactor: 10
+timeFactor: 5
 
 #visualizer parameters 
 visualizerOn: 'True'
 visualizeTime: 10
-FPS: 2 
+FPS: 1
+
+#could add the server processing time & amount here 
+
+
+
+
 
