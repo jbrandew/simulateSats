@@ -9,7 +9,7 @@ phasingParameter: 5
 orbitAltitudeLEO: 1000000
 
 #base station and environment parameters 
-earthRadius: 6371
+earthRadius: 6371000
 BaseStationLocations: 
   - [82.5, -62.3] 
   - [70.4, -31.1]
@@ -17,27 +17,29 @@ BaseStationViewAngle: 10
 SunExclusionAngle: 40
 SunLocation: [149.6e+6, 0, 0]
 
-#topology and routing polocy 
+#topology and routing polocy / satellite info
 initialTopology: 'IPO'
 routingPolicy: null
 topologyPolicy: null
+packetProcessRate: 1
 
 #simulation runtime parameters 
-numPeople: 1
+numPeople: 10
 numPacketsPerPerson: 10
-packetSendTimeFrame: 1
+packetSendTimeFrame: .1
+personDistribution: 'PseudoUniform'
 
-queingDelaysEnabled: 'False'
+queingDelaysEnabled: 'True'
 weatherEnabled: 'False'
 environmentUpdateInterval: 0.05
 outageFrequency: null
 #takes care of how long we want the visualizer to take data for. Should be greater for more traffic.
-timeFactor: 5
+timeFactor: 1000
 
 #visualizer parameters 
 visualizerOn: 'True'
 visualizeTime: 10
-FPS: 1
+FPS: 3
 
 #could add the server processing time & amount here 
 

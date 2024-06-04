@@ -100,7 +100,14 @@ class Player:
 
     """
     
-    def __init__(self, xIn = 0, yIn = 0, zIn = 0): 
+    def __init__(self, 
+                 xIn = 0, 
+                 yIn = 0, 
+                 zIn = 0,
+                 packetProcessRate = None):
+
+        self.packetProcessRate = packetProcessRate
+
         self.x, self.y, self.z = xIn, yIn, zIn 
         #create storage for who we are connected to 
         self.connectedToPlayers = set() 
@@ -109,10 +116,6 @@ class Player:
         #all packets. Note: may be in the past  
         self.finishProcessingTime = 0  
         
-        #this represents the processing rate for all players
-        #should make this modular 
-        self.processRate = 1
-
     def generateProcessingOneMorePacketTime(self, timeRequested, packetCollsionEnabled = True): 
         """
         What is this function doing? Its adding one more packet to the
@@ -137,7 +140,7 @@ class Player:
         random_probability = random.random()
 
         #then using the reverse solved CDF of the exp. interarr. time
-        interArrivalTime = -np.log(1 - random_probability)/(self.processRate)
+        interArrivalTime = -np.log(1 - random_probability)/(self.packetProcessRate)
 
         #in no collision case, just return normal int. time 
         if not packetCollsionEnabled: 
@@ -219,7 +222,14 @@ class Player:
 #LEO (low earth orbit) describes the lowest orbiting set of satellites 
 class LEO(Player): 
 
-    def __init__(self, xIn = 0, yIn = 0, zIn = 0, planeIndex = 0, subSatIndex = 0, normal_vector = []):
+    def __init__(self, 
+                 xIn = 0, 
+                 yIn = 0, 
+                 zIn = 0, 
+                 planeIndex = 0, 
+                 subSatIndex = 0, 
+                 normal_vector = [],
+                 packetProcessRate = None):
         """
         Init function for LEO.
         Just pass off coordinates to parent "Player" 
@@ -230,7 +240,7 @@ class LEO(Player):
         normal_vector: vector determining the circular path of the satellite around the earth 
         
         """
-        super().__init__(xIn, yIn, zIn)
+        super().__init__(xIn, yIn, zIn, packetProcessRate)
 
         #store indices 
         self.planeIndex = planeIndex
@@ -293,7 +303,12 @@ class LEO(Player):
 #base station class desribes the players on the ground that arent moving and act as forwarders 
 class baseStation(Player): 
 
-    def __init__(self, xIn = 0, yIn = 0, zIn = 0, minElevationAngle = 0): 
+    def __init__(self, 
+                 xIn = 0, 
+                 yIn = 0, 
+                 zIn = 0, 
+                 minElevationAngle = 0, 
+                 packetProcessRate = None): 
         """
         Init function for base station. 
         Pass off coords to parent "Player" and set your own angle 
@@ -301,7 +316,7 @@ class baseStation(Player):
         xIn, yIn, zIn: coords in 3d space 
         minElevationAngle: min coordinate you need to be above to be considered in view 
         """
-        super().__init__(xIn, yIn, zIn)
+        super().__init__(xIn, yIn, zIn, packetProcessRate)
         self.minElevationAngle = minElevationAngle 
 
         #can connect to any amount of satellites 

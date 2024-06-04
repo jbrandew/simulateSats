@@ -31,6 +31,7 @@ constellationConfig = [
 ]
 
 #format data for getting manager 
+#manager manages and creates satellites/base stations 
 managerData = {
     "constellationType": "walkerDelta",
     "constellationConfig": constellationConfig,
@@ -43,13 +44,15 @@ managerData = {
     "initialTopology": configData['initialTopology'],
     "routingPolicy": configData['routingPolicy'],
     "topologyPolicy": configData['topologyPolicy'],
+    "packetProcessRate": configData['packetProcessRate']
 }
 
-#simulator args 
+#simulator args. so environment and stuff 
 simulationArgs = {
     "numPeople": configData['numPeople'],
     "numPacketsPerPerson": configData['numPacketsPerPerson'],
     "packetSendTimeFrame": configData['packetSendTimeFrame'],
+    "personDistribution" : configData['personDistribution'],
     "queingDelaysEnabled": configData['queingDelaysEnabled'],
     "weatherEnabled": configData['weatherEnabled'],
     "environmentUpdateInterval": configData['environmentUpdateInterval'],
@@ -69,10 +72,11 @@ visualizerArgs = {
 simmer = Simulator.Simulator(managerData)
 
 #connect satellites 
-simmer.manager.connectSpiralTopologySimple(ISL2Done=False) 
+#simmer.manager.connectSpiralTopologySimple(ISL2Done=False) 
+simmer.manager.updateTopology("Closest", "inView")
+simmer.manager.connect2ISL() 
 
 #do simple plot
-#simmer.plotCurrentState() 
 #simmer.timeFrameSequencing(15, 10, 20)
 
 #then enact simulation and visualize the data 

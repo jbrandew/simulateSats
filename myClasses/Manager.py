@@ -32,7 +32,8 @@ class Manager():
                  earthRadius,
                  initialTopology,
                  routingPolicy,
-                 topologyPolicy
+                 topologyPolicy,
+                 packetProcessRate
                  ): 
         """
         This does the initialization step for internals, as well as generating satellites 
@@ -44,6 +45,12 @@ class Manager():
         baseStationLocations: x y z of all relay/baseStations :) 
         phasingParameter: the angular offset/revolution difference between adjacent planes
         sunExclusionAngle: min angle between line of sight and sun path to ensure stable connection
+        sunLocation: 
+        earthRadius:
+        initialTopology: how satellites are connected initially
+        routingPolicy: how satellites route packets 
+        topologyPolicy: how satellites change their ISLs/connections over time
+        packetProcessRate: how fast players process packets they recieve (poisson arrival)
         """
 
         if(constellationType == "walkerDelta"): 
@@ -68,9 +75,9 @@ class Manager():
         self.sats = np.tile(LEO(), [self.numPlanes, self.numSatPerPlane]) 
 
         #call generate satellites function, which initializes our structure 
-        self.generateSatellites(walkerPoints, normVecs)
+        self.generateSatellites(walkerPoints, normVecs, packetProcessRate)
         #first, format the baseStationInputs 
-        self.generateBaseStations(baseStationLocations, fieldOfViewAngle)
+        self.generateBaseStations(baseStationLocations, fieldOfViewAngle, packetProcessRate)
 
         #this could be wrong lol 
         self.numBaseStations = len(self.baseStations)
@@ -483,7 +490,10 @@ class Manager():
         
         return holdLinks, ind 
     
-    def generateBaseStations(self, baseStationLocations, fieldOfViewAngle): 
+    def generateBaseStations(self, 
+                             baseStationLocations, 
+                             fieldOfViewAngle, 
+                             packetProcessRate): 
         """
         Just generate the baseStation objects. 
 
@@ -491,6 +501,7 @@ class Manager():
         baseStationLocations: x y z of the baseStations 
         fieldOfViewAngle: angle that a satellite must be above with respect to horizon line
         to be considered in view
+        packetProcessRate: how fast our base stations process packets
         
         Effect/Output: 
         Created base station objects 
@@ -503,12 +514,12 @@ class Manager():
                 #convert properly 
                 formattedLocation = myMath.geodetic_to_cartesian(*baseStationLocations[ind])
                 #for each location create the associated object
-                self.baseStations[ind] = baseStation(*formattedLocation, fieldOfViewAngle)
+                self.baseStations[ind] = baseStation(*formattedLocation, fieldOfViewAngle, packetProcessRate)
         #otherwise set as place holder 
         else: 
             self.baseStations = [] 
 
-    def generateSatellites(self, walkerPoints, normVecs): 
+    def generateSatellites(self, walkerPoints, normVecs, packetProcessRate): 
         """
         Just storing satellites when given walker constellation points
 
@@ -517,6 +528,7 @@ class Manager():
         normVecs: normal vectors for each satellite. each satellite will have the same 
         normal vector as all those in its plane, as one normal vector determines a 
         circular path  
+        packetProcessRate: how fast the satellites can process packets 
         
         Effect: sets up our satellite internals using walkerPoints 
         """
@@ -527,7 +539,8 @@ class Manager():
                 self.sats[planeInd, smallSatInd] = LEO(*(walkerPoints[planeInd,smallSatInd]),
                                                         planeInd, 
                                                         smallSatInd,
-                                                        normVecs[planeInd]) 
+                                                        normVecs[planeInd],
+                                                        packetProcessRate) 
                 
     def connectBaseStationsToSatellites(self): 
         """

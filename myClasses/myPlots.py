@@ -46,10 +46,15 @@ def plotWalkerStar(allPlanes, ax = [], sphereColors = []):
 
     #then scatter based on how many sizes we have 
     if(len(sphereColors) == 0): 
-        ax.scatter(points[:,0], points[:,1], points[:,2], c = "black", s = 10, zorder = 2)
-    else: 
-        ax.scatter(points[:,0], points[:,1], points[:,2], c=sphereColors, cmap = "plasma", zorder = 2)
-    
+        ax.scatter(points[:,0], points[:,1], points[:,2], c = "black", s = 10, zorder = 2, alpha=1)
+    else:
+        #make size and color vary based on queue size 
+        #s can be array or single # 
+        s = 20
+        if(max(sphereColors) != min(sphereColors)): 
+            s = sphereColors*80 + 20
+        ax.scatter(points[:,0], points[:,1], points[:,2], c=sphereColors, cmap = "magma", zorder = 2, alpha=1, s = s)
+
 def plot_sphere(radius=1, ax = []):
 
     #if we arent given the axes, set them up 
@@ -89,7 +94,7 @@ def plotPoints(points, ax = []):
         ax = fig.add_subplot(111, projection='3d')
 
     for point in points: 
-        ax.scatter(point[0], point[1], point[2], c = "red", s = 50, zorder = 2)
+        ax.scatter(point[0], point[1], point[2], c = "red", s = 25, zorder = 2)
    
 
 def plot_line_segments(pair_of_points_list, 

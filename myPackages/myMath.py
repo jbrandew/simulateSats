@@ -40,6 +40,7 @@ def generate_points_on_sphere_mostly_uniform(num_points, radius):
     y = radius * np.sin(theta) * np.sin(phi)
     z = radius * np.cos(theta)
 
+    #pdb.set_trace()
     # Return the points as a NumPy array
     return np.column_stack((x, y, z))
 
@@ -659,10 +660,11 @@ def dijkstra(adj_matrix, start, end):
 def dijkstraWithNodeValuesAndPath(adj_matrix, nodeValues, start, end):
     
     #modify adjacency matrix by adding to row and column, but taking out the overlap 
+    #this is "traffic aware", as you are adding the node value to each edge / 2
     for ind, value in enumerate(nodeValues): 
-        adj_matrix[ind] +=value
-        adj_matrix[:,ind] +=value
-        adj_matrix[ind,ind] -=value
+        adj_matrix[ind] +=value/2
+        adj_matrix[:,ind] +=value/2
+        adj_matrix[ind,ind] -=value/2
 
     return dijkstraWithPath(adj_matrix, start, end)
 

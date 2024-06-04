@@ -34,7 +34,7 @@ class Simulator():
         self.manager = Manager(**managerData)
         
         #create figure and plot to disploy data 
-        self.fig = plt.figure()
+        self.fig = plt.figure(figsize = (10, 7),facecolor= 'coral')
         self.ax = self.fig.add_subplot(111, projection='3d') 
         self.view = myPlots.GraphicsView(self.manager, self.fig, self.ax)
 
@@ -75,14 +75,6 @@ class Simulator():
             #please keep in mind that if the currentTime > queueFinish time, then the queue is done 
             relativeFinish = np.maximum(self.queueFinishTimes - self.currentTime, 0)
 
-            #print("max, average, and std dev :)")
-            #print(np.max(relativeFinish))
-            #print(np.average(relativeFinish))
-            #print(np.std(relativeFinish))      
-            
-            print("Argmax")
-            print(np.argmax(relativeFinish))
-
             #if we are in the initial state/no packets in there, then just give normal 
             if( max(relativeFinish) == min(relativeFinish) ):
                 self.sphereColors = np.ones(self.manager.numLEOs)
@@ -93,8 +85,10 @@ class Simulator():
                 #but need mapping to a space of [0,1]
                 self.sphereColors = ((relativeFinish - min(relativeFinish)) / (max(relativeFinish) - min(relativeFinish)))
 
-            #if(np.max(relativeFinish) > 100):
-            #    pdb.set_trace() 
+            print("Hello") 
+            print(relativeFinish[np.nonzero(relativeFinish)])
+            # pdb.set_trace() 
+            
 
         def selfPlot(self): 
             self.view.multiplot(0,
@@ -176,7 +170,7 @@ class Simulator():
         snapshot = self.SimulationSnapshot(self.manager, self.view, 0)
         #then plot it for the current time 
         snapshot.selfPlot()    
-
+     
     def plotSnapshotFromStorage(self, frame): 
         print(frame)
         #the "frame" 
@@ -188,6 +182,7 @@ class Simulator():
                                  numPeople = 100,
                                  numPacketsPerPerson = 1,
                                  packetSendTimeFrame = .0001,                            
+                                 personDistribution = "Even", 
 
                                  queingDelaysEnabled = "False", 
                                  weatherEnabled = "False", 
@@ -244,11 +239,21 @@ class Simulator():
         #then initialize a set of packets
         #so first, get locations of all the packets, semi evenly spread
         #across the globe. xyz is in km btw. 
-        startLocations = myMath.generate_points_on_sphere_mostly_uniform(numPeople,
-                                                                         self.manager.earthRadius)
 
-        endLocations = myMath.generate_points_on_sphere_mostly_uniform(numPeople,
-                                                                         self.manager.earthRadius)        
+        
+        if(personDistribution == "PseudoUniform"):
+            startLocations = myMath.generate_points_on_sphere_mostly_uniform(numPeople,
+                                                                            self.manager.earthRadius)
+
+            endLocations = myMath.generate_points_on_sphere_mostly_uniform(numPeople,
+                                                                            self.manager.earthRadius)        
+        
+        #distribute start and finish of packets to just use one person, and have it be the farthest distance possible
+        if(personDistribution == "SingleFar"):
+                                                                            
+            startLocations = np.array([[0,0,6000000]])
+            endLocations = startLocations*-1   
+
 
         #next, get random times for sending the packets out 
         packetSendTimes = np.random.uniform(0, 
@@ -288,7 +293,6 @@ class Simulator():
         
         #while we arent empty in the eventQueue
         while not eventQueue.is_empty(): 
-            #print(eventQueue.length)
 
             #get the next event 
             event = eventQueue.pop()
@@ -302,7 +306,6 @@ class Simulator():
                 #this is because it updates when the time constraint is violated, and then updates to the timing that created the violation
                 self.manager.updateEnvironmentAndPathData(updateReferenceTime, event.timeOfOccurence)
                 updateReferenceTime = event.timeOfOccurence 
-                print("Updating environment")
 
             #then, iterate through the event types
             
@@ -409,6 +412,11 @@ class Simulator():
                                    "packetArriveAtNextPlayer",
                                    event.kargs)
                
+                # print("Next place")
+                # print(event.kargs)
+                # print(queueEvent.kargs)
+                # pdb.set_trace() 
+                               
                 #then, add the new event on the pQ
                 eventQueue.push(queueEvent)
 
@@ -779,7 +787,7 @@ class Simulator():
 
         #first, create a priority queue for events  
         #create pQueue 
-        eventQueue = PriorityQueue()
+        eventQueue = PQueue()
 
         #then initialize a set of packets
         #so first, get locations of all the packets, spread
@@ -962,7 +970,7 @@ class Simulator():
 
         #first, create a priority queue for events  
         #create pQueue 
-        eventQueue = PriorityQueue()
+        eventQueue = PQueue()
 
         #then initialize a set of packets
         #so first, get locations of all the packets, semi evenly spread
