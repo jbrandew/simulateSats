@@ -621,6 +621,7 @@ class Manager():
                 self.sats[planeInd, smallSatInd].connectToPlayer(self.sats[planeInd, (smallSatInd + 1) % self.numSatPerPlane], False)
                 self.sats[planeInd,  (smallSatInd + 1) % self.numSatPerPlane].connectToPlayer(self.sats[planeInd, smallSatInd], False)
 
+    #not using this anymore..., better without... 
     def checkSpiralResetOfIndex(self, planeIndex, satIndex, originalPlaneIndex, originalSatIndex, goLeft):
         vertDistanceInSatsPerRev = self.numPlanes * self.phasingParameter / ( 360 / self.numSatPerPlane)
 

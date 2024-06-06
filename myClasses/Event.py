@@ -21,6 +21,15 @@ Update adjacency matrix for process times
 Update adjacency matrix for changing distance 
 Update adjacency matrix for topology 
 
+Routing Specific: 
+OSPF: 
+broadcast adj matrix 
+updateRoutingTable 
+
+RL: 
+broadcast adj matrix 
+
+
 Environment: 
 Weather 
 Attack 

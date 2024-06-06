@@ -104,11 +104,24 @@ class Player:
                  xIn = 0, 
                  yIn = 0, 
                  zIn = 0,
-                 packetProcessRate = None):
+                 adjMatPersonalIndex = None, 
+                 packetProcessRate = None,
+                 routingPolicy = 'NaN',
+                 routingArgs = []):
+        """
+        xIn, yIn, zIn: personal position
+        adjMatPersonalIndex: our own index within the adjMat (so its a column/row index)
+        packetProcessRate: how fast we can process packets 
+        routingPolicy: how do we route packets
+        routingArgs: arguments needed for the respective routing policy 
+        
+        """
 
+        #store information 
+        self.adjMatPersonalIndex = adjMatPersonalIndex
         self.packetProcessRate = packetProcessRate
-
         self.x, self.y, self.z = xIn, yIn, zIn 
+        
         #create storage for who we are connected to 
         self.connectedToPlayers = set() 
 
@@ -116,6 +129,18 @@ class Player:
         #all packets. Note: may be in the past  
         self.finishProcessingTime = 0  
         
+        #if our routing policy is OSPF 
+        if(routingPolicy == 'OSPF'): 
+            #then, first create the routing table accordingly 
+            #so, first get how many possible destinations 
+            numberPlayers = routingArgs['totalNumPlayers']
+            #create storage for routing table  
+            self.routingTable = np.zeros([numberPlayers, numberPlayers])
+            #create storage for adj matrix 
+            self.adjMatrix = np.zeros([numberPlayers, numberPlayers])
+            #create storage for time stamps of each edge in adj matrix 
+            self.adjMatrixTimeStamps = np.zeros([numberPlayers, numberPlayers])
+            
     def generateProcessingOneMorePacketTime(self, timeRequested, packetCollsionEnabled = True): 
         """
         What is this function doing? Its adding one more packet to the
@@ -168,6 +193,32 @@ class Player:
     def resetConnections(self): 
         self.connectedToPlayers = set() 
 
+    def setPersonalTime(self, time): 
+        #update personal timing information for edges 
+        self.adjMatrixTimeStamps[self.adjMatPersonalIndex] = time 
+
+    def updateAdjMatrixFromNeighbors(self):
+        """
+        This method updates our personal adjacency matrix with the most recent edge values from neighbors 
+        """ 
+        #for each neighbor we have 
+        for neighborPlayer in self.connectedToPlayers: 
+            #first, create mask with timing information of each entry 
+            timingMask = self.adjMatrixTimeStamps < neighborPlayer.adjMatrixTimeStamps
+            #then, update timing information 
+            self.adjMatrixTimeStamps[timingMask] = neighborPlayer.adjMatrixTimeStamps
+            #then, update the adj matrix information for only the entries where our neighbor player has more recent entries 
+            self.adjMatrix[timingMask] = neighborPlayer.adjMatrix[timingMask]
+            
+    def updateRoutingTable(self): 
+        """
+        This method builds an MST across the entire network using our personal adjacency matrix 
+        Only stores the next hop of each, as thats all thats used
+        That is, if we want to go to B from A, what node should i go to next if i am in A? (for all B in tree)
+        """
+        #so, get the next hop table from math function
+        self.routingTable = myMath.dijkstraWithAllInitialHops(self.adjMatrix)
+        
     def connectToPlayer(self, 
                         playerToConnectTo, 
                         polarRegionRestriction = True, 

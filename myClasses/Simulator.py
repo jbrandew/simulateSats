@@ -314,6 +314,10 @@ class Simulator():
                 #store it in corresponding place 
                 self.snapshotStorage[event.kargs["snapshotInd"]] = self.SimulationSnapshot(self.manager, self.view, self.currentTime)
 
+
+            #if its 
+
+            #if its for sending a packet :D 
             if event.eventType  == "packetSent":
                 #first, get the satellite closest to start and end 
                 #note, assuming you must use satellite for start and end 

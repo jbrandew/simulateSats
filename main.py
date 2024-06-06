@@ -8,7 +8,8 @@ import pdb
 import myClasses.Simulator as Simulator
 import myClasses.Manager as Manager
 
-
+#for profiling 
+import profile
 
 #just need a little bit of computation...just a little bit 
 import numpy as np 
@@ -78,6 +79,8 @@ simmer.manager.connect2ISL()
 
 #do simple plot
 #simmer.timeFrameSequencing(15, 10, 20)
+
+#profile.run('simmer.simulateWithVisualizer(simulationArgs, visualizerArgs)')
 
 #then enact simulation and visualize the data 
 hold = simmer.simulateWithVisualizer(simulationArgs, visualizerArgs)

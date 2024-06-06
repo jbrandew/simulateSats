@@ -37,9 +37,9 @@ outageFrequency: null
 timeFactor: 1000
 
 #visualizer parameters 
-visualizerOn: 'True'
+visualizerOn: 'False'
 visualizeTime: 10
-FPS: 3
+FPS: 1
 
 #could add the server processing time & amount here 
 

@@ -660,7 +660,7 @@ def dijkstra(adj_matrix, start, end):
 def dijkstraWithNodeValuesAndPath(adj_matrix, nodeValues, start, end):
     
     #modify adjacency matrix by adding to row and column, but taking out the overlap 
-    #this is "traffic aware", as you are adding the node value to each edge / 2
+    #this is "traffic aware", as you are adding the node value to each edge /2
     for ind, value in enumerate(nodeValues): 
         adj_matrix[ind] +=value/2
         adj_matrix[:,ind] +=value/2
@@ -668,33 +668,135 @@ def dijkstraWithNodeValuesAndPath(adj_matrix, nodeValues, start, end):
 
     return dijkstraWithPath(adj_matrix, start, end)
 
-def dijkstraWithPath(adj_matrix, start, end):
+def dijkstraWithAllInitialHops(adj_matrix,start): 
+    """
+    Function to build MST and give initial hop to any other node, if we are at "start" 
+
+    Inputs: 
+    adj_matrix: adjacency matrix of the graph
+    start: node index that we are starting at within this graph
+
+    Outptus: 
+    nextHopIndices: where to hop to next if we are trying to go to a node from start 
+    """
+
+    #get number of nodes in graph based on adj matrix  
     num_nodes = len(adj_matrix)
+    #create storage for if we've seen 
     visited = [False] * num_nodes
+    #create storage from current node to all other nodes 
     distances = [sys.maxsize] * num_nodes
+    #create storage for "parent" of each node
+    #parents are just the node thats connecting the node to the MSTM
+    #its the node that added this node to the tree..
+    #storing the parents enables reconstruction of any path 
     parent = [-1] * num_nodes
 
+    #obviously distance to ourself = 0 
     distances[start] = 0
 
+    #we have to build number of paths = # of nodes in our system 
     for _ in range(num_nodes):
+        #initialize the min distance
         min_distance = sys.maxsize
+        #min index is the index of the node for the path that we are currently adding to the in progress MST 
         min_index = -1
 
+        #for each node to examine 
         for node in range(num_nodes):
+            #if we havent visited the node yet and its less than the min distance 
+            #distance being known distance to ourself 
             if not visited[node] and distances[node] < min_distance:
+                #store the distance and index 
                 min_distance = distances[node]
                 min_index = node
 
+        #label the fact that we have seen this node 
         visited[min_index] = True
 
+        #then, for each node again 
         for node in range(num_nodes):
+            #for each node we havent visited 
             if not visited[node] and adj_matrix[min_index][node] >= 0:
+                #set the new distance, so basically updating the distance from the MST to the new node 
                 new_distance = distances[min_index] + adj_matrix[min_index][node]
                 if new_distance < distances[node]:
                     distances[node] = new_distance
+                    #store the parent
+                    parent[node] = min_index
+
+    # Reconstruct all paths and then initial hops
+    # so, make storage for all nodes 
+    nextHopIndices = [-1] * num_nodes
+    for endNode in range(num_nodes): 
+        path = []
+        current_node = endNode
+        while current_node != -1:
+            path.insert(0, current_node)
+            current_node = parent[current_node]
+
+        #store the first hop each time 
+        if(endNode == start):
+            nextHopIndices[endNode] = start
+        else: 
+            nextHopIndices[endNode] = path[1]
+
+
+    return nextHopIndices 
+
+
+def dijkstraWithPath(adj_matrix, start, end):
+    """
+    Function to get the shortest path and corresponding distance between two nodes. 
+    """
+
+    #get number of nodes in graph based on adj matrix  
+    num_nodes = len(adj_matrix)
+    #create storage for if we've seen 
+    visited = [False] * num_nodes
+    #create storage from current node to all other nodes 
+    distances = [sys.maxsize] * num_nodes
+    #create storage for "parent" of each node...not exactly sure what this is 
+    #parents are just the node thats connecting the node to the MSTM
+    #its the node that added this node to the tree..
+    #storing the parents enables reconstruction of any path 
+    parent = [-1] * num_nodes
+
+    #obviously distance to ourself = 0 
+    distances[start] = 0
+
+    #we have to build number of paths = # of nodes in our system 
+    for _ in range(num_nodes):
+        #initialize the min distance
+        min_distance = sys.maxsize
+        #min index is the index of the node for the path that we are currently adding to the in progress MST 
+        min_index = -1
+
+        #for each node to examine 
+        for node in range(num_nodes):
+            #if we havent visited the node yet and its less than the min distance 
+            #distance being known distance to ourself 
+            if not visited[node] and distances[node] < min_distance:
+                #store the distance and index 
+                min_distance = distances[node]
+                min_index = node
+
+        #label the fact that we have seen this node 
+        visited[min_index] = True
+
+        #then, for each node again 
+        for node in range(num_nodes):
+            #for each node we havent visited 
+            if not visited[node] and adj_matrix[min_index][node] >= 0:
+                #set the new distance, so basically updating the distance from the MST to the new node 
+                new_distance = distances[min_index] + adj_matrix[min_index][node]
+                if new_distance < distances[node]:
+                    distances[node] = new_distance
+                    #store the parent
                     parent[node] = min_index
 
     # Reconstruct the path
+    # basically going backwards from the node we want to be at 
     path = []
     current_node = end
     while current_node != -1:
