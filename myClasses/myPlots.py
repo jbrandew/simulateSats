@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pdb 
+import myPackages.myMath as myMath 
+
 #hello! this package works with graphics that we need 
 #please note, this usually opts for plotting the object we create,
 #instead of passing the figure object as a return of the function 
@@ -48,6 +50,9 @@ def plotWalkerStar(allPlanes, ax = [], sphereColors = []):
     if(len(sphereColors) == 0): 
         ax.scatter(points[:,0], points[:,1], points[:,2], c = "black", s = 10, zorder = 2, alpha=1)
     else:
+        #use log scale with the sphereColors. Sphere colors are from 0 to 1, 1 being brightest 
+        sphereColors = np.log(sphereColors + 1)
+
         #make size and color vary based on queue size 
         #s can be array or single # 
         s = 20
@@ -119,7 +124,6 @@ def plot_line_segments(pair_of_points_list,
 
         # Plot the line segment for each pair
         ax.plot([x1, x2], [y1, y2], [z1, z2], marker='o', c = "black", markersize = 0)
-     
 
 class GraphicsView:
     """
@@ -176,7 +180,7 @@ class GraphicsView:
         plotWalkerStar(satPoints, self.ax, sphereColors)
 
         #plot base stations 
-        plotPoints(baseStationPoints, self.ax)
+        #plotPoints(baseStationPoints, self.ax)
 
         #plot sphere 
         plot_sphere(radius, self.ax)

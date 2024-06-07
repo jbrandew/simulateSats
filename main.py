@@ -75,11 +75,13 @@ visualizerArgs = {
 simmer = Simulator.Simulator(managerData)
 
 #connect satellites 
-#simmer.manager.connectSpiralTopologySimple(ISL2Done=False) 
-simmer.manager.updateTopology("Closest", "inView")
-simmer.manager.connect2ISL() 
+simmer.manager.connectSpiralTopologySimple(ISL2Done=False) 
+#simmer.manager.updateTopology("Closest", "inView")
+#simmer.manager.connect2ISL() 
+
 
 #do simple plot
+#simmer.plotCurrentState() 
 #simmer.timeFrameSequencing(15, 10, 20)
 
 #profile.run('simmer.simulateWithVisualizer(simulationArgs, visualizerArgs)')
@@ -93,7 +95,7 @@ quit()
 #simmer.manager.connectBaseStationsToSatellites() 
 
 #optionally plot the configuration for debugging 
-#simmer.plotCurrentState() 
+#
 
 #simmer.manager.updateTopology("Closest", "None")
 #simmer.timeFrameSequencing(15, 10, 20)

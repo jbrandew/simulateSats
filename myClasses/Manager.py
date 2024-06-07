@@ -213,6 +213,7 @@ class Manager():
         raveledSats = np.ravel(self.sats)
 
         for current_sat in raveledSats:
+
             # Initialize a min heap to store the m closest points
             min_heap = []
 
@@ -236,6 +237,7 @@ class Manager():
         """
 
         if(satPolicy == "Closest"): 
+            #x = 1
             #call that update
             self.connectSatellitesToClosest() 
             #need to also connect each base station to all sats in view
@@ -256,7 +258,12 @@ class Manager():
 
         Effect: 
         Satellites are now connected to the closest players 
+
+        Not good function. 
         """
+
+        #raise Exception("No good function to use, as A may be the closest satellite B, but A might not be the closest saetllite to B. (Lack of assured reciprocation)")
+        
         #first, get the set of locations for each satellite 
         #locs = self.getSatLocations
         #then, get closest to each 
@@ -267,9 +274,24 @@ class Manager():
         for satKey in closest.keys():
             #reset the connections 
             satKey.resetConnections()
-            #and then connect to the closest "maxISLNum" satellites 
-            #convert to set as thats what connectedToPlayers works with 
-            satKey.connectedToPlayers = set(closest[satKey]) 
+
+        #then, try to connect to the nearest n. 
+        for satKey in closest.keys(): 
+            #for each satellite that you are close to 
+            for satToConnectTo in closest[satKey]: 
+                #check if they are not full 
+                if( not len(satToConnectTo.connectedToPlayers) == maxISLNum): 
+                    #if they arent full, then connect to them and have them connect to you 
+                    satToConnectTo.connectedToPlayers.add(satKey)
+                    satKey.connectedToPlayers.add(satToConnectTo)           
+
+        #and then connect to the closest "maxISLNum" satellites 
+        #convert to set as thats what connectedToPlayers works with 
+        #satKey.connectedToPlayers = set(closest[satKey]) 
+         
+        #for satToConnectTo in closest[satKey]: 
+        #    if satToConnectTo.
+            
 
     def updateConstellationPosition(self, timeDiff): 
         """

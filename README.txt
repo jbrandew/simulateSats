@@ -58,4 +58,3 @@ Manager: has functions for initialization and runtime updates of topology, inclu
 Player: interface/general implementations for stuff like base stations and satellites. also has necessary data structures, like PQueue that are used within player implementations
 Simulator: contains execution protocols. Assumes already initialized framework, then operates on that framework for simulations 
 Event: will contain all types of events that could occur in the environment 
-

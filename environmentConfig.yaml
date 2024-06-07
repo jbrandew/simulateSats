@@ -24,18 +24,19 @@ topologyPolicy: null
 packetProcessRate: 1
 
 #simulation runtime parameters 
-numPeople: 1
-numPacketsPerPerson: 100
-packetSendTimeFrame: 0.1
+numPeople: 10
+numPacketsPerPerson: 10
+packetSendTimeFrame: 10
 #PseudoUniform, or SingleFar
-personDistribution: 'SingleFar'
+#cant use single far with multiple people 
+personDistribution: 'PseudoUniform'
 
 queingDelaysEnabled: 'True'
 weatherEnabled: 'False'
 environmentUpdateInterval: 0.05
 outageFrequency: null
 #takes care of how long we want the visualizer to take data for. Should be greater for more traffic.
-timeFactor: 1000
+timeFactor: 10
 
 #visualizer parameters 
 visualizerOn: 'False'
