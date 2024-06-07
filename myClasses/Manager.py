@@ -537,10 +537,9 @@ class Manager():
             for smallSatInd in range(self.numSatPerPlane):
                 #initialize a satellite each time  
                 self.sats[planeInd, smallSatInd] = LEO(*(walkerPoints[planeInd,smallSatInd]),
-                                                        planeInd, 
-                                                        smallSatInd,
-                                                        normVecs[planeInd],
-                                                        packetProcessRate) 
+                                                        packetProcessRate,
+                                                        self.numSatPerPlane*planeInd + smallSatInd, 
+                                                        normVecs[planeInd]) 
                 
     def connectBaseStationsToSatellites(self): 
         """

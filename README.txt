@@ -1,4 +1,3 @@
-Hi Jun :D 
 Here are a couple basic use cases you can have fun with: 
 
 Plotting Topologies: 
@@ -37,6 +36,7 @@ Random notes:
 based on walker delta 360 (20,18) constellation. 
 most math is done in terms of meters (i.e., divide by 3e8 for prop delay)
 base stations are not connected to other base stations 
+the "players" matrix is ordered: LEOs, base stations
 
 Used the following guide to be able to use graphics: 
 https://medium.com/@shaoyenyu/make-matplotlib-works-correctly-with-x-server-in-wsl2-9d9928b4e36a

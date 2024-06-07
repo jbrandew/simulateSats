@@ -19,15 +19,16 @@ SunLocation: [149.6e+6, 0, 0]
 
 #topology and routing polocy / satellite info
 initialTopology: 'IPO'
-routingPolicy: null
+routingPolicy: 'basic'
 topologyPolicy: null
 packetProcessRate: 1
 
 #simulation runtime parameters 
-numPeople: 10
-numPacketsPerPerson: 10
-packetSendTimeFrame: .1
-personDistribution: 'PseudoUniform'
+numPeople: 1
+numPacketsPerPerson: 100
+packetSendTimeFrame: 0.1
+#PseudoUniform, or SingleFar
+personDistribution: 'SingleFar'
 
 queingDelaysEnabled: 'True'
 weatherEnabled: 'False'
@@ -39,7 +40,7 @@ timeFactor: 1000
 #visualizer parameters 
 visualizerOn: 'False'
 visualizeTime: 10
-FPS: 1
+FPS: 3
 
 #could add the server processing time & amount here 
 

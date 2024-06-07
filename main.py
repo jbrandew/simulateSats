@@ -49,6 +49,7 @@ managerData = {
 }
 
 #simulator args. so environment and stuff 
+#there is some overlap, like the routing policy, because the environment needs to know how to create evnents 
 simulationArgs = {
     "numPeople": configData['numPeople'],
     "numPacketsPerPerson": configData['numPacketsPerPerson'],
@@ -58,7 +59,8 @@ simulationArgs = {
     "weatherEnabled": configData['weatherEnabled'],
     "environmentUpdateInterval": configData['environmentUpdateInterval'],
     "outageFrequency": configData['outageFrequency'],
-    "timeFactor": configData['timeFactor']
+    "timeFactor": configData['timeFactor'],
+    "routingPolicy": configData['routingPolicy']
 }
 
 #visualizer args 

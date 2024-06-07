@@ -668,7 +668,7 @@ def dijkstraWithNodeValuesAndPath(adj_matrix, nodeValues, start, end):
 
     return dijkstraWithPath(adj_matrix, start, end)
 
-def dijkstraWithAllInitialHops(adj_matrix,start): 
+def dijkstraWithNodeValuesAllInitialHops(adj_matrix, nodeValues, start): 
     """
     Function to build MST and give initial hop to any other node, if we are at "start" 
 
@@ -679,6 +679,10 @@ def dijkstraWithAllInitialHops(adj_matrix,start):
     Outptus: 
     nextHopIndices: where to hop to next if we are trying to go to a node from start 
     """
+    for ind, value in enumerate(nodeValues): 
+        adj_matrix[ind] +=value/2
+        adj_matrix[:,ind] +=value/2
+        adj_matrix[ind,ind] -=value/2
 
     #get number of nodes in graph based on adj matrix  
     num_nodes = len(adj_matrix)

@@ -104,8 +104,8 @@ class Player:
                  xIn = 0, 
                  yIn = 0, 
                  zIn = 0,
-                 adjMatPersonalIndex = None, 
                  packetProcessRate = None,
+                 adjMatPersonalIndex = None, 
                  routingPolicy = 'NaN',
                  routingArgs = []):
         """
@@ -135,12 +135,16 @@ class Player:
             #so, first get how many possible destinations 
             numberPlayers = routingArgs['totalNumPlayers']
             #create storage for routing table  
-            self.routingTable = np.zeros([numberPlayers, numberPlayers])
+            #this has the next hop based on if we are trying to reach the final player thats = associated index 
+            self.routingTable = np.zeros(numberPlayers)
             #create storage for adj matrix 
             self.adjMatrix = np.zeros([numberPlayers, numberPlayers])
             #create storage for time stamps of each edge in adj matrix 
             self.adjMatrixTimeStamps = np.zeros([numberPlayers, numberPlayers])
             
+    def getNextPlayerToHopTo(self, endDestination): 
+        return self.routingTable[endDestination]
+
     def generateProcessingOneMorePacketTime(self, timeRequested, packetCollsionEnabled = True): 
         """
         What is this function doing? Its adding one more packet to the
@@ -277,10 +281,9 @@ class LEO(Player):
                  xIn = 0, 
                  yIn = 0, 
                  zIn = 0, 
-                 planeIndex = 0, 
-                 subSatIndex = 0, 
-                 normal_vector = [],
-                 packetProcessRate = None):
+                 packetProcessRate = None,
+                 adjMatPersonalIndex = None,
+                 normal_vector = []):
         """
         Init function for LEO.
         Just pass off coordinates to parent "Player" 
@@ -291,12 +294,8 @@ class LEO(Player):
         normal_vector: vector determining the circular path of the satellite around the earth 
         
         """
-        super().__init__(xIn, yIn, zIn, packetProcessRate)
-
-        #store indices 
-        self.planeIndex = planeIndex
-        
-        self.subSatIndex = subSatIndex
+        #pdb.set_trace() 
+        super().__init__(xIn, yIn, zIn, packetProcessRate, adjMatPersonalIndex)
 
         #number links we are allowed to have
         #not sure if we will use this  
