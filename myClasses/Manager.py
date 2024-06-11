@@ -8,6 +8,7 @@ from matplotlib.animation import FuncAnimation
 import heapq
 from myClasses.Player import * 
 from myClasses.Event import Event
+import time 
 
 #general manager/scheduler, model of processes   
 class Manager(): 
@@ -17,7 +18,8 @@ class Manager():
     interactions with stochastic elements, etc. 
 
     Acts as the model in the model, view, controller architecture. Provides
-    main calculations and monitoring of states of components 
+    main calculations and monitoring of states of components, for really just players/routing agents.
+    this includes satellites and base stations. 
     
     """
     
@@ -76,8 +78,10 @@ class Manager():
 
         #call generate satellites function, which initializes our structure 
         self.generateSatellites(walkerPoints, normVecs, packetProcessRate, routingPolicy)
+        
         #first, format the baseStationInputs 
-        self.generateBaseStations(baseStationLocations, fieldOfViewAngle, packetProcessRate)
+        self.baseStations = []
+        #self.generateBaseStations(baseStationLocations, fieldOfViewAngle, packetProcessRate)
 
         #this could be wrong lol 
         self.numBaseStations = len(self.baseStations)
@@ -88,6 +92,24 @@ class Manager():
         #set up storage for anticipated waiting times at each location 
         self.queueFinishTimes = np.zeros(self.numLEOs + len(self.baseStations))
 
+        #self.initializeSatelliteRoutingTables()
+
+    def initializeSatelliteRoutingTables(self): 
+        
+        """
+        Just a method to initialize satellite routing tables using the initial state of the environment 
+
+        """
+        
+        #first, set up our own adjacency matrix 
+        self.updateEnvironmentAndPathData(0,0)
+        #then, for each satellite, set up the adjacency matrix 
+        for sat in np.ravel(self.sats): 
+            sat.adjMatrix = self.currAdjMat
+        #then, have each satellite build their routing table 
+        for sat in np.ravel(self.sats):
+            sat.updateRoutingTable()
+    
     def updateEnvironmentAndPathData(self,
                         oldTime, 
                         newTime): 
@@ -515,7 +537,8 @@ class Manager():
     def generateBaseStations(self, 
                              baseStationLocations, 
                              fieldOfViewAngle, 
-                             packetProcessRate): 
+                             packetProcessRate,
+                             playerIndexStart): 
         """
         Just generate the baseStation objects. 
 
@@ -524,7 +547,8 @@ class Manager():
         fieldOfViewAngle: angle that a satellite must be above with respect to horizon line
         to be considered in view
         packetProcessRate: how fast our base stations process packets
-        
+        playerIndexStart: what player index we are starting at
+
         Effect/Output: 
         Created base station objects 
         """
@@ -559,7 +583,7 @@ class Manager():
         
         Effect: sets up our satellite internals using walkerPoints 
         """
-        #iterate through planes and then sats within a plane 
+        #iterate through planes and then sats within a plane    
         for planeInd in range(self.numPlanes): 
             for smallSatInd in range(self.numSatPerPlane):
                 #initialize a satellite each time  
@@ -567,7 +591,9 @@ class Manager():
                                                         packetProcessRate,
                                                         self.numSatPerPlane*planeInd + smallSatInd, 
                                                         normVecs[planeInd],
-                                                        routingPolicy) 
+                                                        routingPolicy,
+                                                        {"totalNumPlayers":self.numPlanes*self.numSatPerPlane}
+                                                        ) 
                 
     def connectBaseStationsToSatellites(self): 
         """

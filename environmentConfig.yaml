@@ -37,7 +37,7 @@ environmentUpdateInterval: 0.05
 outageFrequency: null
 #takes care of how long we want the visualizer to take data for. Should be greater for more traffic.
 #its a ratio of the visualize time vs the time frame length that packets are being sent over. 
-timeFactor: 20
+timeFactor: 5
 
 #visualizer parameters 
 visualizerOn: 'True'

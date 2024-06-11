@@ -14,6 +14,9 @@ import profile
 #just need a little bit of computation...just a little bit 
 import numpy as np 
 
+#for setting the seed to be the same across all calls
+import random
+
 #read in the config file 
 with open("environmentConfig.yaml", "r") as stream: 
     #attempt to read out 
@@ -21,6 +24,9 @@ with open("environmentConfig.yaml", "r") as stream:
         configData = yaml.safe_load(stream)
     except yaml.YAMLError as exc: 
         print(exc) 
+
+#set constant seed
+random.seed(1)
 
 #format config data for generating constellation
 constellationConfig = [

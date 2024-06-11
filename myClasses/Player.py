@@ -107,7 +107,7 @@ class Player:
                  packetProcessRate = None,
                  adjMatPersonalIndex = None, 
                  routingPolicy = 'NaN',
-                 routingArgs = []):
+                 routingArgs = {}):
         """
         xIn, yIn, zIn: personal position
         adjMatPersonalIndex: our own index within the adjMat (so its a column/row index)
@@ -145,15 +145,17 @@ class Player:
             self.adjMatrixTimeStamps = np.zeros([numberPlayers, numberPlayers])
         
     def getNextHopAndUpdatePacket(self, packet): 
-        #who we output as the next hop depends on our routing policy 
+        """
+        This function updates packet parameters 
+        """
 
-        #pdb.set_trace() 
-        #not assigning routing policy correctly :/
+        #who we output as the next hop depends on our routing policy 
 
         #if its OSPF 
         if(self.routingPolicy == "OSPF"):
-            #get the next satellite to hop to 
-            hopTo = self.routingTable[packet.currSat]
+
+            #get the next satellite to hop to. So, based on the destination, get the direction of the next hop 
+            hopTo = self.routingTable[packet.endSat]
             #store the index 
             packet.currSat = hopTo
         
@@ -224,12 +226,13 @@ class Player:
         """
         This method updates our personal adjacency matrix with the most recent edge values from neighbors 
         """ 
+
         #for each neighbor we have 
         for neighborPlayer in self.connectedToPlayers: 
             #first, create mask with timing information of each entry 
             timingMask = self.adjMatrixTimeStamps < neighborPlayer.adjMatrixTimeStamps
             #then, update timing information 
-            self.adjMatrixTimeStamps[timingMask] = neighborPlayer.adjMatrixTimeStamps
+            self.adjMatrixTimeStamps[timingMask] = neighborPlayer.adjMatrixTimeStamps[timingMask]
             #then, update the adj matrix information for only the entries where our neighbor player has more recent entries 
             self.adjMatrix[timingMask] = neighborPlayer.adjMatrix[timingMask]
             
@@ -240,7 +243,7 @@ class Player:
         That is, if we want to go to B from A, what node should i go to next if i am in A? (for all B in tree)
         """
         #so, get the next hop table from math function
-        self.routingTable = myMath.dijkstraWithAllInitialHops(self.adjMatrix)
+        self.routingTable = myMath.dijkstraWithNodeValuesAllInitialHops(self.adjMatrix, self.adjMatPersonalIndex)
         
     def connectToPlayer(self, 
                         playerToConnectTo, 
@@ -303,7 +306,8 @@ class LEO(Player):
                  packetProcessRate = None,
                  adjMatPersonalIndex = None,
                  normal_vector = [],
-                 routingPolicy = "None"):
+                 routingPolicy = "None",
+                 routingArgs = {}):
         """
         Init function for LEO.
         Just pass off coordinates to parent "Player" 
@@ -314,19 +318,12 @@ class LEO(Player):
         normal_vector: vector determining the circular path of the satellite around the earth 
         
         """
-        #pdb.set_trace() 
-        super().__init__(xIn, yIn, zIn, packetProcessRate, adjMatPersonalIndex, routingPolicy)
+        
+        super().__init__(xIn, yIn, zIn, packetProcessRate, adjMatPersonalIndex, routingPolicy, routingArgs)
 
         #number links we are allowed to have
         #not sure if we will use this  
         self.numberISLlinksAllowed = 2  
-
-        #satellites we are connected to 
-        #self.connectedSats = [] 
-
-        #base stations we are connected to
-        #base station itself will probably do the connecting/disconnecting  
-        #self.connectedBaseStations = []
 
         #store the normal vector determining our circular path 
         self.normVec = normal_vector
@@ -364,9 +361,9 @@ class LEO(Player):
 
         #calculate new position
         self.x, self.y, self.z = myMath.calculate_new_position(self.normVec, 
-                                                               [self.x, self.y, self.z], 
-                                                               angleRadDiff)
-        
+                                                            [self.x, self.y, self.z], 
+                                                            angleRadDiff)
+
       
 
 
@@ -377,8 +374,12 @@ class baseStation(Player):
                  xIn = 0, 
                  yIn = 0, 
                  zIn = 0, 
-                 minElevationAngle = 0, 
-                 packetProcessRate = None): 
+                 minElevationAngle = 0,
+                 packetProcessRate = None,
+                 adjMatPersonalIndex = None,
+                 normal_vector = [],
+                 routingPolicy = "None",
+                 routingArgs = {}): 
         """
         Init function for base station. 
         Pass off coords to parent "Player" and set your own angle 

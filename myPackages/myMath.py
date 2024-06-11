@@ -259,16 +259,15 @@ def calculate_new_position(normal_vector, current_position, angle_rad):
     """
     
     # Calculate the rotation matrix using the normal vector
-
     rotation_matrix = np.array([[np.cos(angle_rad) + normal_vector[0]**2 * (1 - np.cos(angle_rad)),
-                                 normal_vector[0] * normal_vector[1] * (1 - np.cos(angle_rad)) - normal_vector[2] * np.sin(angle_rad),
-                                 normal_vector[0] * normal_vector[2] * (1 - np.cos(angle_rad)) + normal_vector[1] * np.sin(angle_rad)],
-                                [normal_vector[1] * normal_vector[0] * (1 - np.cos(angle_rad)) + normal_vector[2] * np.sin(angle_rad),
-                                 np.cos(angle_rad) + normal_vector[1]**2 * (1 - np.cos(angle_rad)),
-                                 normal_vector[1] * normal_vector[2] * (1 - np.cos(angle_rad)) - normal_vector[0] * np.sin(angle_rad)],
-                                [normal_vector[2] * normal_vector[0] * (1 - np.cos(angle_rad)) - normal_vector[1] * np.sin(angle_rad),
-                                 normal_vector[2] * normal_vector[1] * (1 - np.cos(angle_rad)) + normal_vector[0] * np.sin(angle_rad),
-                                 np.cos(angle_rad) + normal_vector[2]**2 * (1 - np.cos(angle_rad))]])
+                                    normal_vector[0] * normal_vector[1] * (1 - np.cos(angle_rad)) - normal_vector[2] * np.sin(angle_rad),
+                                    normal_vector[0] * normal_vector[2] * (1 - np.cos(angle_rad)) + normal_vector[1] * np.sin(angle_rad)],
+                                    [normal_vector[1] * normal_vector[0] * (1 - np.cos(angle_rad)) + normal_vector[2] * np.sin(angle_rad),
+                                    np.cos(angle_rad) + normal_vector[1]**2 * (1 - np.cos(angle_rad)),
+                                    normal_vector[1] * normal_vector[2] * (1 - np.cos(angle_rad)) - normal_vector[0] * np.sin(angle_rad)],
+                                    [normal_vector[2] * normal_vector[0] * (1 - np.cos(angle_rad)) - normal_vector[1] * np.sin(angle_rad),
+                                    normal_vector[2] * normal_vector[1] * (1 - np.cos(angle_rad)) + normal_vector[0] * np.sin(angle_rad),
+                                    np.cos(angle_rad) + normal_vector[2]**2 * (1 - np.cos(angle_rad))]])
 
     # Calculate the new position using the rotation matrix
     new_position = np.dot(rotation_matrix, np.array(current_position))
@@ -668,12 +667,14 @@ def dijkstraWithNodeValuesAndPath(adj_matrix, nodeValues, start, end):
 
     return dijkstraWithPath(adj_matrix, start, end)
 
-def dijkstraWithNodeValuesAllInitialHops(adj_matrix, nodeValues, start): 
+def dijkstraWithNodeValuesAllInitialHops(adj_matrix, start, nodeValues = []): 
     """
-    Function to build MST and give initial hop to any other node, if we are at "start" 
+    Function to build MST and give initial hop to any other node, if we are at "start".
+    caution, this doesnt throw an error if a path isnt found.....
 
     Inputs: 
     adj_matrix: adjacency matrix of the graph
+    nodeValues: "traffic aware" node values 
     start: node index that we are starting at within this graph
 
     Outptus: 
@@ -729,6 +730,9 @@ def dijkstraWithNodeValuesAllInitialHops(adj_matrix, nodeValues, start):
                     #store the parent
                     parent[node] = min_index
 
+    if(any(np.array(distances) == np.inf)): 
+        pdb.set_trace()
+
     # Reconstruct all paths and then initial hops
     # so, make storage for all nodes 
     nextHopIndices = [-1] * num_nodes
@@ -739,12 +743,19 @@ def dijkstraWithNodeValuesAllInitialHops(adj_matrix, nodeValues, start):
             path.insert(0, current_node)
             current_node = parent[current_node]
 
-        #store the first hop each time 
+        #store the first hop each time
+        #if end node == start, obviously just set to start 
         if(endNode == start):
             nextHopIndices[endNode] = start
+        #if this condition occurs, then that means we didnt find a path  
+        elif(path[0] == endNode): 
+            nextHopIndices[endNode] = None
+        #otherwise, we have a valid path, and we take the corresponding index 
         else: 
             nextHopIndices[endNode] = path[1]
-
+        
+        #if(len(path) > 2): 
+        #    pdb.set_trace()
 
     return nextHopIndices 
 
