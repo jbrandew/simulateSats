@@ -26,7 +26,7 @@ packetProcessRate: 1
 #simulation runtime parameters 
 numPeople: 10
 numPacketsPerPerson: 10
-packetSendTimeFrame: 10
+packetSendTimeFrame: 1
 #PseudoUniform, or SingleFar
 #cant use single far with multiple people 
 personDistribution: 'PseudoUniform'
@@ -36,10 +36,11 @@ weatherEnabled: 'False'
 environmentUpdateInterval: 0.05
 outageFrequency: null
 #takes care of how long we want the visualizer to take data for. Should be greater for more traffic.
-timeFactor: 10
+#its a ratio of the visualize time vs the time frame length that packets are being sent over. 
+timeFactor: 20
 
 #visualizer parameters 
-visualizerOn: 'False'
+visualizerOn: 'True'
 visualizeTime: 10
 FPS: 3
 

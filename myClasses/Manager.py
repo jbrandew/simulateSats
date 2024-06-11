@@ -75,7 +75,7 @@ class Manager():
         self.sats = np.tile(LEO(), [self.numPlanes, self.numSatPerPlane]) 
 
         #call generate satellites function, which initializes our structure 
-        self.generateSatellites(walkerPoints, normVecs, packetProcessRate)
+        self.generateSatellites(walkerPoints, normVecs, packetProcessRate, routingPolicy)
         #first, format the baseStationInputs 
         self.generateBaseStations(baseStationLocations, fieldOfViewAngle, packetProcessRate)
 
@@ -541,7 +541,11 @@ class Manager():
         else: 
             self.baseStations = [] 
 
-    def generateSatellites(self, walkerPoints, normVecs, packetProcessRate): 
+    def generateSatellites(self, 
+                           walkerPoints, 
+                           normVecs, 
+                           packetProcessRate, 
+                           routingPolicy): 
         """
         Just storing satellites when given walker constellation points
 
@@ -551,6 +555,7 @@ class Manager():
         normal vector as all those in its plane, as one normal vector determines a 
         circular path  
         packetProcessRate: how fast the satellites can process packets 
+        routingPolicy: how satellites route their respective packets
         
         Effect: sets up our satellite internals using walkerPoints 
         """
@@ -561,7 +566,8 @@ class Manager():
                 self.sats[planeInd, smallSatInd] = LEO(*(walkerPoints[planeInd,smallSatInd]),
                                                         packetProcessRate,
                                                         self.numSatPerPlane*planeInd + smallSatInd, 
-                                                        normVecs[planeInd]) 
+                                                        normVecs[planeInd],
+                                                        routingPolicy) 
                 
     def connectBaseStationsToSatellites(self): 
         """

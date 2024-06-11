@@ -50,14 +50,15 @@ def plotWalkerStar(allPlanes, ax = [], sphereColors = []):
     if(len(sphereColors) == 0): 
         ax.scatter(points[:,0], points[:,1], points[:,2], c = "black", s = 10, zorder = 2, alpha=1)
     else:
-        #use log scale with the sphereColors. Sphere colors are from 0 to 1, 1 being brightest 
-        sphereColors = np.log(sphereColors + 1)
+        #use log scale with the sphereColors. Sphere colors initially are from 0 to 1, 1 being brightest 
+        
+        sphereColors = sphereColors > 0 #np.log(sphereColors + 1)
 
         #make size and color vary based on queue size 
         #s can be array or single # 
         s = 20
         if(max(sphereColors) != min(sphereColors)): 
-            s = sphereColors*80 + 20
+            s = (sphereColors)*80 + 20
         ax.scatter(points[:,0], points[:,1], points[:,2], c=sphereColors, cmap = "magma", zorder = 2, alpha=1, s = s)
 
 def plot_sphere(radius=1, ax = []):

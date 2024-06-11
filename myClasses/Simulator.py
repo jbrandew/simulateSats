@@ -3,6 +3,7 @@ import myClasses.myPlots as myPlots
 import myPackages.myMath as myMath 
 from myClasses.Player import * 
 from myClasses.Manager import *
+import myClasses.Packet as Packet
 
 #processing classes 
 import math 
@@ -87,9 +88,8 @@ class Simulator():
 
             print("Hello") 
             print(relativeFinish[np.nonzero(relativeFinish)])
-            # pdb.set_trace() 
-            
 
+        
         def selfPlot(self): 
             self.view.multiplot(0,
                     self.satelliteLocations,
@@ -181,6 +181,86 @@ class Simulator():
         #plot the aleadry stored snapshot 
         self.snapshotStorage[frame].selfPlot()
 
+    def generatePackets(self, 
+                        numPeople,
+                        numPacketsPerPerson,
+                        startLocationDistribution,
+                        sendTimeDistribution, 
+                        sendTimeFrameLength,
+                        precomputePath): 
+        """
+        Generate a set of packet objects 
+        
+        Inputs: 
+        numPacketsPerPerson: how many packets per person to create
+        numPeople: how many people are sending packets 
+        startLocationDistribution: how the origin locations of packets is distributed
+        sendTimeDistribution: how the timing of the send time of packets is distributed
+        sendTimeFrameLength: over what period of time to send packets over 
+        precomputePath: do we compute the path for all the packets beforehand? This is part of the "basic routing policy" 
+        
+        Output: 
+        packets: set of packet objects that have corresponding properties         
+        """
+        satLocs = self.manager.getSatLocations()
+        satLocs = np.reshape(satLocs, [np.shape(satLocs)[0]*np.shape(satLocs)[1], np.shape(satLocs)[2]])
+
+        packets = [0]*numPacketsPerPerson*numPeople
+        satStarts = [0]*len(packets)
+        satEnds = [0]*len(packets)
+        routingMetaData = [dict() for x in range(len(packets))]
+
+        if(startLocationDistribution == "PseudoUniform"):
+            startLocations = myMath.generate_points_on_sphere_mostly_uniform(numPeople,
+                                                                            self.manager.earthRadius)
+            endLocations = myMath.generate_points_on_sphere_mostly_uniform(numPeople*numPacketsPerPerson,
+                                                                            self.manager.earthRadius)        
+        
+        #distribute start and finish of packets to just use one person, and have it be the farthest distance possible
+        if(startLocationDistribution == "SingleFar"):
+                                                                            
+            startLocations = np.array([[0,0,6000000]])
+            endLocations = startLocations*-1   
+
+        if(sendTimeDistribution == "Uniform"):
+            #next, get random times for sending the packets out 
+            packetSendTimes = np.random.uniform(0, 
+                                                sendTimeFrameLength, 
+                                                (numPeople*numPacketsPerPerson,))
+        
+        #store the indices of the start and end satellites 
+        for packetInd in range(len(packets)): 
+            satStarts[packetInd], _ = myMath.closest_point(satLocs, 
+                                                            startLocations[int(packetInd/numPacketsPerPerson)])
+            satEnds[packetInd], _ = myMath.closest_point(satLocs,
+                                                            endLocations[int(packetInd/numPacketsPerPerson)])        
+        #if we are supposed to precompute the path 
+        if(precomputePath):
+
+            #then, for each packet, use the start and end satellites to get the path
+            for packetInd in range(len(packets)):                 
+                #use adjacency matrix to get the path for each 
+                routingMetaData[packetInd]["path"] , _ = myMath.dijkstraWithPath(self.manager.currAdjMat, 
+                                                                                 satStarts[packetInd],
+                                                                                 satEnds[packetInd])
+                
+                #handle exception of not being able to find a path 
+                if len(routingMetaData[packetInd]["path"]) == 1 and satStarts[packetInd]!=satEnds[packetInd]:
+                    raise Exception("couldnt find path between start and end") 
+        
+        #then, initialize all the necessary packets 
+        for packetInd in range(numPacketsPerPerson*numPeople): 
+            packets[packetInd] = Packet.Packet(startLocations[int(packetInd/numPacketsPerPerson)],
+                                               endLocations[int(packetInd/numPacketsPerPerson)],
+                                               satStarts[packetInd],
+                                               satEnds[packetInd],
+                                               None,
+                                               packetSendTimes[packetInd],
+                                               routingMetaData[packetInd],
+                                               None)
+        
+        return packets
+        
     def executeGeneralSimulation(self,
                                  
                                  numPeople = 100,
@@ -260,41 +340,22 @@ class Simulator():
         #create pQueue 
         eventQueue = PQueue()
 
-        #then initialize a set of packets
-        #so first, get locations of all the packets, semi evenly spread
-        #across the globe.        
-        if(personDistribution == "PseudoUniform"):
-            startLocations = myMath.generate_points_on_sphere_mostly_uniform(numPeople,
-                                                                            self.manager.earthRadius)
+        #create the packets 
+        #TODO: change input config here 
+        packets = self.generatePackets(numPeople,
+                                       numPacketsPerPerson,
+                                       "PseudoUniform",
+                                       "Uniform",
+                                       packetSendTimeFrame,
+                                       "True")
 
-            endLocations = myMath.generate_points_on_sphere_mostly_uniform(numPeople,
-                                                                            self.manager.earthRadius)        
-        
-        #distribute start and finish of packets to just use one person, and have it be the farthest distance possible
-        if(personDistribution == "SingleFar"):
-                                                                            
-            startLocations = np.array([[0,0,6000000]])
-            endLocations = startLocations*-1   
-
-
-        #next, get random times for sending the packets out 
-        packetSendTimes = np.random.uniform(0, 
-                                            packetSendTimeFrame, 
-                                            (numPeople*numPacketsPerPerson,))
-        
-        #get storage for when the packets arrive 
-        packetArriveTimes = -1*np.ones(numPeople*numPacketsPerPerson)
-
-        #create the packet send events
-        for personInd in range(numPeople): 
-            for smallPacketInd in range(numPacketsPerPerson): 
-                kargs = {"startLocation":startLocations[personInd],
-                        "endLocation":endLocations[personInd],
-                        "packetInd":personInd*numPacketsPerPerson + smallPacketInd}
-                queueEvent = Event(packetSendTimes[personInd*numPacketsPerPerson + smallPacketInd],
-                                "packetSent",
-                                kargs)
-                eventQueue.push(queueEvent)
+        #create the events fro the packets being sent 
+        for packetInd in range(len(packets)):
+            kargs = {"packet": packets[packetInd]} 
+            queueEvent = Event(packets[packetInd].packetSendTime,
+                               "packetSent",
+                               kargs)
+            eventQueue.push(queueEvent)
 
         #section for updating routing information. in OSPF, this could be creating MST, but in RL, could be general routing table update 
         #logically, probably have the update MST method occur less often than the update adj mat method 
@@ -337,7 +398,7 @@ class Simulator():
 
             #get the next event 
             event = eventQueue.pop()
-
+            
             #coordinate current time
             self.currentTime = event.timeOfOccurence
 
@@ -375,50 +436,18 @@ class Simulator():
 
             #if its for sending a packet :D 
             if event.eventType  == "packetSent":
-                #first, get the satellite closest to start and end 
-                #note, assuming you must use satellite for start and end 
-                #note, this is a non-dynamic path that doesnt account for the slight change in constellation within the path sending. If a change in topology occurs while packet is sent, youre toast. 
-                #(no terrestrial networks)  
-                #need the start and end regardless of the routing policy 
-                closestSatIndToStart, _ = myMath.closest_point(satLocs, 
-                                                            event.kargs["startLocation"])
-                 
-                closestSatIndToEnd, _ = myMath.closest_point(satLocs,
-                                                          event.kargs["endLocation"])
                 
-                #if we are utilizing basic routing policy 
-                if(routingPolicy == "basic"): 
-                    #then, get the waitTimes for each using our currentTime 
-                    #TODO: you really dont need to compute this every time, could approximate somehow 
-                    waitTimes = np.maximum(self.manager.queueFinishTimes - self.currentTime, 0)
-
-                    #use adjacency matrix to get the path for each 
-                    pathToTake , _ = myMath.dijkstraWithNodeValuesAndPath(self.manager.currAdjMat, 
-                                                                        waitTimes,
-                                                                        closestSatIndToStart,
-                                                                        closestSatIndToEnd)
-                    #handle exception of not being able to find a path 
-                    if len(pathToTake) == 1 and closestSatIndToStart!=closestSatIndToEnd:
-                        raise Exception("couldnt find path between start and end node")
-
-                    event.kargs["pathToTake"] = pathToTake
-                    event.kargs["lastSatInd"] = closestSatIndToEnd
-                    event.kargs["currentIndexInPath"] = 0 
-
-                #if we are using OSPF 
-                if(routingPolicy == "OSPF"): 
-                    #then, do nothing, because nothing is preassigned before arrival of packet to constellation  
-                    event.kargs["currSatInd"] = closestSatIndToStart
-                    event.kargs["lastSatInd"] = closestSatIndToEnd
-                    x = 1 
-
                 #create event for arriving at next player. (so arriving at constellation)
                 #first, get the time of arriving at that first satellite 
                 #the indexing may possibly be wrong for raveled satellites
                 #but get the eventEndTime by accounting for initial propagation 
-                timeOfOccurence = event.timeOfOccurence + myMath.dist3d(event.kargs["startLocation"],  
-                                                        raveledPlayers[closestSatIndToStart].getCoords())/(3e8)
+                timeOfOccurence = event.timeOfOccurence + myMath.dist3d(event.kargs["packet"].startLocation,  
+                                                                        raveledPlayers[event.kargs["packet"].startSat].getCoords())/(3e8)
+                
+                #store the currSat 
+                event.kargs["packet"].currSat = event.kargs["packet"].startSat
 
+                #create the event
                 queueEvent = Event(timeOfOccurence, 
                                    "packetArriveAtNextPlayer",
                                    event.kargs)
@@ -428,30 +457,20 @@ class Simulator():
                 
             #if our event type is arriving at next player,
             if event.eventType == "packetArriveAtNextPlayer": 
-
-                if(routingPolicy == "basic"): 
-                    #if we are, then create end event. So, first get the process time
-                    #how to do this? first, generate how long it takes to process one packet
-                    satelliteIndWeAreAt = event.kargs["pathToTake"][event.kargs["currentIndexInPath"]]
-                    satelliteWeAreAt = raveledPlayers[satelliteIndWeAreAt]
-
-                    #get the finish processing time 
-                    endProcessTime = satelliteWeAreAt.generateProcessingOneMorePacketTime(event.timeOfOccurence, queingDelaysEnabled) 
-
-                if(routingPolicy == "OSPF"): 
-                    #in OSPF, get just get the processing time of the current satellite 
-                    satelliteIndWeAreAt = event.kargs["currSatInd"]
-                    
-                    #get the finish processing time 
-                    endProcessTime = raveledPlayers[satelliteIndWeAreAt].generateProcessingOneMorePacketTime(event.timeOfOccurence, queingDelaysEnabled) 
-
+                
+                #get our current satellite 
+                satelliteIndWeAreAt = event.kargs["packet"].currSat
+                
+                #get the finish processing time 
+                endProcessTime = raveledPlayers[satelliteIndWeAreAt].generateProcessingOneMorePacketTime(event.timeOfOccurence, queingDelaysEnabled) 
+                
                 #create event to queue, based on when we finish processing 
                 queueEvent = Event(endProcessTime,
                                    "packetFinishProcessing",
                                    event.kargs)
                 
                 #push the event 
-                eventQueue.push(queueEvent)
+                eventQueue.push(queueEvent)                
 
                 continue 
 
@@ -462,36 +481,25 @@ class Simulator():
                 
                 #for basic, its if we only had to wait at one to begin with  
                 #or if we are at the end of path
-                if((routingPolicy == "basic" and (len(event.kargs["pathToTake"]) == 1 or event.kargs["currentIndexInPath"] is len(event.kargs["pathToTake"])-1))  or
+                if((routingPolicy == "basic" and (len(event.kargs["packet"].routingMetadata["path"]) == 1 or event.kargs["packet"].reachedEnd()))  or
                     #for OSPF, its if the current satellite is the last satellite in the routing path 
-                   (routingPolicy == "OSPF"  and (event.kargs["currSatInd"] == event.kargs["lastSatInd"]))):
+                   (routingPolicy == "OSPF"  and (event.kargs["packet"].reachedEnd()))):
                      
                     #so then, get the time of occurence of landing at the dest 
-                    timeOfOccurence = event.timeOfOccurence + myMath.dist3d(event.kargs["endLocation"],  
-                                                        raveledPlayers[event.kargs["lastSatInd"]].getCoords())/(3e8)
+                    timeOfOccurence = event.timeOfOccurence + myMath.dist3d(event.kargs["packet"].endLocation,  
+                                                                            raveledPlayers[event.kargs["packet"].endSat].getCoords())/(3e8)
                     
                     #then, store the data for when the final arrival of the packet happened 
-                    packetArriveTimes[event.kargs["packetInd"]] = timeOfOccurence
-                    
+                    event.kargs["packet"].packetArriveTime = timeOfOccurence
                     continue 
                 
-                #who we hop to next depends on the routing policy 
-
-                if(routingPolicy == "basic"): 
-                    #otherwise, first, get the traversal time for the next link 
-                    fromPlayer = event.kargs["pathToTake"][event.kargs["currentIndexInPath"]]
-                    toPlayer = event.kargs["pathToTake"][event.kargs["currentIndexInPath"]+1]
-
-                    #store the args 
-                    event.kargs["currentIndexInPath"] = event.kargs["currentIndexInPath"]+1
-
-                if(routingPolicy == "OSPF"):
-                    #if its OSPF, then get the next player on the current routing table 
-                    fromPlayer = raveledPlayers[event.kargs["currSatInd"]]
-                    toPlayer = fromPlayer.getNextPlayerToHopTo(event.kargs["lastSatInd"])
+                #get the current and next players 
+                fromPlayerInd = event.kargs["packet"].currSat
+                fromPlayer = raveledPlayers[fromPlayerInd]
+                toPlayerInd = fromPlayer.getNextHopAndUpdatePacket(event.kargs["packet"])
 
                 #adjMat stores propagation delays 
-                propTime = self.manager.currAdjMat[fromPlayer, toPlayer]
+                propTime = self.manager.currAdjMat[fromPlayerInd, toPlayerInd]
                 
                 #create corresponding time 
                 timeOfOccurence = event.timeOfOccurence + propTime 
@@ -500,18 +508,20 @@ class Simulator():
                 queueEvent = Event(timeOfOccurence, 
                                    "packetArriveAtNextPlayer",
                                    event.kargs)
-               
-                # print("Next place")
-                # print(event.kargs)
-                # print(queueEvent.kargs)
-                # pdb.set_trace() 
                                
                 #then, add the new event on the pQ
                 eventQueue.push(queueEvent)
 
 
         #then, finally just return the difference between the two. 
-        return packetArriveTimes - packetSendTimes
+        #create storage for latency 
+        latencyTimes = np.zeros(len(packets))
+        #then, iterating through the packets
+        for packetInd in range(len(packets)): 
+            latencyTimes[packetInd] = packets[packetInd].packetArriveTime - packets[packetInd].packetSendTime
+
+        #then, return it
+        return latencyTimes
  
     def executeSimulation(self,
                           numPackets, 
@@ -567,9 +577,6 @@ class Simulator():
         self.manager.updateTopology(satPolicy, baseStationPolicy)
         #plot current state 
         self.plotCurrentState() 
-
-        #print("asdfasdf")
-
 
     def timeFrameSequencing(self, timeRatio, FPS, animationDuration): 
         """
@@ -946,8 +953,6 @@ class Simulator():
                     event.kargs["pathToTake"] = pathToTake
                     event.kargs["lastSatInd"] = closestSatIndToEnd
                 
-                if(routingPolicy == "aoeu"):
-                    x= 1 
 
                 queueEvent = Event(timeOfOccurence, 
                                    "packetArriveAtConstellation",

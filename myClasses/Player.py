@@ -46,47 +46,47 @@ class PQueue:
         return len(self.queue)
 
 
-class PacketState: 
+# class PacketState: 
 
-    """
-    Describes what the packet is actually doing 
-    """
-    def __init__(self, initState): 
-        self.allowedValues = {'Dormant', 
-                                'InTransmit', 
-                                'InProcessQueue',
-                                'InTransmitQueue',
-                                'Finished'}
-        if initState not in self.allowedValues: 
-            raise ValueError("Bad Packet State Value") 
-class Packet(): 
-    """
-    This class is separate functionally from the "Player" set, but 
-    this seemed like the best place to put it. It really just 
-    represents the lifecycle of a packet. 
+#     """
+#     Describes what the packet is actually doing 
+#     """
+#     def __init__(self, initState): 
+#         self.allowedValues = {'Dormant', 
+#                                 'InTransmit', 
+#                                 'InProcessQueue',
+#                                 'InTransmitQueue',
+#                                 'Finished'}
+#         if initState not in self.allowedValues: 
+#             raise ValueError("Bad Packet State Value") 
+# class Packet(): 
+#     """
+#     This class is separate functionally from the "Player" set, but 
+#     this seemed like the best place to put it. It really just 
+#     represents the lifecycle of a packet. 
 
-    """
-    def __init__(self, **kwargs): 
-        """
-        Initialization of packet
+#     """
+#     def __init__(self, **kwargs): 
+#         """
+#         Initialization of packet
 
-        Inputs: 
+#         Inputs: 
 
-        startLocation: xyz of the packet for when it is sent out 
-        endLocation: xyz of location for packet to arrive at 
-        scheduledAwakeTime: when the packet is supposed to be sent/start its path
-        pathToTake: the series of terminals it travels over to get to its 
-        destination. This is currently assigned when the packet reaches the time
-        of "awake," so its non adaptable  
-        """
+#         startLocation: xyz of the packet for when it is sent out 
+#         endLocation: xyz of location for packet to arrive at 
+#         scheduledAwakeTime: when the packet is supposed to be sent/start its path
+#         pathToTake: the series of terminals it travels over to get to its 
+#         destination. This is currently assigned when the packet reaches the time
+#         of "awake," so its non adaptable  
+#         """
 
-        for key, value in kwargs.items():
-            setattr(self, key, value)
+#         for key, value in kwargs.items():
+#             setattr(self, key, value)
 
-        #packet is dormant first 
-        self.currentPhase = PacketState('Dormant')
+#         #packet is dormant first 
+#         self.currentPhase = PacketState('Dormant')
 
-        return 
+#         return 
     
 #player class describes any operator on or above the earth 
 #probably going to use rho and phi more often than purely longitude and latitude 
@@ -128,9 +128,11 @@ class Player:
         #this represents when the server will be done processing
         #all packets. Note: may be in the past  
         self.finishProcessingTime = 0  
+
+        self.routingPolicy = routingPolicy
         
         #if our routing policy is OSPF 
-        if(routingPolicy == 'OSPF'): 
+        if(self.routingPolicy == 'OSPF'): 
             #then, first create the routing table accordingly 
             #so, first get how many possible destinations 
             numberPlayers = routingArgs['totalNumPlayers']
@@ -141,9 +143,26 @@ class Player:
             self.adjMatrix = np.zeros([numberPlayers, numberPlayers])
             #create storage for time stamps of each edge in adj matrix 
             self.adjMatrixTimeStamps = np.zeros([numberPlayers, numberPlayers])
-            
-    def getNextPlayerToHopTo(self, endDestination): 
-        return self.routingTable[endDestination]
+        
+    def getNextHopAndUpdatePacket(self, packet): 
+        #who we output as the next hop depends on our routing policy 
+
+        #pdb.set_trace() 
+        #not assigning routing policy correctly :/
+
+        #if its OSPF 
+        if(self.routingPolicy == "OSPF"):
+            #get the next satellite to hop to 
+            hopTo = self.routingTable[packet.currSat]
+            #store the index 
+            packet.currSat = hopTo
+        
+        if(self.routingPolicy == "basic"):
+            #same here 
+            hopTo = packet.returnNextHopBasic() 
+            packet.updateToNextHopBasic() 
+        
+        return hopTo
 
     def generateProcessingOneMorePacketTime(self, timeRequested, packetCollsionEnabled = True): 
         """
@@ -283,7 +302,8 @@ class LEO(Player):
                  zIn = 0, 
                  packetProcessRate = None,
                  adjMatPersonalIndex = None,
-                 normal_vector = []):
+                 normal_vector = [],
+                 routingPolicy = "None"):
         """
         Init function for LEO.
         Just pass off coordinates to parent "Player" 
@@ -295,7 +315,7 @@ class LEO(Player):
         
         """
         #pdb.set_trace() 
-        super().__init__(xIn, yIn, zIn, packetProcessRate, adjMatPersonalIndex)
+        super().__init__(xIn, yIn, zIn, packetProcessRate, adjMatPersonalIndex, routingPolicy)
 
         #number links we are allowed to have
         #not sure if we will use this  
