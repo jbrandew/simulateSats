@@ -393,6 +393,10 @@ def dist3d(point1, point2):
     
     return distance
 
+def generateSingleSourceSquarePoints(): 
+
+    return 
+
 def generateWalkerStarConstellationPoints(
         numSatellites, 
         inclination,
@@ -418,7 +422,7 @@ def generateWalkerStarConstellationPoints(
 
     Nvm its fine, phasing parameter has been figured out 
     """
-
+    
     #alright, now that we have intro done, lets work with the calculation 
     numSatellitesPerPlane = numSatellites/numPlanes 
     if(int(numSatellitesPerPlane) - numSatellitesPerPlane != 0): 

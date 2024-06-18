@@ -81,7 +81,10 @@ visualizerArgs = {
 simmer = Simulator.Simulator(managerData)
 
 #connect satellites 
-simmer.manager.connectSpiralTopologySimple(ISL2Done=False) 
+simmer.manager.connectSpiralTopologySimple(ISL2Done=False)
+
+hold = simmer.simulateWithVisualizer(simulationArgs, visualizerArgs)
+
 #simmer.manager.updateTopology("Closest", "inView")
 #simmer.manager.connect2ISL() 
 
@@ -93,7 +96,7 @@ simmer.manager.connectSpiralTopologySimple(ISL2Done=False)
 #profile.run('simmer.simulateWithVisualizer(simulationArgs, visualizerArgs)')
 
 #then enact simulation and visualize the data 
-hold = simmer.simulateWithVisualizer(simulationArgs, visualizerArgs)
+
 
 quit()
 

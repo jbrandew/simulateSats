@@ -623,3 +623,29 @@ def executeSimulation(self,
                 #then, add the new event on the pQ
                 eventQueue.push(queueEvent)     
 
+    def connectDisjointSpiralTopologyaoeuaoeuaoeu(self): 
+        """
+        DEPRECATED (use simple version instead)
+        Similar to spiral topology implementation. However, we will
+        instead use every other. 
+
+        Effect: disjoint spiral connections
+        """
+
+        self.connect2ISL() 
+
+        #then, connect to adjacent planes 
+        #iterate through planes and then sats within a plane 
+        for smallSatInd in range(self.numSatPerPlane):  
+            for planeInd in range(self.numPlanes): 
+                #uhhh...connect satellite to adjacent ones 
+                #for forward case:  
+                if(planeInd % 2 == 0): 
+                    satOfPrevPlane = self.sats[(planeInd + 1 ) % self.numPlanes, smallSatInd]
+                    self.sats[planeInd, smallSatInd].connectToPlayer(satOfPrevPlane, True, self.sunExclusionAngle, self.sunLocation)
+                
+                #for back case: 
+                else: 
+                    satOfNextPlane = self.sats[(planeInd - 1) % self.numPlanes, smallSatInd]
+                    self.sats[planeInd, smallSatInd].connectToPlayer(satOfNextPlane, True, self.sunExclusionAngle, self.sunLocation)  
+

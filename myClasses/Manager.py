@@ -21,6 +21,10 @@ class Manager():
     main calculations and monitoring of states of components, for really just players/routing agents.
     this includes satellites and base stations. 
     
+    Please realize, only certain topologies work for certain constellations. that is, the VN and spiral topologies
+    only make logical sense for the walker delta constellation, but not for something simple like the 
+    single square one. So, just avoid using specific combos of topologies and constellations :)) 
+
     """
     
     def __init__(self, 
@@ -56,28 +60,25 @@ class Manager():
         """
 
         if(constellationType == "walkerDelta"): 
-            walkerPoints, normVecs = myMath.generateWalkerStarConstellationPoints(*constellationConfig) 
+            constellationPoints, normVecs = myMath.generateWalkerStarConstellationPoints(*constellationConfig) 
+        elif(constellationType == "singleSourceSquare"):
+            constellationPoints, normVecs = myMath.generateSingleSourceSquare() 
         else:
             raise ValueError("Not valid constellation type")
 
         #take in input data 
         self.earthRadius = earthRadius
-
         self.sunExclusionAngle = sunExclusionAngle
-
         self.sunLocation = sunLocation
 
         #calculate logical parameters based on point dimensions 
-        self.numPlanes = np.shape(walkerPoints)[0]
-        self.numSatPerPlane = np.shape(walkerPoints)[1]
-        self.numLEOs = np.shape(walkerPoints)[0] * np.shape(walkerPoints)[1]
+        self.numPlanes = np.shape(constellationPoints)[0]
+        self.numSatPerPlane = np.shape(constellationPoints)[1]
+        self.numLEOs = np.shape(constellationPoints)[0] * np.shape(constellationPoints)[1]
         self.phasingParameter = phasingParameter
 
-        #init storage for satellites, base stations, and links    
-        self.sats = np.tile(LEO(), [self.numPlanes, self.numSatPerPlane]) 
-
         #call generate satellites function, which initializes our structure 
-        self.generateSatellites(walkerPoints, normVecs, packetProcessRate, routingPolicy)
+        self.generateSatellites(constellationPoints, normVecs, packetProcessRate, routingPolicy)
         
         #first, format the baseStationInputs 
         self.baseStations = []
@@ -106,6 +107,7 @@ class Manager():
         #then, for each satellite, set up the adjacency matrix 
         for sat in np.ravel(self.sats): 
             sat.adjMatrix = self.currAdjMat
+            
         #then, have each satellite build their routing table 
         for sat in np.ravel(self.sats):
             sat.updateRoutingTable()
@@ -565,6 +567,27 @@ class Manager():
         else: 
             self.baseStations = [] 
 
+    def generateSatellitesBasic(self,
+                                initialPoints,
+                                packetProcessRate,
+                                routingPolicy):
+        """
+        Creating basic constellation. This is used for basic routing testing with RL policies. 
+
+        initialPoints: initial locations of the satellites
+        packetProcessRate: how fast we process packets at our server 
+        routingPolicy: how each server routes packets
+        """
+        
+        #initialize storage 
+        self.sats =  []
+
+        #for each satellite position 
+        for satStartPoint in initialPoints: 
+            #create a satellite 
+            x = 1
+        return 
+
     def generateSatellites(self, 
                            walkerPoints, 
                            normVecs, 
@@ -580,9 +603,12 @@ class Manager():
         circular path  
         packetProcessRate: how fast the satellites can process packets 
         routingPolicy: how satellites route their respective packets
-        
+
         Effect: sets up our satellite internals using walkerPoints 
         """
+
+        self.sats = np.tile(LEO(), [self.numPlanes, self.numSatPerPlane]) 
+
         #iterate through planes and then sats within a plane    
         for planeInd in range(self.numPlanes): 
             for smallSatInd in range(self.numSatPerPlane):
@@ -913,32 +939,6 @@ class Manager():
     def connectDisjointSpiralTopologySimple(self): 
         self.connectSpiralTopologySimple(2)
         return 
-
-    def connectDisjointSpiralTopologyaoeuaoeuaoeu(self): 
-        """
-        DEPRECATED (use simple version instead)
-        Similar to spiral topology implementation. However, we will
-        instead use every other. 
-
-        Effect: disjoint spiral connections
-        """
-
-        self.connect2ISL() 
-
-        #then, connect to adjacent planes 
-        #iterate through planes and then sats within a plane 
-        for smallSatInd in range(self.numSatPerPlane):  
-            for planeInd in range(self.numPlanes): 
-                #uhhh...connect satellite to adjacent ones 
-                #for forward case:  
-                if(planeInd % 2 == 0): 
-                    satOfPrevPlane = self.sats[(planeInd + 1 ) % self.numPlanes, smallSatInd]
-                    self.sats[planeInd, smallSatInd].connectToPlayer(satOfPrevPlane, True, self.sunExclusionAngle, self.sunLocation)
-                
-                #for back case: 
-                else: 
-                    satOfNextPlane = self.sats[(planeInd - 1) % self.numPlanes, smallSatInd]
-                    self.sats[planeInd, smallSatInd].connectToPlayer(satOfNextPlane, True, self.sunExclusionAngle, self.sunLocation)  
 
     def generateAdjacencyMatrix(self): 
         """

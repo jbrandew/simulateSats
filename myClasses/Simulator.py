@@ -367,23 +367,31 @@ class Simulator():
 
         #section for updating routing information. in OSPF, this could be creating MST, but in RL, could be general routing table update 
         #logically, probably have the update MST method occur less often than the update adj mat method 
+        
+        #will probably have much more adjMat updates/broadcasts than updateRoutingTable methods 
+        #just because computationally one is way more than the other 
+
         if(routingPolicy == 'OSPF'): 
             for updateRoutingTableInd in range(0): 
                 #so create time and events 
-                updateTime = fullyFlushedNetworkETA*updateRoutingTableInd/1
-                queueEvent1 = Event(updateTime,
-                                    "updateAdjMats",
-                                    {})
-                queueEvent2 = Event(updateTime,
+                updateTime = fullyFlushedNetworkETA*updateRoutingTableInd/2
+                queueEvent = Event(updateTime,
                                     "updateRoutingTable",
                                     {})
                 
                 #then push the events 
-                eventQueue.push(queueEvent1)
-                eventQueue.push(queueEvent2)
+                eventQueue.push(queueEvent)
         
-        #otherwise, compute path at every recieval instance 
+        if(routingPolicy == 'OSPF'): 
+            for broadcastAdjMatInd in range(100): 
+                #so create time and events 
+                updateTime = fullyFlushedNetworkETA*broadcastAdjMatInd/100
+                queueEvent = Event(updateTime,
+                                    "updateAdjMats",
+                                    {})
+                eventQueue.push(queueEvent)
 
+        #otherwise, compute path at every recieval instance 
         #then, create the snapshot events if we are supposed to 
         if(takeSnapshots):
             #create the time stamps for all 
@@ -401,18 +409,12 @@ class Simulator():
         #first, create the reference time for when to update environment parameters 
         updateReferenceTime = 0 
         
+        updatedAlready = False 
         #while we arent empty in the eventQueue
         while not eventQueue.is_empty(): 
 
-            debug = False
-
             #get the next event 
             event = eventQueue.pop()
-            
-            if(eventQueue.length == 5):
-                #print(event.eventType)
-                #pdb.set_trace()
-                debug = True 
 
             #coordinate current time
             self.currentTime = event.timeOfOccurence
@@ -427,8 +429,6 @@ class Simulator():
                 self.manager.updateEnvironmentAndPathData(updateReferenceTime, event.timeOfOccurence)
                 updateReferenceTime = event.timeOfOccurence 
 
-            #then, iterate through the event types
-            
             #if its to take the snapshot 
             if(event.eventType == "takeSnapshot"):
                 #store it in corresponding place 
@@ -509,6 +509,7 @@ class Simulator():
                     
                     #then, store the data for when the final arrival of the packet happened 
                     event.kargs["packet"].packetArriveTime = timeOfOccurence
+
                     continue 
                 
                 #get the current and next players 
