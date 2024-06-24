@@ -117,7 +117,7 @@ class Player:
             #create storage for Q Lengths and associated timestamps 
             self.QFinishTimes = np.zeros(numberPlayers)
             self.QFinishTimeStamps = np.zeros(numberPlayers)
-            
+
             self.agent = RoutingRL.DQNAgentRouting(self)
 
 
@@ -144,11 +144,11 @@ class Player:
         
         if(self.routingPolicy == "RL"): 
             #if we are working with RL, get next hop from RL agent 
-            hopTo = self.agent.step(packet)
+            hopTo = self.agent.select_action(packet)
             #store the hop 
             packet.currSat = hopTo
             
-        return hopTo
+        return int(hopTo)
 
     def generateProcessingOneMorePacketTime(self, timeRequested, packetCollsionEnabled = True): 
         """

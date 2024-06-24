@@ -18,7 +18,7 @@ SunExclusionAngle: 40
 SunLocation: [149.6e+6, 0, 0]
 
 #topology and routing polocy / satellite info
-initialTopology: 'IPO'
+initialTopology: 'basicSquare'
 #possible values: 
 #OSPF, basic, mixedSingleAgentRLRestOSPF
 routingPolicy: 'mixedSingleAgentRLRestOSPF'
@@ -26,12 +26,12 @@ topologyPolicy: null
 packetProcessRate: .1
 
 #simulation runtime parameters 
-numPeople: 10
-numPacketsPerPerson: 10
+numPeople: 1
+numPacketsPerPerson: 100
 packetSendTimeFrame: 1
-#PseudoUniform, or SingleFar
+#PseudoUniform, SingleFar, simpleForSingleRL
 #cant use single far with multiple people 
-personDistribution: 'PseudoUniform'
+personDistribution: 'simpleForSingleRL'
 
 queingDelaysEnabled: True
 weatherEnabled: False

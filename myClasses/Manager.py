@@ -95,6 +95,14 @@ class Manager():
         self.queueFinishTimes = np.zeros(self.numLEOs + len(self.baseStations))
 
         #self.initializeSatelliteRoutingTables()
+        #connect satellites with topology 
+        if(initialTopology == "IPO"): 
+            self.connectSpiralTopologySimple(ISL2Done=False)
+        elif  (initialTopology == "basicSquare"): 
+            self.connectSingleSquare()
+        else:
+            raise "This topology isnt integrated/implemented yet"
+
 
     def initializeSatelliteRoutingTables(self): 
         
@@ -886,6 +894,22 @@ class Manager():
             self.createISL(self.sats[planeInd1,satInd1], self.sats[planeInd2, satInd2], True)
            
         return 
+
+    def connectSingleSquare(self):
+        """
+        This method connects satellites in a square...and its used for 
+        basic RL testing/integration. 
+
+        Effect: 
+        satellites are connected in a 2x2 square....
+        """
+        #so only create 4 connections, creating a place for the decision of an RL agent  
+        self.createISL(self.sats[0,0],self.sats[0,1], False)
+        self.createISL(self.sats[0,0],self.sats[0,3], False)
+
+        self.createISL(self.sats[0,2],self.sats[0,1], False)
+        self.createISL(self.sats[0,2],self.sats[0,3], False)
+
 
     def connectSpiralTopologySimple(self, satsBetweenConnections= 1, numberConnections = -1, startPlaneInd = 0, startSatInd = 0, ISL2Done = False): 
         """

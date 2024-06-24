@@ -121,8 +121,7 @@ class Simulator():
         #    #maxed = max(np.average(snapshot.relativeFinish), maxed) 
         #     total+= np.average(snapshot.relativeFinish)
         # print("Average")
-        # print(total/snapshotInd)
-        # pdb.set_trace() 
+        # print(total/snapshotInd) 
 
         #create storage for average queue length 
         averageQueueLength = np.ones(len(self.snapshotStorage)) 
@@ -260,10 +259,15 @@ class Simulator():
                                                                             self.manager.earthRadius)        
         
         #distribute start and finish of packets to just use one person, and have it be the farthest distance possible
-        if(startLocationDistribution == "SingleFar"):
+        elif(startLocationDistribution == "SingleFar"):
                                                                             
             startLocations = np.array([[0,0,6000000]])
             endLocations = startLocations*-1   
+
+        elif(startLocationDistribution == "simpleForSingleRL"): 
+
+            startLocations = np.array([[-2000,-2000,0]])
+            endLocations = startLocations*-1
 
         if(sendTimeDistribution == "Uniform"):
             #next, get random times for sending the packets out 
@@ -490,7 +494,7 @@ class Simulator():
             if event.eventType == "updateRoutingTable": 
                 #just update the respective routing tables 
                 for ind, player in enumerate(raveledPlayers):
-                    if(ind == 1): 
+                    if(ind == 1 and False): 
 
                         #analyze the difference in routing table 
                         QLengths = np.maximum(player.QFinishTimes, player.currTime)
@@ -533,7 +537,9 @@ class Simulator():
                 #get our current satellite 
                 satelliteIndWeAreAt = event.kargs["packet"].currSat
                 
-                #get the finish processing time 
+                #get the finish processing time
+                print(satelliteIndWeAreAt) 
+                pdb.set_trace() 
                 endProcessTime = raveledPlayers[satelliteIndWeAreAt].generateProcessingOneMorePacketTime(event.timeOfOccurence, queingDelaysEnabled) 
                 
                 #create event to queue, based on when we finish processing 
@@ -555,7 +561,8 @@ class Simulator():
                 #or if we are at the end of path
                 if((routingPolicy == "basic" and (len(event.kargs["packet"].routingMetadata["path"]) == 1 or event.kargs["packet"].reachedEnd()))  or
                     #for OSPF, its if the current satellite is the last satellite in the routing path 
-                   (routingPolicy == "OSPF"  and (event.kargs["packet"].reachedEnd()))):
+                   (routingPolicy == "OSPF"  and (event.kargs["packet"].reachedEnd())) or
+                   (routingPolicy == "mixedSingleAgentRLRestOSPF"  and (event.kargs["packet"].reachedEnd()))):
                      
                     #so then, get the time of occurence of landing at the dest 
                     timeOfOccurence = event.timeOfOccurence + myMath.dist3d(event.kargs["packet"].endLocation,  
