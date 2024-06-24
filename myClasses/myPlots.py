@@ -126,6 +126,17 @@ def plot_line_segments(pair_of_points_list,
         # Plot the line segment for each pair
         ax.plot([x1, x2], [y1, y2], [z1, z2], marker='o', c = "black", markersize = 0)
 
+def plotXY(x, y, xlabel = "", ylabel = "", title = ""): 
+    """
+    Generic plotting
+    """
+    
+    fig,ax = plt.subplots(1)
+    ax.plot(x,y)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.title(title)
+
 class GraphicsView:
     """
     This class is just for graphing to a given axes. Uses generic util functions as above ^

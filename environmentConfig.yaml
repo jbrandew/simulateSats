@@ -1,7 +1,7 @@
 ---
 
 #constellation parameters 
-LEOConstellation: 'Walker Star'
+LEOConstellation: 'walkerDelta'
 NumberLEOSatellites: 360
 OrbitalPlanes: 20
 Inclination: 80 
@@ -19,9 +19,9 @@ SunLocation: [149.6e+6, 0, 0]
 
 #topology and routing polocy / satellite info
 initialTopology: 'IPO'
-routingPolicy: 'basic'
+routingPolicy: 'OSPF'
 topologyPolicy: null
-packetProcessRate: 1
+packetProcessRate: .1
 
 #simulation runtime parameters 
 numPeople: 10
@@ -31,18 +31,21 @@ packetSendTimeFrame: 1
 #cant use single far with multiple people 
 personDistribution: 'PseudoUniform'
 
-queingDelaysEnabled: 'True'
-weatherEnabled: 'False'
-environmentUpdateInterval: 0.05
+queingDelaysEnabled: True
+weatherEnabled: False
+#was .05 for first graphic...
+environmentUpdateInterval: 1
 outageFrequency: null
 #takes care of how long we want the visualizer to take data for. Should be greater for more traffic.
 #its a ratio of the visualize time vs the time frame length that packets are being sent over. 
-timeFactor: 5
+timeFactor: 500
 
 #visualizer parameters 
-visualizerOn: 'True'
+visualizerOn: True
 visualizeTime: 10
 FPS: 3
+
+dynamicLocation: False
 
 #could add the server processing time & amount here 
 

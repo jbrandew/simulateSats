@@ -40,7 +40,7 @@ constellationConfig = [
 #format data for getting manager 
 #manager manages and creates satellites/base stations 
 managerData = {
-    "constellationType": "walkerDelta",
+    "constellationType": configData["LEOConstellation"],
     "constellationConfig": constellationConfig,
     "baseStationLocations": configData['BaseStationLocations'],
     "fieldOfViewAngle": configData['BaseStationViewAngle'],
@@ -66,7 +66,8 @@ simulationArgs = {
     "environmentUpdateInterval": configData['environmentUpdateInterval'],
     "outageFrequency": configData['outageFrequency'],
     "timeFactor": configData['timeFactor'],
-    "routingPolicy": configData['routingPolicy']
+    "routingPolicy": configData['routingPolicy'],
+    "dynamicLocation": configData['dynamicLocation']
 }
 
 #visualizer args 
@@ -77,13 +78,16 @@ visualizerArgs = {
 
 }
 
-#get simulator 
+#get simulator object 
 simmer = Simulator.Simulator(managerData)
 
-#connect satellites 
+#connect satellites with topology 
 simmer.manager.connectSpiralTopologySimple(ISL2Done=False)
 
+#enact simulation 
 hold = simmer.simulateWithVisualizer(simulationArgs, visualizerArgs)
+
+
 
 #simmer.manager.updateTopology("Closest", "inView")
 #simmer.manager.connect2ISL() 

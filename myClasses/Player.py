@@ -9,6 +9,8 @@ import heapq
 
 import random
 
+#import myClasses.RoutingRL as RoutingRL
+
 class PQueue:
     """
     could make this more efficent using the min heap implementation
@@ -45,53 +47,6 @@ class PQueue:
     def size(self):
         return len(self.queue)
 
-
-# class PacketState: 
-
-#     """
-#     Describes what the packet is actually doing 
-#     """
-#     def __init__(self, initState): 
-#         self.allowedValues = {'Dormant', 
-#                                 'InTransmit', 
-#                                 'InProcessQueue',
-#                                 'InTransmitQueue',
-#                                 'Finished'}
-#         if initState not in self.allowedValues: 
-#             raise ValueError("Bad Packet State Value") 
-# class Packet(): 
-#     """
-#     This class is separate functionally from the "Player" set, but 
-#     this seemed like the best place to put it. It really just 
-#     represents the lifecycle of a packet. 
-
-#     """
-#     def __init__(self, **kwargs): 
-#         """
-#         Initialization of packet
-
-#         Inputs: 
-
-#         startLocation: xyz of the packet for when it is sent out 
-#         endLocation: xyz of location for packet to arrive at 
-#         scheduledAwakeTime: when the packet is supposed to be sent/start its path
-#         pathToTake: the series of terminals it travels over to get to its 
-#         destination. This is currently assigned when the packet reaches the time
-#         of "awake," so its non adaptable  
-#         """
-
-#         for key, value in kwargs.items():
-#             setattr(self, key, value)
-
-#         #packet is dormant first 
-#         self.currentPhase = PacketState('Dormant')
-
-#         return 
-    
-#player class describes any operator on or above the earth 
-#probably going to use rho and phi more often than purely longitude and latitude 
-#nah lets just always use x,y,z...maybe easier in polar all the time...worry later
-
 #possible error from removing () after "Player"
 class Player: 
     """
@@ -116,6 +71,8 @@ class Player:
         routingArgs: arguments needed for the respective routing policy 
         
         """
+
+        self.currTime = 0 
 
         #store information 
         self.adjMatPersonalIndex = adjMatPersonalIndex
@@ -143,7 +100,21 @@ class Player:
             self.adjMatrix = np.zeros([numberPlayers, numberPlayers])
             #create storage for time stamps of each edge in adj matrix 
             self.adjMatrixTimeStamps = np.zeros([numberPlayers, numberPlayers])
-        
+
+            #create storage for Q Lengths and associated timestamps 
+            self.QFinishTimes = np.zeros(numberPlayers)
+            self.QFinishTimeStamps = np.zeros(numberPlayers)
+
+        if(self.routingPolicy == 'RL'): 
+            self.agent = RoutingRL.agent(self)
+            #then, first create the routing table accordingly 
+            #so, first get how many possible destinations 
+            numberPlayers = routingArgs['totalNumPlayers']
+            #create storage for adj matrix 
+            self.adjMatrix = np.zeros([numberPlayers, numberPlayers])
+            #create storage for time stamps of each edge in adj matrix 
+            self.adjMatrixTimeStamps = np.zeros([numberPlayers, numberPlayers])
+
     def getNextHopAndUpdatePacket(self, packet): 
         """
         This function updates packet parameters 
@@ -164,6 +135,12 @@ class Player:
             hopTo = packet.returnNextHopBasic() 
             packet.updateToNextHopBasic() 
         
+        if(self.routingPolicy == "RL"): 
+            #if we are working with RL, get next hop from RL agent 
+            hopTo = self.agent.step(packet)
+            #store the hop 
+            packet.currSat = hopTo
+            
         return hopTo
 
     def generateProcessingOneMorePacketTime(self, timeRequested, packetCollsionEnabled = True): 
@@ -218,9 +195,16 @@ class Player:
     def resetConnections(self): 
         self.connectedToPlayers = set() 
 
-    def setPersonalTime(self, time): 
-        #update personal timing information for edges 
+    def updateUsingPersonalInfo(self, time): 
+        #update personal timing information for edges and QLengths
         self.adjMatrixTimeStamps[self.adjMatPersonalIndex] = time 
+        
+        #update Qlengths object for personal
+        self.QFinishTimes[self.adjMatPersonalIndex] = self.finishProcessingTime
+        self.QFinishTimeStamps[self.adjMatPersonalIndex] = time
+
+        #set timing info
+        self.currTime = time 
 
     def updateAdjMatrixFromNeighbors(self):
         """
@@ -236,15 +220,29 @@ class Player:
             #then, update the adj matrix information for only the entries where our neighbor player has more recent entries 
             self.adjMatrix[timingMask] = neighborPlayer.adjMatrix[timingMask]
             
+            #update the traffic aware component now 
+            #get the timing mask 
+            QFinishTimingMask = self.QFinishTimeStamps < neighborPlayer.QFinishTimeStamps
+            #use timing mask to update them 
+            self.QFinishTimeStamps[QFinishTimingMask] = neighborPlayer.QFinishTimeStamps[QFinishTimingMask]
+            self.QFinishTimes[QFinishTimingMask] = neighborPlayer.QFinishTimes[QFinishTimingMask]
+
     def updateRoutingTable(self): 
         """
         This method builds an MST across the entire network using our personal adjacency matrix 
         Only stores the next hop of each, as thats all thats used
         That is, if we want to go to B from A, what node should i go to next if i am in A? (for all B in tree)
         """
-        #so, get the next hop table from math function
-        self.routingTable = myMath.dijkstraWithNodeValuesAllInitialHops(self.adjMatrix, self.adjMatPersonalIndex)
+
+        #get the normalized Qlengths 
+        QLengths = np.maximum(self.QFinishTimes, self.currTime)
+        QLengths = QLengths - self.currTime
+
+        #so, get the next hop table from math function using traffic aware component 
+        self.routingTable = myMath.dijkstraWithNodeValuesAllInitialHops(self.adjMatrix, self.adjMatPersonalIndex, QLengths)
         
+        
+
     def connectToPlayer(self, 
                         playerToConnectTo, 
                         polarRegionRestriction = True, 

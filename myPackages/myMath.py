@@ -10,7 +10,7 @@ from poliastro.bodies import Earth
 from poliastro.twobody import Orbit
 from astropy import units as u
 from datetime import datetime, timedelta
-
+import copy 
 
 #hello! this package works with implementing custom math functions i need
 #some of the functions (such as the Walker one) may be more implementation 
@@ -393,9 +393,33 @@ def dist3d(point1, point2):
     
     return distance
 
-def generateSingleSourceSquarePoints(): 
+def generateSquareConstellationPoints(squareWidth): 
+    """
+    This method just generates a square of satellites.
+    Used in the proof of concept RL case 
 
-    return 
+    Inputs: 
+    squareWidth: how far side length of square should be 
+
+    Outputs: 
+    constellationPoints: x y z of the satellites 
+    normVecs: just return a blank one, cause we arent doing location updates for this 
+    """
+
+    #create storage for points. (one plane, four satellites, xyz) 
+    satellitePoints = np.ones([1, 4, 3])
+
+    #create the satellite points 
+    satellitePoints[0,0] = [0,0,0]
+    satellitePoints[0,1] = [squareWidth,0,0]
+    satellitePoints[0,2] = [squareWidth,squareWidth,0]
+    satellitePoints[0,3] = [0,squareWidth,0]
+
+    #create filler normal vector 
+    normVec = calculate_normal_vector(satellitePoints[0,0], satellitePoints[0,1])
+
+    #return points 
+    return satellitePoints, normVec
 
 def generateWalkerStarConstellationPoints(
         numSatellites, 
@@ -416,13 +440,12 @@ def generateWalkerStarConstellationPoints(
     planes. You get it from pP*360/t, where t = num satellites  
     altitude: how far above the earth our satellite is  
 
-    Im very confused by phaseParameter. If (pP*360/t)*num planes != 360, I thought
-    we had 2 adjacent planes offset by alot -> we dont. Its fine. Because each plane 
-    is periodic, adjacent planes will match up with angle period of 360/(t/numplanes)
+    Outputs: 
+    walkerPoints: constellation points for walker delta 
+    normVecs: normal vectors, used for updating the position 
 
-    Nvm its fine, phasing parameter has been figured out 
     """
-    
+
     #alright, now that we have intro done, lets work with the calculation 
     numSatellitesPerPlane = numSatellites/numPlanes 
     if(int(numSatellitesPerPlane) - numSatellitesPerPlane != 0): 
@@ -592,11 +615,6 @@ def find_closest_satsBad(sats, m):
 
     return result
 
-
-
-
-
-
 #alright, i just want to plot a cone :D 
 #to do that, need to use the parametric equations. 
 #x = rcos(theta)
@@ -671,26 +689,30 @@ def dijkstraWithNodeValuesAndPath(adj_matrix, nodeValues, start, end):
 
     return dijkstraWithPath(adj_matrix, start, end)
 
-def dijkstraWithNodeValuesAllInitialHops(adj_matrix, start, nodeValues = []): 
+def dijkstraWithNodeValuesAllInitialHops(adjMatrix, start, nodeValues = []): 
     """
     Function to build MST and give initial hop to any other node, if we are at "start".
     caution, this doesnt throw an error if a path isnt found.....
 
     Inputs: 
-    adj_matrix: adjacency matrix of the graph
+    adjMatrix: adjacency matrix of the graph
     nodeValues: "traffic aware" node values 
     start: node index that we are starting at within this graph
 
     Outptus: 
     nextHopIndices: where to hop to next if we are trying to go to a node from start 
     """
+
+    #create working adjMatrix
+    workingAdjMatrix = copy.deepcopy(adjMatrix)
+    
     for ind, value in enumerate(nodeValues): 
-        adj_matrix[ind] +=value/2
-        adj_matrix[:,ind] +=value/2
-        adj_matrix[ind,ind] -=value/2
+        workingAdjMatrix[ind] +=value/2
+        workingAdjMatrix[:,ind] +=value/2
+        workingAdjMatrix[ind,ind] -=value/2
 
     #get number of nodes in graph based on adj matrix  
-    num_nodes = len(adj_matrix)
+    num_nodes = len(workingAdjMatrix)
     #create storage for if we've seen 
     visited = [False] * num_nodes
     #create storage from current node to all other nodes 
@@ -726,9 +748,9 @@ def dijkstraWithNodeValuesAllInitialHops(adj_matrix, start, nodeValues = []):
         #then, for each node again 
         for node in range(num_nodes):
             #for each node we havent visited 
-            if not visited[node] and adj_matrix[min_index][node] >= 0:
+            if not visited[node] and workingAdjMatrix[min_index][node] >= 0:
                 #set the new distance, so basically updating the distance from the MST to the new node 
-                new_distance = distances[min_index] + adj_matrix[min_index][node]
+                new_distance = distances[min_index] + workingAdjMatrix[min_index][node]
                 if new_distance < distances[node]:
                     distances[node] = new_distance
                     #store the parent

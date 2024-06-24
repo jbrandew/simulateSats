@@ -1,5 +1,53 @@
  
-    def executeSimulation(self,
+
+
+# class PacketState: 
+
+#     """
+#     Describes what the packet is actually doing 
+#     """
+#     def __init__(self, initState): 
+#         self.allowedValues = {'Dormant', 
+#                                 'InTransmit', 
+#                                 'InProcessQueue',
+#                                 'InTransmitQueue',
+#                                 'Finished'}
+#         if initState not in self.allowedValues: 
+#             raise ValueError("Bad Packet State Value") 
+# class Packet(): 
+#     """
+#     This class is separate functionally from the "Player" set, but 
+#     this seemed like the best place to put it. It really just 
+#     represents the lifecycle of a packet. 
+
+#     """
+#     def __init__(self, **kwargs): 
+#         """
+#         Initialization of packet
+
+#         Inputs: 
+
+#         startLocation: xyz of the packet for when it is sent out 
+#         endLocation: xyz of location for packet to arrive at 
+#         scheduledAwakeTime: when the packet is supposed to be sent/start its path
+#         pathToTake: the series of terminals it travels over to get to its 
+#         destination. This is currently assigned when the packet reaches the time
+#         of "awake," so its non adaptable  
+#         """
+
+#         for key, value in kwargs.items():
+#             setattr(self, key, value)
+
+#         #packet is dormant first 
+#         self.currentPhase = PacketState('Dormant')
+
+#         return 
+    
+#player class describes any operator on or above the earth 
+#probably going to use rho and phi more often than purely longitude and latitude 
+#nah lets just always use x,y,z...maybe easier in polar all the time...worry later   
+
+def executeSimulation(self,
                           numPackets, 
                           numPacketsPerPerson = 1): 
         """

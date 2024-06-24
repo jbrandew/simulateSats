@@ -9,6 +9,7 @@ import heapq
 from myClasses.Player import * 
 from myClasses.Event import Event
 import time 
+import copy 
 
 #general manager/scheduler, model of processes   
 class Manager(): 
@@ -61,8 +62,8 @@ class Manager():
 
         if(constellationType == "walkerDelta"): 
             constellationPoints, normVecs = myMath.generateWalkerStarConstellationPoints(*constellationConfig) 
-        elif(constellationType == "singleSourceSquare"):
-            constellationPoints, normVecs = myMath.generateSingleSourceSquare() 
+        elif(constellationType == "square"):
+            constellationPoints, normVecs = myMath.generateSquareConstellationPoints(1000) 
         else:
             raise ValueError("Not valid constellation type")
 
@@ -84,7 +85,7 @@ class Manager():
         self.baseStations = []
         #self.generateBaseStations(baseStationLocations, fieldOfViewAngle, packetProcessRate)
 
-        #this could be wrong lol 
+        #this could be wrong 
         self.numBaseStations = len(self.baseStations)
 
         #set up storage for adjacency matrix 
@@ -105,16 +106,18 @@ class Manager():
         #first, set up our own adjacency matrix 
         self.updateEnvironmentAndPathData(0,0)
         #then, for each satellite, set up the adjacency matrix 
+        #make it to be propagation delay instead of distance 
         for sat in np.ravel(self.sats): 
-            sat.adjMatrix = self.currAdjMat
-            
+            sat.adjMatrix = copy.deepcopy(self.currAdjMat)
+
         #then, have each satellite build their routing table 
         for sat in np.ravel(self.sats):
             sat.updateRoutingTable()
     
     def updateEnvironmentAndPathData(self,
                         oldTime, 
-                        newTime): 
+                        newTime,
+                        dynamicLocation = True): 
         """
         Update our adjacency matrix for satellites based on the new reference time. Assumes that the simulation starts at time 0. 
 
@@ -126,13 +129,14 @@ class Manager():
         Effect: 
         properly updated state and adj matrix 
         """
-
+        
         #update the constellation position
-        self.updateConstellationPosition(newTime - oldTime)
+        if(dynamicLocation): 
+            self.updateConstellationPosition(newTime - oldTime)
         #update the waiting times for each of the servers
         self.updateQueueFinishTimes()
         #after that, update the adjacency matrix. uses the queue finish times and the 
-        self.currAdjMat = self.generateAdjacencyMatrix()
+        self.generateAdjacencyMatrix()
 
     def updateQueueFinishTimes(self): 
         """
@@ -500,7 +504,6 @@ class Manager():
         point1 = player1.getCoords()
         point2 = player2.getCoords()
         
-        #working within km so 10e5
         if( myMath.dist3d(point1, point2)/(3e8) == np.inf ): 
             pdb.set_trace() 
         return myMath.dist3d(point1, point2)/(3e8)    
@@ -977,5 +980,4 @@ class Manager():
 
         self.currAdjMat = adjMat
 
-        return adjMat
 

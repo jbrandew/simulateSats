@@ -53,7 +53,7 @@ class Simulator():
             self.manager = manager
             self.view = view 
             self.currentTime = currentTime
-            #then, store the actual data 
+            #then, store the initial state of the data 
             self.snapshot()  
             return 
         
@@ -78,21 +78,21 @@ class Simulator():
 
             #here, we are doing a slight amount of processing for better visualization.
             #please keep in mind that if the currentTime > queueFinish time, then the queue is done 
-            relativeFinish = np.maximum(self.queueFinishTimes - self.currentTime, 0)
+            self.relativeFinish = np.maximum(self.queueFinishTimes - self.currentTime, 0)
 
             #if we are in the initial state/no packets in there, then just give normal 
-            if( max(relativeFinish) == min(relativeFinish) ):
+            if( max(self.relativeFinish) == min(self.relativeFinish) ):
                 self.sphereColors = np.ones(self.manager.numLEOs)
                 #self.sphereColors = 10*np.ones(self.manager.numLEOs)
             else: 
 
                 #normalization doesnt really matter cause color map plots regardless, only important part is inverting so that its properly plotted (dimmer color => less traffic to be serviced)
                 #but need mapping to a space of [0,1]
-                self.sphereColors = ((relativeFinish - min(relativeFinish)) / (max(relativeFinish) - min(relativeFinish)))
-
+                self.sphereColors = ((self.relativeFinish - min(self.relativeFinish)) / (max(self.relativeFinish) - min(self.relativeFinish)))
+            
             print("Hello") 
-            print(relativeFinish[np.nonzero(relativeFinish)])
-
+            print(self.relativeFinish[np.nonzero(self.relativeFinish)])
+            
         
         def selfPlot(self): 
             self.view.multiplot(0,
@@ -102,6 +102,45 @@ class Simulator():
                     self.numLinks,
                     self.sphereColors)                     
                  
+    def plotMySnapshotSet(self):
+        """
+        This function uses the existing set of snapshots to provide visualization of the average queue length over time
+        
+        Inputs: 
+        none
+        
+        Outputs: 
+        matplotlib plot of average queue length over time 
+
+        """
+
+        #also, get the average.....hm.....
+        #get the max queue length average 
+        # total = 0 
+        # for snapshotInd, snapshot in enumerate(self.snapshotStorage): 
+        #    #maxed = max(np.average(snapshot.relativeFinish), maxed) 
+        #     total+= np.average(snapshot.relativeFinish)
+        # print("Average")
+        # print(total/snapshotInd)
+        # pdb.set_trace() 
+
+        #create storage for average queue length 
+        averageQueueLength = np.ones(len(self.snapshotStorage)) 
+        #create storage for corresponding time 
+        timeOfSnapshots = np.ones(len(self.snapshotStorage))
+
+        #iterating through our snapshots
+        for snapshotInd, snapshot in enumerate(self.snapshotStorage): 
+            #for each, store the average queue length 
+            averageQueueLength[snapshotInd] = np.average(snapshot.relativeFinish)
+            #store the time associated with the snapshot ind 
+            timeOfSnapshots[snapshotInd] = np.average(snapshot.currentTime)
+        
+        #then, plot the data: 
+        myPlots.plotXY(timeOfSnapshots, averageQueueLength, "Time Point in Simulation (seconds)", "Average Queue Length (seconds)")
+
+        return 
+
     def simulateWithVisualizer(self, 
                                simulationArgs,
                                visualizerArgs):
@@ -276,7 +315,8 @@ class Simulator():
                                  weatherEnabled = "False", 
                                  environmentUpdateInterval = None, 
                                  outageFrequency = None, 
-                                 
+                                 dynamicLocation = True, 
+
                                  takeSnapshots = False, 
                                  simulationTimeBetweenSnapshots = None, 
                                  numEnvironmentSnapshots = None,
@@ -372,9 +412,9 @@ class Simulator():
         #just because computationally one is way more than the other 
 
         if(routingPolicy == 'OSPF'): 
-            for updateRoutingTableInd in range(0): 
+            for updateRoutingTableInd in range(3): 
                 #so create time and events 
-                updateTime = fullyFlushedNetworkETA*updateRoutingTableInd/2
+                updateTime = fullyFlushedNetworkETA*updateRoutingTableInd/3
                 queueEvent = Event(updateTime,
                                     "updateRoutingTable",
                                     {})
@@ -426,7 +466,7 @@ class Simulator():
                 print(":)")
                 print(event.timeOfOccurence)
 
-                self.manager.updateEnvironmentAndPathData(updateReferenceTime, event.timeOfOccurence)
+                self.manager.updateEnvironmentAndPathData(updateReferenceTime, event.timeOfOccurence, dynamicLocation)
                 updateReferenceTime = event.timeOfOccurence 
 
             #if its to take the snapshot 
@@ -440,7 +480,7 @@ class Simulator():
                 #update all personal times first 
                 for player in raveledPlayers: 
                     #first update the personal times 
-                    player.setPersonalTime(event.timeOfOccurence) 
+                    player.updateUsingPersonalInfo(event.timeOfOccurence) 
                 
                 for player in raveledPlayers: 
                     #then, update the adj matrix 
@@ -449,8 +489,22 @@ class Simulator():
             #if the event is to update the routing table 
             if event.eventType == "updateRoutingTable": 
                 #just update the respective routing tables 
-                for player in raveledPlayers: 
+                for ind, player in enumerate(raveledPlayers):
+                    if(ind == 340 and False): 
+
+                        #analyze the difference in routing table 
+                        QLengths = np.maximum(player.QFinishTimes, player.currTime)
+                        QLengths = QLengths - player.currTime
+
+                        #get traffic aware table
+                        trafficAwareRoutingTable = myMath.dijkstraWithNodeValuesAllInitialHops(player.adjMatrix, player.adjMatPersonalIndex, QLengths)
+
+                        #get non traffic aware routing table
+                        nonTrafficAwareRoutingTable = myMath.dijkstraWithNodeValuesAllInitialHops(player.adjMatrix, player.adjMatPersonalIndex)
+
+                        pdb.set_trace() 
                     player.updateRoutingTable() 
+
 
             #if its for sending a packet :D 
             if event.eventType  == "packetSent":
@@ -538,8 +592,12 @@ class Simulator():
         for packetInd in range(len(packets)): 
             latencyTimes[packetInd] = packets[packetInd].packetArriveTime - packets[packetInd].packetSendTime
 
-        pdb.set_trace()
+        self.plotMySnapshotSet()
 
+        #print average latency
+        print("Average latency")
+        print(np.average(latencyTimes))
+        
         #then, return it
         return latencyTimes
 
@@ -774,6 +832,8 @@ class Simulator():
         #get adjacency matrix for satellites 
         #please note...hmmm...it should have already been init with that topology...
         #i think the manager should initialize the topology and base stations in its own init
+        
+        #eh bad
         adjMat = self.manager.generateAdjacencyMatrix() 
 
         #size 2 as we have a destination and a start
