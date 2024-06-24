@@ -490,7 +490,7 @@ class Simulator():
             if event.eventType == "updateRoutingTable": 
                 #just update the respective routing tables 
                 for ind, player in enumerate(raveledPlayers):
-                    if(ind == 340 and False): 
+                    if(ind == 1): 
 
                         #analyze the difference in routing table 
                         QLengths = np.maximum(player.QFinishTimes, player.currTime)

@@ -9,7 +9,7 @@ import heapq
 
 import random
 
-#import myClasses.RoutingRL as RoutingRL
+import myClasses.RoutingRL as RoutingRL
 
 class PQueue:
     """
@@ -106,7 +106,6 @@ class Player:
             self.QFinishTimeStamps = np.zeros(numberPlayers)
 
         if(self.routingPolicy == 'RL'): 
-            self.agent = RoutingRL.agent(self)
             #then, first create the routing table accordingly 
             #so, first get how many possible destinations 
             numberPlayers = routingArgs['totalNumPlayers']
@@ -114,6 +113,14 @@ class Player:
             self.adjMatrix = np.zeros([numberPlayers, numberPlayers])
             #create storage for time stamps of each edge in adj matrix 
             self.adjMatrixTimeStamps = np.zeros([numberPlayers, numberPlayers])
+
+            #create storage for Q Lengths and associated timestamps 
+            self.QFinishTimes = np.zeros(numberPlayers)
+            self.QFinishTimeStamps = np.zeros(numberPlayers)
+            
+            self.agent = RoutingRL.DQNAgentRouting(self)
+
+
 
     def getNextHopAndUpdatePacket(self, packet): 
         """
@@ -234,15 +241,16 @@ class Player:
         That is, if we want to go to B from A, what node should i go to next if i am in A? (for all B in tree)
         """
 
+        #so, get the next hop table from math function using traffic aware component 
+        self.routingTable = myMath.dijkstraWithNodeValuesAllInitialHops(self.adjMatrix, self.adjMatPersonalIndex, self.getQLengths())
+        
+    def getQLengths(self): 
         #get the normalized Qlengths 
         QLengths = np.maximum(self.QFinishTimes, self.currTime)
         QLengths = QLengths - self.currTime
 
-        #so, get the next hop table from math function using traffic aware component 
-        self.routingTable = myMath.dijkstraWithNodeValuesAllInitialHops(self.adjMatrix, self.adjMatPersonalIndex, QLengths)
+        return QLengths        
         
-        
-
     def connectToPlayer(self, 
                         playerToConnectTo, 
                         polarRegionRestriction = True, 

@@ -612,17 +612,41 @@ class Manager():
 
         self.sats = np.tile(LEO(), [self.numPlanes, self.numSatPerPlane]) 
 
-        #iterate through planes and then sats within a plane    
-        for planeInd in range(self.numPlanes): 
-            for smallSatInd in range(self.numSatPerPlane):
-                #initialize a satellite each time  
-                self.sats[planeInd, smallSatInd] = LEO(*(walkerPoints[planeInd,smallSatInd]),
-                                                        packetProcessRate,
-                                                        self.numSatPerPlane*planeInd + smallSatInd, 
-                                                        normVecs[planeInd],
-                                                        routingPolicy,
-                                                        {"totalNumPlayers":self.numPlanes*self.numSatPerPlane}
-                                                        ) 
+        #first, check if we have a mixedRoutingPolicy
+        if "mixed" in routingPolicy: 
+            
+            #if its one agent with RL for the mixed policy, 
+            if(routingPolicy == "mixedSingleAgentRLRestOSPF"):
+                #iterate through planes and then sats within a plane    
+                for planeInd in range(self.numPlanes): 
+                    for smallSatInd in range(self.numSatPerPlane):
+                        
+                        if(planeInd == 0 and smallSatInd == 0): 
+                            mixedPolicy = "RL"
+                        else: 
+                            mixedPolicy = "OSPF"
+
+                        #initialize a satellite each time  
+                        self.sats[planeInd, smallSatInd] = LEO(*(walkerPoints[planeInd,smallSatInd]),
+                                                                packetProcessRate,
+                                                                self.numSatPerPlane*planeInd + smallSatInd, 
+                                                                normVecs[planeInd],
+                                                                mixedPolicy,
+                                                                {"totalNumPlayers":self.numPlanes*self.numSatPerPlane}
+                                                                ) 
+
+        else: 
+            #iterate through planes and then sats within a plane    
+            for planeInd in range(self.numPlanes): 
+                for smallSatInd in range(self.numSatPerPlane):
+                    #initialize a satellite each time  
+                    self.sats[planeInd, smallSatInd] = LEO(*(walkerPoints[planeInd,smallSatInd]),
+                                                            packetProcessRate,
+                                                            self.numSatPerPlane*planeInd + smallSatInd, 
+                                                            normVecs[planeInd],
+                                                            routingPolicy,
+                                                            {"totalNumPlayers":self.numPlanes*self.numSatPerPlane}
+                                                            ) 
                 
     def connectBaseStationsToSatellites(self): 
         """
