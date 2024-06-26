@@ -51,7 +51,8 @@ managerData = {
     "initialTopology": configData['initialTopology'],
     "routingPolicy": configData['routingPolicy'],
     "topologyPolicy": configData['topologyPolicy'],
-    "packetProcessRate": configData['packetProcessRate']
+    "packetProcessRate": configData['packetProcessRate'],
+    "dynamicLocation": configData['dynamicLocation']
 }
 
 #simulator args. so environment and stuff 
@@ -66,8 +67,7 @@ simulationArgs = {
     "environmentUpdateInterval": configData['environmentUpdateInterval'],
     "outageFrequency": configData['outageFrequency'],
     "timeFactor": configData['timeFactor'],
-    "routingPolicy": configData['routingPolicy'],
-    "dynamicLocation": configData['dynamicLocation']
+    "routingPolicy": configData['routingPolicy']
 }
 
 #visualizer args 

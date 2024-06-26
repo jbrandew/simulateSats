@@ -29,6 +29,9 @@ import torch.optim as optim
 import torch.nn.functional as F
 import pdb 
 
+import math
+
+
 #transition consists of state, action, next state, reward
 #just a tuple of information 
 Transition = namedtuple('Transition',
@@ -65,10 +68,13 @@ class DQN(nn.Module):
         #initialize network 
         super(DQN, self).__init__()
 
+        self.n_actions = n_actions
+        self.n_observations = n_observations
+
         #create layers 
-        self.layer1 = nn.Linear(n_observations, 128)
+        self.layer1 = nn.Linear(self.n_observations, 128)
         self.layer2 = nn.Linear(128, 128)
-        self.layer3 = nn.Linear(128, n_actions)
+        self.layer3 = nn.Linear(128, self.n_actions)
 
     # Called with either one element to determine next action, or a batch
     # during optimization. Returns tensor([[left0exp,right0exp]...]).
@@ -152,16 +158,33 @@ class DQNAgentRouting:
 
         #create predicted state (simple for now)
         predictedState = overallState
+                
+        #use epsilon-greedy exploration
+        sample = random.random()
+        eps_threshold = 1
+
+        if sample > eps_threshold:
+            #with torch.no_grad():
+
+            #so, get the policy net output
+            actionOutput = self.policy_net(overallState).argmax().item()
         
-        #so, get the policy net output
-        actionOutput = self.policy_net(overallState).argmax() 
+        else: 
+            actionOutput = np.random.randint(self.policy_net.n_actions)
 
         #then, convert it to viable satellite ind 
         indexableSats = sorted(self.satellite.connectedToPlayers)
-        satIndToForwardTo = indexableSats[actionOutput.item()].adjMatPersonalIndex
+        satIndToForwardTo = indexableSats[actionOutput].adjMatPersonalIndex
 
         #create experience and push it 
         self.memory.push(overallState, satIndToForwardTo, predictedState, None)
+
+        # print("Action")
+        # print(actionOutput)
+        # print("Satellite index to send to")
+        # print(satIndToForwardTo)
+        
+        # pdb.set_trace() 
 
         #return the viable satellite index now :) 
         return satIndToForwardTo 
@@ -169,4 +192,14 @@ class DQNAgentRouting:
         #torch.tensor([[self.policy_net.forward(overallState)]], device=self.device, dtype=torch.long)
     
     def optimize(self):
+        """
+        Optimize the current network with respect to experiences in buffer. 
+
+        Please note, currently this assumes that the state of the topology when we are making experiences is the
+        same as the state of the topology when we are training. 
+
+        """
+        
+        
+        
         return 

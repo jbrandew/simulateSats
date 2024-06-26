@@ -40,7 +40,8 @@ class Manager():
                  initialTopology,
                  routingPolicy,
                  topologyPolicy,
-                 packetProcessRate
+                 packetProcessRate,
+                 dynamicLocation
                  ): 
         """
         This does the initialization step for internals, as well as generating satellites 
@@ -71,6 +72,7 @@ class Manager():
         self.earthRadius = earthRadius
         self.sunExclusionAngle = sunExclusionAngle
         self.sunLocation = sunLocation
+        self.dynamicLocation = dynamicLocation
 
         #calculate logical parameters based on point dimensions 
         self.numPlanes = np.shape(constellationPoints)[0]
@@ -112,7 +114,8 @@ class Manager():
         """
         
         #first, set up our own adjacency matrix 
-        self.updateEnvironmentAndPathData(0,0)
+        self.updateSatelliteStates(0,0)
+
         #then, for each satellite, set up the adjacency matrix 
         #make it to be propagation delay instead of distance 
         for sat in np.ravel(self.sats): 
@@ -122,10 +125,9 @@ class Manager():
         for sat in np.ravel(self.sats):
             sat.updateRoutingTable()
     
-    def updateEnvironmentAndPathData(self,
+    def updateSatelliteStates(self,
                         oldTime, 
-                        newTime,
-                        dynamicLocation = True): 
+                        newTime): 
         """
         Update our adjacency matrix for satellites based on the new reference time. Assumes that the simulation starts at time 0. 
 
@@ -139,7 +141,7 @@ class Manager():
         """
         
         #update the constellation position
-        if(dynamicLocation): 
+        if(self.dynamicLocation): 
             self.updateConstellationPosition(newTime - oldTime)
         #update the waiting times for each of the servers
         self.updateQueueFinishTimes()

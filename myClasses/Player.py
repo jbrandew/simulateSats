@@ -134,7 +134,9 @@ class Player:
             hopTo = int(self.routingTable[packet.endSat])
             #store the index 
             packet.currSat = hopTo
-        
+
+            pdb.set_trace()
+
         if(self.routingPolicy == "basic"):
             #same here 
             hopTo = int(packet.returnNextHopBasic()) 
@@ -240,7 +242,8 @@ class Player:
         """
 
         #so, get the next hop table from math function using traffic aware component 
-        self.routingTable = myMath.dijkstraWithNodeValuesAllInitialHops(self.adjMatrix, self.adjMatPersonalIndex, self.getQLengths())
+        if(self.routingPolicy == "OSPF"): 
+            self.routingTable = myMath.dijkstraWithNodeValuesAllInitialHops(self.adjMatrix, self.adjMatPersonalIndex, self.getQLengths())
         
     def getQLengths(self): 
         #get the normalized Qlengths 

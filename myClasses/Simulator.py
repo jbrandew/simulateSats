@@ -384,9 +384,8 @@ class Simulator():
         #generate adj mat 
         self.manager.generateAdjacencyMatrix()
         
-        #if we are using OSPF, initialize routing tables
-        if(routingPolicy == "OSPF"): 
-            self.manager.initializeSatelliteRoutingTables()
+        #initialize routing tables. This is really only applicable for OSPF :) 
+        self.manager.initializeSatelliteRoutingTables()
 
         #first, create a priority queue for events  
         #create pQueue 
@@ -470,7 +469,7 @@ class Simulator():
                 print(":)")
                 print(event.timeOfOccurence)
 
-                self.manager.updateEnvironmentAndPathData(updateReferenceTime, event.timeOfOccurence, dynamicLocation)
+                self.manager.updateSatelliteStates(updateReferenceTime, event.timeOfOccurence)
                 updateReferenceTime = event.timeOfOccurence 
 
             #if its to take the snapshot 
@@ -569,6 +568,8 @@ class Simulator():
                     
                     #then, store the data for when the final arrival of the packet happened 
                     event.kargs["packet"].packetArriveTime = timeOfOccurence
+
+                    print("Made it! :D")
 
                     continue 
                 
