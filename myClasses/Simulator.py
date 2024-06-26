@@ -539,7 +539,6 @@ class Simulator():
                 
                 #get the finish processing time
                 print(satelliteIndWeAreAt) 
-                pdb.set_trace() 
                 endProcessTime = raveledPlayers[satelliteIndWeAreAt].generateProcessingOneMorePacketTime(event.timeOfOccurence, queingDelaysEnabled) 
                 
                 #create event to queue, based on when we finish processing 

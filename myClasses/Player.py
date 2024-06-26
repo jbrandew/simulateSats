@@ -120,35 +120,33 @@ class Player:
 
             self.agent = RoutingRL.DQNAgentRouting(self)
 
-
-
     def getNextHopAndUpdatePacket(self, packet): 
         """
-        This function updates packet parameters 
+        This function updates packet parameters and returns the next hop
+        for the packets path
         """
 
         #who we output as the next hop depends on our routing policy 
-
         #if its OSPF 
         if(self.routingPolicy == "OSPF"):
 
             #get the next satellite to hop to. So, based on the destination, get the direction of the next hop 
-            hopTo = self.routingTable[packet.endSat]
+            hopTo = int(self.routingTable[packet.endSat])
             #store the index 
             packet.currSat = hopTo
         
         if(self.routingPolicy == "basic"):
             #same here 
-            hopTo = packet.returnNextHopBasic() 
+            hopTo = int(packet.returnNextHopBasic()) 
             packet.updateToNextHopBasic() 
         
         if(self.routingPolicy == "RL"): 
             #if we are working with RL, get next hop from RL agent 
-            hopTo = self.agent.select_action(packet)
+            hopTo = int(self.agent.select_action(packet))
             #store the hop 
             packet.currSat = hopTo
             
-        return int(hopTo)
+        return hopTo
 
     def generateProcessingOneMorePacketTime(self, timeRequested, packetCollsionEnabled = True): 
         """

@@ -75,6 +75,7 @@ class DQN(nn.Module):
 
     #forward pass through the network, using the basic input 
     def forward(self, x):
+
         x = F.relu(self.layer1(x))
         x = F.relu(self.layer2(x))
         return self.layer3(x)
@@ -100,6 +101,10 @@ class DQNAgentRouting:
         self.TAU = 0.005
         self.LR = 1e-4
 
+        #initialize networks when we first select the action, as by that point, the topology will be set up 
+        self.initializedNetworks = False
+
+    def initializeNetworks(self): 
         #from the satellite, get the number of possible actions and the shape of the observation space
         #get number of actions from connected players
         n_actions = len(self.satellite.connectedToPlayers)
@@ -130,34 +135,33 @@ class DQNAgentRouting:
         action: what satellite to route the packet towards 
 
         """
-        #for now, take random action 
-        #can optimize later... ('state', 'action', 'next_state', 'reward'))
-        
-        #select random action 
-        #hehe
-        action = torch.tensor([[self.env.action_space.sample()]], device=self.device, dtype=torch.long) 
+
+        #if we have not initialized the networks, then do that. 
+        if(not self.initializedNetworks): 
+            self.initializedNetworks = True
+            self.initializeNetworks() 
         
         #create experience from adjMatrix and QLengths
         adjMatrixState = np.ravel(copy.deepcopy(self.satellite.adjMatrix))
         queueLengthState = copy.deepcopy(self.satellite.getQLengths())
+
+        #format the network input data 
         overallState = np.concatenate([adjMatrixState, queueLengthState])
+        overallState = [float(i) for i in overallState]
+        overallState = torch.tensor(overallState)
 
         #create predicted state (simple for now)
         predictedState = overallState
-
-        #create experience and push it 
-        self.memory.push(overallState, action, predictedState, None)
-
-        #then, get corresponding action from network and return it 
-        #use GPU if we can
-
-        #first get action from output
-        actionOutput = torch.tensor([[self.policy_net.forward(overallState)]], device=self.device, dtype=torch.long)
+        
+        #so, get the policy net output
+        actionOutput = self.policy_net(overallState).argmax() 
 
         #then, convert it to viable satellite ind 
-        satIndToForwardTo = list(self.satellite.connectedToPlayers)[actionOutput].adjMatPersonalIndex
+        indexableSats = sorted(self.satellite.connectedToPlayers)
+        satIndToForwardTo = indexableSats[actionOutput.item()].adjMatPersonalIndex
 
-        pdb.set_trace() 
+        #create experience and push it 
+        self.memory.push(overallState, satIndToForwardTo, predictedState, None)
 
         #return the viable satellite index now :) 
         return satIndToForwardTo 
