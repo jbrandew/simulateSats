@@ -17,8 +17,10 @@ class Packet:
                  currSat, 
                  packetSendTime,
                  routingMetadata,
-                 packetArriveTime
+                 packetArriveTime,
+                 packetIndex = 0 
                  ):
+        
         self.startLocation = startLocation
         self.endLocation = endLocation
 
@@ -29,6 +31,9 @@ class Packet:
         self.packetSendTime = packetSendTime
         self.routingMetadata = routingMetadata
         self.packetArriveTime = packetArriveTime
+
+        self.packetIndex = packetIndex
+        self.playersInvolvedInSending = set() 
 
         #this is only used within the "basic" protocol
         self.routingMetadata["currIndInPath"] = 0

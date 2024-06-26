@@ -127,7 +127,8 @@ class DQNAgentRouting:
 
         #create optimizer and buffer 
         self.optimizer = optim.AdamW(self.policy_net.parameters(), lr=self.LR, amsgrad=True)
-        self.memory = ReplayMemory(10000)
+        self.fullExperienceMemory = ReplayMemory(10000)
+        self.nonRewardMemory = {}
 
     #create function for selecting action based on state 
     def select_action(self, packet):
@@ -156,9 +157,6 @@ class DQNAgentRouting:
         overallState = [float(i) for i in overallState]
         overallState = torch.tensor(overallState)
 
-        #create predicted state (simple for now)
-        predictedState = overallState
-                
         #use epsilon-greedy exploration
         sample = random.random()
         eps_threshold = 1
@@ -176,15 +174,23 @@ class DQNAgentRouting:
         indexableSats = sorted(self.satellite.connectedToPlayers)
         satIndToForwardTo = indexableSats[actionOutput].adjMatPersonalIndex
 
+        #create predicted state (simple for now)
+        #to create the predicted state, get the timing for processing a packet    
+        timeToProcess = indexableSats[actionOutput].generateProcessingOneMorePacketTime(0) 
+        #then, increase the associated queueLength state 
+        predictedState = copy.deepcopy(overallState)
+        predictedState[len(adjMatrixState) + indexableSats[actionOutput].adjMatPersonalIndex]+=timeToProcess
+            
         #create experience and push it 
-        self.memory.push(overallState, satIndToForwardTo, predictedState, None)
+        #self.memory.push(overallState, satIndToForwardTo, predictedState, None)
+        self.nonRewardMemory[packet.packetIndex] = [overallState, satIndToForwardTo, predictedState]
 
-        # print("Action")
-        # print(actionOutput)
-        # print("Satellite index to send to")
-        # print(satIndToForwardTo)
+        print("Action")
+        print(actionOutput)
+        print("Satellite index to send to")
+        print(satIndToForwardTo)
         
-        # pdb.set_trace() 
+        pdb.set_trace() 
 
         #return the viable satellite index now :) 
         return satIndToForwardTo 
@@ -203,3 +209,14 @@ class DQNAgentRouting:
         
         
         return 
+    
+    def retroactiveRewardCreation(self, packet): 
+        """
+        Here, retroactively create reward based on packet properties 
+        Currently, its simply the inverse of propagation delay of the packet through the network 
+        """
+
+        #first get the time it took for the packet to go through the network 
+        packetPropDelay = packet.packetArriveTime - packet.packetSendTime
+        #then, create and push the experience 
+        self.fullExperienceMemory.push(*self.nonRewardMemory[packet.packetIndex], packetPropDelay)

@@ -120,6 +120,14 @@ class Player:
 
             self.agent = RoutingRL.DQNAgentRouting(self)
 
+    def storePropDelay(self, packet): 
+        """
+        Store propagation delay for a packet we are involved in sending
+        """
+
+        if(self.routingPolicy == "RL"):
+            self.agent.retroactiveRewardCreation(packet)
+
     def getNextHopAndUpdatePacket(self, packet): 
         """
         This function updates packet parameters and returns the next hop
@@ -129,13 +137,10 @@ class Player:
         #who we output as the next hop depends on our routing policy 
         #if its OSPF 
         if(self.routingPolicy == "OSPF"):
-
             #get the next satellite to hop to. So, based on the destination, get the direction of the next hop 
             hopTo = int(self.routingTable[packet.endSat])
             #store the index 
             packet.currSat = hopTo
-
-            pdb.set_trace()
 
         if(self.routingPolicy == "basic"):
             #same here 

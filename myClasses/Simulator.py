@@ -178,6 +178,9 @@ class Simulator():
         #after getting that, do the computation in the event stack
         holdData = self.executeGeneralSimulation(**simulationArgs)
     
+        #plotting the average queing delay stuff 
+        #self.plotMySnapshotSet()
+
         #have main thread be the visualization
         self.showVisualization(**visualizerArgs)
 
@@ -199,7 +202,9 @@ class Simulator():
         Effect: 
         Plots in 3D the traffic, position of satellites, etc. in time varying capacity 
         """ 
-
+        if(not visualizerOn):
+            return 
+        
         #please note, that even tho it looks like "hold" isnt used, its auto erased from memory if not assigned. So keep it there. 
         #also note, this auto gives a "frame" variable to the plotSnapshotFromStorage function 
         #also note, interval is in milliseconds 
@@ -304,7 +309,8 @@ class Simulator():
                                                None,
                                                packetSendTimes[packetInd],
                                                routingMetaData[packetInd],
-                                               None)
+                                               None,
+                                               packetInd)
         
         return packets
         
@@ -540,6 +546,9 @@ class Simulator():
                 print(satelliteIndWeAreAt) 
                 endProcessTime = raveledPlayers[satelliteIndWeAreAt].generateProcessingOneMorePacketTime(event.timeOfOccurence, queingDelaysEnabled) 
                 
+                #add index to the set for packet data
+                event.kargs["packet"].playersInvolvedInSending.add(satelliteIndWeAreAt)
+
                 #create event to queue, based on when we finish processing 
                 queueEvent = Event(endProcessTime,
                                    "packetFinishProcessing",
@@ -569,8 +578,12 @@ class Simulator():
                     #then, store the data for when the final arrival of the packet happened 
                     event.kargs["packet"].packetArriveTime = timeOfOccurence
 
+                    #send packet propagation time to all agents                     
+                    for playerInd in event.kargs["packet"].playersInvolvedInSending: 
+                        raveledPlayers[playerInd].storePropDelay(event.kargs["packet"])
+                        
                     print("Made it! :D")
-
+                
                     continue 
                 
                 #get the current and next players 
@@ -598,8 +611,6 @@ class Simulator():
         #then, iterating through the packets
         for packetInd in range(len(packets)): 
             latencyTimes[packetInd] = packets[packetInd].packetArriveTime - packets[packetInd].packetSendTime
-
-        self.plotMySnapshotSet()
 
         #print average latency
         print("Average latency")
