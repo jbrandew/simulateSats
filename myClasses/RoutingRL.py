@@ -35,7 +35,7 @@ import math
 #transition consists of state, action, next state, reward
 #just a tuple of information 
 Transition = namedtuple('Transition',
-                        ('state', 'action', 'next_state', 'reward'))
+                        ('state', 'action', 'next_state', 'propDelay'))
 
 #create replay object 
 class ReplayMemory(object):
@@ -116,6 +116,8 @@ class DQNAgentRouting:
         n_actions = len(self.satellite.connectedToPlayers)
         #get size of observation space from the adjMatrix and QLengths (should be equal)
         #TODO: look at observation compression. Only in nearby vicinity most likely matters 
+        #TODO: modify structure to just use non-inf values 
+        #or, just preprocess after the fact. 
         n_observations = np.size(self.satellite.adjMatrix)
         n_observations+= np.size(self.satellite.QFinishTimes)
 
@@ -150,6 +152,10 @@ class DQNAgentRouting:
         
         #create experience from adjMatrix and QLengths
         adjMatrixState = np.ravel(copy.deepcopy(self.satellite.adjMatrix))
+        #modify adjMatrixState to set the inf values to 10* the non-inf max
+        #or, just a high value works ig  
+        adjMatrixState[adjMatrixState == np.inf] = 10000 #max(adjMatrixState[adjMatrixState != np.inf])*10
+         
         queueLengthState = copy.deepcopy(self.satellite.getQLengths())
 
         #format the network input data 
@@ -183,15 +189,15 @@ class DQNAgentRouting:
             
         #create experience and push it 
         #self.memory.push(overallState, satIndToForwardTo, predictedState, None)
-        self.nonRewardMemory[packet.packetIndex] = [overallState, satIndToForwardTo, predictedState]
+        self.nonRewardMemory[packet.packetIndex] = [overallState, actionOutput, predictedState]
+
+        self.optimize() 
 
         print("Action")
         print(actionOutput)
         print("Satellite index to send to")
         print(satIndToForwardTo)
         
-        pdb.set_trace() 
-
         #return the viable satellite index now :) 
         return satIndToForwardTo 
         
@@ -205,9 +211,74 @@ class DQNAgentRouting:
         same as the state of the topology when we are training. 
 
         """
+        #this only works with experiences that have their reward
+        #so, read in a value from the buffer: 
+
+        smallBatchSize = 3
+        #can configure batching later :/
+        #torch forward methods expects it to be batch size x ... and whatever else 
+        #this is useful: torch.cat(batch.state).shape[0]
+
+        if len( self.fullExperienceMemory ) < smallBatchSize:
+            return
         
+        transitions = self.fullExperienceMemory.sample(smallBatchSize)
+
+        # Transpose the batch (see https://stackoverflow.com/a/19343/3343043 for
+        # detailed explanation). This converts batch-array of Transitions
+        # to Transition of batch-arrays.
+        batch = Transition(*zip(*transitions))
+
+        #so, get necessary elements from the batch 
+        state_batch = torch.cat(batch.state)
+        #dont need to cat the action, as the dimensions of each element are matching 
+        #same with propDelay
+        action_batch = torch.tensor(batch.action)
+        next_state_batch = torch.cat(batch.next_state)
+
+        #reshape the state and next state 
+        #first get numElementsPerSet 
+        numElementsPerSet = int(state_batch.size()[0] / smallBatchSize)
         
+        #then, reshape 
+        state_batch = state_batch.reshape([smallBatchSize, numElementsPerSet])
+        next_state_batch = next_state_batch.reshape([smallBatchSize, numElementsPerSet])
+
+        #reward is generated as the inverse of the propagation delay 
+        reward_batch = torch.tensor([1/i for i in batch.propDelay])
+
+        #then, get the current state values
+        #use the action that we actually executed beforehand
+        #alternatively, this could just be the max operatior as well...  
+        #we need to match the dimensions of indexer vs data, which is why we do the squeeze 
+        state_action_values = self.policy_net(state_batch).gather(1,action_batch.unsqueeze(1))
+
+        #.gather(1, action_batch), either use the action for indexing, or just index by action
+
+        #get the next state values 
+        #should be a list here...
+        #will need to make modifications for the approach when i use batching instead of single values
+        with torch.no_grad():
         
+            next_state_values = self.target_net(next_state_batch).max(1).values
+
+        #then get the values for next state actions using the reward  
+        target_state_action_values = (next_state_values * self.GAMMA) + reward_batch
+
+        # Compute Huber loss
+        criterion = nn.SmoothL1Loss()
+        loss = criterion(state_action_values, target_state_action_values.unsqueeze(1))
+
+        # Optimize the model
+        #zero out gradients, as we arent using memory here over batches 
+        self.optimizer.zero_grad()
+        #back propagate with respect to the generated loss 
+        loss.backward()
+
+        # In-place gradient clipping
+        torch.nn.utils.clip_grad_value_(self.policy_net.parameters(), 100)
+        self.optimizer.step()
+
         return 
     
     def retroactiveRewardCreation(self, packet): 
@@ -220,3 +291,4 @@ class DQNAgentRouting:
         packetPropDelay = packet.packetArriveTime - packet.packetSendTime
         #then, create and push the experience 
         self.fullExperienceMemory.push(*self.nonRewardMemory[packet.packetIndex], packetPropDelay)
+

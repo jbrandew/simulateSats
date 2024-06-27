@@ -515,7 +515,8 @@ class Manager():
         point2 = player2.getCoords()
         
         if( myMath.dist3d(point1, point2)/(3e8) == np.inf ): 
-            pdb.set_trace() 
+            raise Exception("Error, distance cant be infinity")
+         
         return myMath.dist3d(point1, point2)/(3e8)    
 
     def getXYZofLinks(self, maxNumLinksPerSat=6): 

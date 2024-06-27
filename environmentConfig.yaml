@@ -2,7 +2,7 @@
 
 #constellation parameters
 #walkerDelta or square  
-LEOConstellation: 'walkerDelta' #'walkerDelta'
+LEOConstellation: 'square' #'walkerDelta'
 NumberLEOSatellites: 360
 OrbitalPlanes: 20
 Inclination: 80 
@@ -20,20 +20,20 @@ SunLocation: [149.6e+6, 0, 0]
 
 #topology and routing polocy / satellite info
 #either basicSquare or IPO
-initialTopology: 'IPO'
+initialTopology: 'basicSquare'
 #possible values: 
 #OSPF, basic, mixedSingleAgentRLRestOSPF
-routingPolicy: 'basic'
+routingPolicy: 'mixedSingleAgentRLRestOSPF'
 topologyPolicy: null
 packetProcessRate: .1
 
 #simulation runtime parameters 
-numPeople: 10
+numPeople: 1
 numPacketsPerPerson: 10
 packetSendTimeFrame: 1
 #PseudoUniform, SingleFar, simpleForSingleRL
 #cant use single far with multiple people 
-personDistribution: 'PseudoUniform'
+personDistribution: 'simpleForSingleRL'
 
 queingDelaysEnabled: True
 weatherEnabled: False
@@ -45,7 +45,7 @@ outageFrequency: null
 timeFactor: 500
 
 #visualizer parameters 
-visualizerOn: True
+visualizerOn: False
 visualizeTime: 10
 FPS: 3
 

@@ -511,7 +511,7 @@ class Simulator():
                         #get non traffic aware routing table
                         nonTrafficAwareRoutingTable = myMath.dijkstraWithNodeValuesAllInitialHops(player.adjMatrix, player.adjMatPersonalIndex)
 
-                        pdb.set_trace() 
+                 
                     player.updateRoutingTable() 
 
 
