@@ -25,11 +25,11 @@ initialTopology: 'basicSquare'
 #OSPF, basic, mixedSingleAgentRLRestOSPF
 routingPolicy: 'mixedSingleAgentRLRestOSPF'
 topologyPolicy: null
-packetProcessRate: .1
+packetProcessRate: 1000
 
 #simulation runtime parameters 
 numPeople: 1
-numPacketsPerPerson: 10
+numPacketsPerPerson: 1000
 packetSendTimeFrame: 1
 #PseudoUniform, SingleFar, simpleForSingleRL
 #cant use single far with multiple people 

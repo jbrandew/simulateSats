@@ -103,9 +103,13 @@ class DQNAgentRouting:
         self.GAMMA = 0.99
         self.EPS_START = 0.9
         self.EPS_END = 0.05
-        self.EPS_DECAY = 1000
+        #lower "decay" value actually increases rate we go to the "eps_end" value 
+        self.EPS_DECAY = 100
         self.TAU = 0.005
-        self.LR = 1e-4
+        self.LR = 1e-2
+
+        #initialize the # of steps we have completed 
+        self.steps_done = 0 
 
         #initialize networks when we first select the action, as by that point, the topology will be set up 
         self.initializedNetworks = False
@@ -131,6 +135,7 @@ class DQNAgentRouting:
         self.optimizer = optim.AdamW(self.policy_net.parameters(), lr=self.LR, amsgrad=True)
         self.fullExperienceMemory = ReplayMemory(10000)
         self.nonRewardMemory = {}
+
 
     #create function for selecting action based on state 
     def select_action(self, packet):
@@ -165,7 +170,9 @@ class DQNAgentRouting:
 
         #use epsilon-greedy exploration
         sample = random.random()
-        eps_threshold = 1
+        eps_threshold = self.EPS_END + (self.EPS_START - self.EPS_END) * \
+            math.exp(-1. * self.steps_done / self.EPS_DECAY)
+        self.steps_done+=1
 
         if sample > eps_threshold:
             #with torch.no_grad():
@@ -193,10 +200,10 @@ class DQNAgentRouting:
 
         self.optimize() 
 
-        print("Action")
-        print(actionOutput)
-        print("Satellite index to send to")
-        print(satIndToForwardTo)
+        #print("Action")
+        #print(actionOutput)
+        #print("Satellite index to send to")
+        #print(satIndToForwardTo)
         
         #return the viable satellite index now :) 
         return satIndToForwardTo 
@@ -214,7 +221,7 @@ class DQNAgentRouting:
         #this only works with experiences that have their reward
         #so, read in a value from the buffer: 
 
-        smallBatchSize = 3
+        smallBatchSize = 64
         #can configure batching later :/
         #torch forward methods expects it to be batch size x ... and whatever else 
         #this is useful: torch.cat(batch.state).shape[0]

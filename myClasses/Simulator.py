@@ -90,8 +90,8 @@ class Simulator():
                 #but need mapping to a space of [0,1]
                 self.sphereColors = ((self.relativeFinish - min(self.relativeFinish)) / (max(self.relativeFinish) - min(self.relativeFinish)))
             
-            print("Hello") 
-            print(self.relativeFinish[np.nonzero(self.relativeFinish)])
+            #print("Hello") 
+            #print(self.relativeFinish[np.nonzero(self.relativeFinish)])
             
         
         def selfPlot(self): 
@@ -472,8 +472,8 @@ class Simulator():
             if(event.timeOfOccurence > updateReferenceTime + environmentUpdateInterval): 
                 #this updates at least as often as necessary
                 #this is because it updates when the time constraint is violated, and then updates to the timing that created the violation
-                print(":)")
-                print(event.timeOfOccurence)
+                #print(":)")
+                #print(event.timeOfOccurence)
 
                 self.manager.updateSatelliteStates(updateReferenceTime, event.timeOfOccurence)
                 updateReferenceTime = event.timeOfOccurence 
@@ -543,7 +543,7 @@ class Simulator():
                 satelliteIndWeAreAt = event.kargs["packet"].currSat
                 
                 #get the finish processing time
-                print(satelliteIndWeAreAt) 
+                #print(satelliteIndWeAreAt) 
                 endProcessTime = raveledPlayers[satelliteIndWeAreAt].generateProcessingOneMorePacketTime(event.timeOfOccurence, queingDelaysEnabled) 
                 
                 #add index to the set for packet data
@@ -582,8 +582,9 @@ class Simulator():
                     for playerInd in event.kargs["packet"].playersInvolvedInSending: 
                         raveledPlayers[playerInd].storePropDelay(event.kargs["packet"])
                         
-                    print("Made it! :D")
-                
+                    #check delay: 
+                    print(event.kargs["packet"].packetArriveTime - event.kargs["packet"].packetSendTime)
+
                     continue 
                 
                 #get the current and next players 
