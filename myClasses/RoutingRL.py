@@ -104,9 +104,9 @@ class DQNAgentRouting:
         self.EPS_START = 0.9
         self.EPS_END = 0.05
         #lower "decay" value actually increases rate we go to the "eps_end" value 
-        self.EPS_DECAY = 100
+        self.EPS_DECAY = 10000
         self.TAU = 0.005
-        self.LR = 1e-2
+        self.LR = 1e-4
 
         #initialize the # of steps we have completed 
         self.steps_done = 0 
@@ -135,6 +135,9 @@ class DQNAgentRouting:
         self.optimizer = optim.AdamW(self.policy_net.parameters(), lr=self.LR, amsgrad=True)
         self.fullExperienceMemory = ReplayMemory(10000)
         self.nonRewardMemory = {}
+
+        #past rewards
+        self.epsRewards = [] 
 
 
     #create function for selecting action based on state 
@@ -174,11 +177,13 @@ class DQNAgentRouting:
             math.exp(-1. * self.steps_done / self.EPS_DECAY)
         self.steps_done+=1
 
+        #print(eps_threshold)
+
         if sample > eps_threshold:
-            #with torch.no_grad():
+            with torch.no_grad():
 
             #so, get the policy net output
-            actionOutput = self.policy_net(overallState).argmax().item()
+                actionOutput = self.policy_net(overallState).argmax().item()
         
         else: 
             actionOutput = np.random.randint(self.policy_net.n_actions)
@@ -222,8 +227,6 @@ class DQNAgentRouting:
         #so, read in a value from the buffer: 
 
         smallBatchSize = 64
-        #can configure batching later :/
-        #torch forward methods expects it to be batch size x ... and whatever else 
         #this is useful: torch.cat(batch.state).shape[0]
 
         if len( self.fullExperienceMemory ) < smallBatchSize:
@@ -253,6 +256,9 @@ class DQNAgentRouting:
 
         #reward is generated as the inverse of the propagation delay 
         reward_batch = torch.tensor([1/i for i in batch.propDelay])
+
+        #store the reward for that batch 
+        self.epsRewards = self.epsRewards + [np.average(reward_batch)]
 
         #then, get the current state values
         #use the action that we actually executed beforehand

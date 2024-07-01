@@ -106,6 +106,11 @@ class Player:
             self.QFinishTimeStamps = np.zeros(numberPlayers)
 
         if(self.routingPolicy == 'RL'): 
+
+            #double the relative process rate for RL agent 
+            #TODO: remove this. its only for temporary debugging. 
+            self.packetProcessRate = 2*self.packetProcessRate
+
             #then, first create the routing table accordingly 
             #so, first get how many possible destinations 
             numberPlayers = routingArgs['totalNumPlayers']
@@ -119,6 +124,27 @@ class Player:
             self.QFinishTimeStamps = np.zeros(numberPlayers)
 
             self.agent = RoutingRL.DQNAgentRouting(self)
+
+    def resetWorldState(self):
+
+        #reset adjMatrixStamps 
+        self.adjMatrixTimeStamps = 0*self.adjMatrixTimeStamps
+
+        #reset Q times 
+        self.QFinishTimes = 0*self.QFinishTimes
+        self.QFinishTimeStamps = 0*self.QFinishTimeStamps
+
+        #reset our queue finish time 
+        self.finishProcessingTime = 0
+
+        #if we have RL routing policy
+        if(self.routingPolicy == 'RL'): 
+            #print the past average 
+            print("Average Reward")
+            print(np.average(self.agent.epsRewards))
+
+            #then reset the episode rewards for the agent
+            self.agent.epsRewards = []
 
     def storePropDelay(self, packet): 
         """
@@ -179,7 +205,11 @@ class Player:
         random_probability = random.random()
 
         #then using the reverse solved CDF of the exp. interarr. time
-        interArrivalTime = -np.log(1 - random_probability)/(self.packetProcessRate)
+        #interArrivalTime = -np.log(1 - random_probability)/(self.packetProcessRate)
+        
+        #for deterministic process event, just use inverse 
+        #can use deterministic for more stability in training
+        interArrivalTime = 1/self.packetProcessRate
 
         #in no collision case, just return normal int. time 
         if not packetCollsionEnabled: 

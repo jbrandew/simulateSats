@@ -314,6 +314,14 @@ class Simulator():
         
         return packets
         
+    def resetWorldState(self): 
+        """
+        This function resets the states of the satellites, manager, and ourself
+        """
+
+        #reset the objects 
+        self.manager.resetWorldState()
+
     def executeGeneralSimulation(self,
                                  
                                  numPeople = 100,
@@ -390,7 +398,8 @@ class Simulator():
         #generate adj mat 
         self.manager.generateAdjacencyMatrix()
         
-        #initialize routing tables. This is really only applicable for OSPF :) 
+        #initialize routing tables. This is really only applicable for OSPF.
+        #call this only once at the beginning for precomputed path policy. 
         self.manager.initializeSatelliteRoutingTables()
 
         #first, create a priority queue for events  
@@ -472,8 +481,6 @@ class Simulator():
             if(event.timeOfOccurence > updateReferenceTime + environmentUpdateInterval): 
                 #this updates at least as often as necessary
                 #this is because it updates when the time constraint is violated, and then updates to the timing that created the violation
-                #print(":)")
-                #print(event.timeOfOccurence)
 
                 self.manager.updateSatelliteStates(updateReferenceTime, event.timeOfOccurence)
                 updateReferenceTime = event.timeOfOccurence 
@@ -583,7 +590,7 @@ class Simulator():
                         raveledPlayers[playerInd].storePropDelay(event.kargs["packet"])
                         
                     #check delay: 
-                    print(event.kargs["packet"].packetArriveTime - event.kargs["packet"].packetSendTime)
+                    #print(event.kargs["packet"].packetArriveTime - event.kargs["packet"].packetSendTime)
 
                     continue 
                 
@@ -613,10 +620,14 @@ class Simulator():
         for packetInd in range(len(packets)): 
             latencyTimes[packetInd] = packets[packetInd].packetArriveTime - packets[packetInd].packetSendTime
 
-        #print average latency
-        print("Average latency")
-        print(np.average(latencyTimes))
+        # #print average latency
+        # print("Average latency")
+        # print(np.average(latencyTimes))
         
+        #fit linear regression to see if its decreasing over time 
+        print("Slope of fit line:")
+        #polyHold = np.polyfit(np.arange(len(latencyTimes)), latencyTimes, 2)
+
         #then, return it
         return latencyTimes
 

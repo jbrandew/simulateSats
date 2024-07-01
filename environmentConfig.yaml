@@ -25,12 +25,15 @@ initialTopology: 'basicSquare'
 #OSPF, basic, mixedSingleAgentRLRestOSPF
 routingPolicy: 'mixedSingleAgentRLRestOSPF'
 topologyPolicy: null
-packetProcessRate: 1000
+#RL training: [[100,70,100,30]]
+#normal behavior: 100
+#cant be 1d array 
+packetProcessRate: [[50,70,300,30]]
 
 #simulation runtime parameters 
 numPeople: 1
-numPacketsPerPerson: 1000
-packetSendTimeFrame: 1
+numPacketsPerPerson: 500
+packetSendTimeFrame: 10
 #PseudoUniform, SingleFar, simpleForSingleRL
 #cant use single far with multiple people 
 personDistribution: 'simpleForSingleRL'
@@ -38,11 +41,11 @@ personDistribution: 'simpleForSingleRL'
 queingDelaysEnabled: True
 weatherEnabled: False
 #was .05 for first graphic...
-environmentUpdateInterval: 1
+environmentUpdateInterval: 10
 outageFrequency: null
 #takes care of how long we want the visualizer to take data for. Should be greater for more traffic.
 #its a ratio of the visualize time vs the time frame length that packets are being sent over. 
-timeFactor: 500
+timeFactor: 1
 
 #visualizer parameters 
 visualizerOn: False

@@ -105,6 +105,22 @@ class Manager():
         else:
             raise "This topology isnt integrated/implemented yet"
 
+    def resetWorldState(self): 
+        """
+        Reset the world
+        """
+        
+        #reset personal variables 
+        self.generateAdjacencyMatrix() 
+        self.queueFinishTimes = 0*self.queueFinishTimes
+
+        #reset each of the satellites and base stations 
+        for satellite in np.ravel(self.sats): 
+            satellite.resetWorldState()
+
+        for baseStation in self.baseStations: 
+            baseStation.resetWorldState() 
+
 
     def initializeSatelliteRoutingTables(self): 
         
@@ -474,7 +490,6 @@ class Manager():
         #for each packet, get the path 
         
         for packetInd in range(numberPackets): 
-            #print(str(packetInd)+"/"+str(numberPackets))
         
             listOfPaths[packetInd] = myMath.dijkstraWithPath(self.currAdjMat, 
                                                         random_integers[packetInd,0], 
@@ -581,27 +596,6 @@ class Manager():
         else: 
             self.baseStations = [] 
 
-    def generateSatellitesBasic(self,
-                                initialPoints,
-                                packetProcessRate,
-                                routingPolicy):
-        """
-        Creating basic constellation. This is used for basic routing testing with RL policies. 
-
-        initialPoints: initial locations of the satellites
-        packetProcessRate: how fast we process packets at our server 
-        routingPolicy: how each server routes packets
-        """
-        
-        #initialize storage 
-        self.sats =  []
-
-        #for each satellite position 
-        for satStartPoint in initialPoints: 
-            #create a satellite 
-            x = 1
-        return 
-
     def generateSatellites(self, 
                            walkerPoints, 
                            normVecs, 
@@ -621,8 +615,14 @@ class Manager():
         Effect: sets up our satellite internals using walkerPoints 
         """
 
+        #create storage for satellites 
         self.sats = np.tile(LEO(), [self.numPlanes, self.numSatPerPlane]) 
 
+        #check if packetProcessRate is a list or not 
+        if( (not isinstance(packetProcessRate, list)) and (not isinstance(packetProcessRate, np.array) )): 
+            #if its not a list, then make it  
+            packetProcessRate = packetProcessRate * np.ones([self.numPlanes, self.numSatPerPlane])
+            
         #first, check if we have a mixedRoutingPolicy
         if "mixed" in routingPolicy: 
             
@@ -639,9 +639,9 @@ class Manager():
 
                         #initialize a satellite each time  
                         self.sats[planeInd, smallSatInd] = LEO(*(walkerPoints[planeInd,smallSatInd]),
-                                                                packetProcessRate,
+                                                                packetProcessRate[planeInd][smallSatInd],
                                                                 self.numSatPerPlane*planeInd + smallSatInd, 
-                                                                normVecs[planeInd],
+                                                                normVecs[planeInd], 
                                                                 mixedPolicy,
                                                                 {"totalNumPlayers":self.numPlanes*self.numSatPerPlane}
                                                                 ) 
@@ -652,7 +652,7 @@ class Manager():
                 for smallSatInd in range(self.numSatPerPlane):
                     #initialize a satellite each time  
                     self.sats[planeInd, smallSatInd] = LEO(*(walkerPoints[planeInd,smallSatInd]),
-                                                            packetProcessRate,
+                                                            packetProcessRate[planeInd][smallSatInd],
                                                             self.numSatPerPlane*planeInd + smallSatInd, 
                                                             normVecs[planeInd],
                                                             routingPolicy,
