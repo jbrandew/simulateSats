@@ -619,7 +619,7 @@ class Manager():
         self.sats = np.tile(LEO(), [self.numPlanes, self.numSatPerPlane]) 
 
         #check if packetProcessRate is a list or not 
-        if( (not isinstance(packetProcessRate, list)) and (not isinstance(packetProcessRate, np.array) )): 
+        if( (not isinstance(packetProcessRate, list)) and (not isinstance(packetProcessRate, np.ndarray) )): 
             #if its not a list, then make it  
             packetProcessRate = packetProcessRate * np.ones([self.numPlanes, self.numSatPerPlane])
             

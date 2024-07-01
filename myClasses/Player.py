@@ -126,24 +126,30 @@ class Player:
             self.agent = RoutingRL.DQNAgentRouting(self)
 
     def resetWorldState(self):
+        """
+        Reset known view of the world. 
+        Only applicable for certain routing protocols. 
+        
+        """
 
-        #reset adjMatrixStamps 
-        self.adjMatrixTimeStamps = 0*self.adjMatrixTimeStamps
+        if(self.routingPolicy == 'RL' or self.routingPolicy == 'OSPF'): 
+            #reset adjMatrixStamps 
+            self.adjMatrixTimeStamps = 0*self.adjMatrixTimeStamps
 
-        #reset Q times 
-        self.QFinishTimes = 0*self.QFinishTimes
-        self.QFinishTimeStamps = 0*self.QFinishTimeStamps
+            #reset Q times 
+            self.QFinishTimes = 0*self.QFinishTimes
+            self.QFinishTimeStamps = 0*self.QFinishTimeStamps
 
-        #reset our queue finish time 
-        self.finishProcessingTime = 0
+            #reset our queue finish time 
+            self.finishProcessingTime = 0
 
-        #if we have RL routing policy
-        if(self.routingPolicy == 'RL'): 
+            #if we have RL routing policy
+            if(self.routingPolicy == 'RL'): 
 
-            #run episode analysis for past episode 
-            self.agent.episodeAnalysis() 
-            
-            self.agent.resetData()
+                #run episode analysis for past episode 
+                self.agent.episodeAnalysis() 
+                
+                self.agent.resetData()
 
     def storePropDelay(self, packet): 
         """

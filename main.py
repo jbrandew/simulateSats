@@ -79,25 +79,25 @@ visualizerArgs = {
 }
 
 #set up RL config: 
-num_episodes = 500 
+num_episodes = 1 
 
 #get simulator object 
 simmer = Simulator.Simulator(managerData)
     
-#iterate through episodes  
-for i_episode in range(num_episodes):
+# #iterate through episodes  
+# for i_episode in range(num_episodes):
 
-    #get latency each time 
-    holdLatencyTimes = simmer.executeGeneralSimulation(**simulationArgs)
+#     #get latency each time 
+#     holdLatencyTimes = simmer.executeGeneralSimulation(**simulationArgs)
 
-    #reset the state of the simulator
-    simmer.resetWorldState()
+#     #reset the state of the simulator
+#     simmer.resetWorldState()
 
-    print("Average latency for packets for this episode:")
-    print(np.average(holdLatencyTimes))
+#     print("Average latency for packets for this episode:")
+#     print(np.average(holdLatencyTimes))
 
 #enact simulation 
-#hold = simmer.simulateWithVisualizer(simulationArgs, visualizerArgs)
+hold = simmer.simulateWithVisualizer(simulationArgs, visualizerArgs)
 
 quit()
 

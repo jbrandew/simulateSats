@@ -44,7 +44,8 @@ def plotWalkerStar(allPlanes, ax = [], sphereColors = []):
         ax.set_zlabel('Z')
 
     #reshape points across planes
-    points = np.reshape(allPlanes, [360,3])
+    #use -1 to infer one of the dimensions 
+    points = np.reshape(allPlanes, [-1,3])
 
     #then scatter based on how many sizes we have 
     if(len(sphereColors) == 0): 
