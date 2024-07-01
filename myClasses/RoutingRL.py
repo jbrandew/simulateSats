@@ -138,6 +138,29 @@ class DQNAgentRouting:
 
         #past rewards
         self.epsRewards = [] 
+        self.epsLoss = []
+        self.epsActions = []
+
+    def resetData(self): 
+        #then reset the episode rewards for the agent
+        self.epsRewards = []
+        self.epsLoss = []
+        self.epsActions = [] 
+    
+    def episodeAnalysis(self): 
+        
+        #print the past average reward and loss  
+        print("Average Reward")
+        print(np.average(self.epsRewards))
+
+        print("Average Loss")
+        print(np.average(self.epsLoss))
+
+        #also, print the stats of the selected actions 
+        print("Action Stats")
+        stats = np.unique(self.epsActions, return_counts=True)
+        
+        print(stats)
 
 
     #create function for selecting action based on state 
@@ -160,6 +183,7 @@ class DQNAgentRouting:
         
         #create experience from adjMatrix and QLengths
         adjMatrixState = np.ravel(copy.deepcopy(self.satellite.adjMatrix))
+
         #modify adjMatrixState to set the inf values to 10* the non-inf max
         #or, just a high value works ig  
         adjMatrixState[adjMatrixState == np.inf] = 10000 #max(adjMatrixState[adjMatrixState != np.inf])*10
@@ -211,6 +235,9 @@ class DQNAgentRouting:
         #print(satIndToForwardTo)
         
         #return the viable satellite index now :) 
+        
+        self.epsActions = self.epsActions + [satIndToForwardTo]
+
         return satIndToForwardTo 
         
         #torch.tensor([[self.policy_net.forward(overallState)]], device=self.device, dtype=torch.long)
@@ -264,6 +291,7 @@ class DQNAgentRouting:
         #use the action that we actually executed beforehand
         #alternatively, this could just be the max operatior as well...  
         #we need to match the dimensions of indexer vs data, which is why we do the squeeze 
+        #we do this with gradients, because we will optimize with them in a second 
         state_action_values = self.policy_net(state_batch).gather(1,action_batch.unsqueeze(1))
 
         #.gather(1, action_batch), either use the action for indexing, or just index by action
@@ -281,6 +309,8 @@ class DQNAgentRouting:
         # Compute Huber loss
         criterion = nn.SmoothL1Loss()
         loss = criterion(state_action_values, target_state_action_values.unsqueeze(1))
+
+        self.epsLoss = self.epsLoss + [np.average(loss.detach().numpy())]
 
         # Optimize the model
         #zero out gradients, as we arent using memory here over batches 

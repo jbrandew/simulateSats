@@ -139,12 +139,11 @@ class Player:
 
         #if we have RL routing policy
         if(self.routingPolicy == 'RL'): 
-            #print the past average 
-            print("Average Reward")
-            print(np.average(self.agent.epsRewards))
 
-            #then reset the episode rewards for the agent
-            self.agent.epsRewards = []
+            #run episode analysis for past episode 
+            self.agent.episodeAnalysis() 
+            
+            self.agent.resetData()
 
     def storePropDelay(self, packet): 
         """
