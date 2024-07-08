@@ -72,9 +72,10 @@ class DQN(nn.Module):
         self.n_observations = n_observations
 
         #create layers 
-        self.layer1 = nn.Linear(self.n_observations, 64)
-        self.layer2 = nn.Linear(64, 64)
-        self.layer3 = nn.Linear(64, self.n_actions)
+        #using float64 to match input type (only changing this once as opposed to many times for input)
+        self.layer1 = nn.Linear(self.n_observations, 64).to(torch.float64) 
+        self.layer2 = nn.Linear(64, 64).to(torch.float64) 
+        self.layer3 = nn.Linear(64, self.n_actions).to(torch.float64) 
 
     # Called with either one element to determine next action, or a batch
     # during optimization. Returns tensor([[left0exp,right0exp]...]).
@@ -104,9 +105,9 @@ class DQNAgentRouting:
         self.EPS_START = 0.9
         self.EPS_END = 0.05
         #lower "decay" value actually increases rate we go to the "eps_end" value 
-        self.EPS_DECAY = 10000
+        self.EPS_DECAY = 1000
         self.TAU = 0.005
-        self.LR = 1e-4
+        self.LR = 1e-3
 
         self.discountFactor = 0.9 
 
@@ -125,12 +126,10 @@ class DQNAgentRouting:
         #from the satellite, get the number of possible actions and the shape of the observation space
         #get number of actions from connected players
         n_actions = len(self.satellite.connectedToPlayers)
-        #get size of observation space from the adjMatrix and QLengths (should be equal)
-        #TODO: look at observation compression. Only in nearby vicinity most likely matters 
-        #TODO: modify structure to just use non-inf values 
-        #or, just preprocess after the fact. 
-        n_observations = np.size(self.satellite.adjMatrix)
-        n_observations+= np.size(self.satellite.QFinishTimes)
+
+        #get size of observation space from the adjMatrix and QLengths
+        #TODO: look at observation compression, as most likely only nearest info matters that much 
+        n_observations = np.sum(self.satellite.adjMatrix != np.inf)
 
         #policy net = network we use to make our decisions. its the one that we use forward passes to interact with the environment
         #target net = network we use to train upon i.e. the network that generates the target that we use to update the policy net 
@@ -191,20 +190,30 @@ class DQNAgentRouting:
             self.initializeNetworks() 
         
         #create experience from adjMatrix and QLengths
-        adjMatrixState = np.ravel(copy.deepcopy(self.satellite.adjMatrix))
+        adjMatrixState = copy.deepcopy(self.satellite.adjMatrix)
 
-        #modify adjMatrixState to set the inf values to 10* the non-inf max
-        #or, just a high value works ig  
-
-        #so wo
-        adjMatrixState[adjMatrixState == np.inf] = 10000 #max(adjMatrixState[adjMatrixState != np.inf])*10
-         
+        #get the queue lengths 
         queueLengthState = copy.deepcopy(self.satellite.getQLengths())
 
-        #format the network input data 
-        overallState = np.concatenate([adjMatrixState, queueLengthState])
-        overallState = [float(i) for i in overallState]
-        overallState = torch.tensor(overallState)
+        #then, combine the adjMatrixState and the qeue lengths 
+        for ind, value in enumerate(queueLengthState): 
+            
+            adjMatrixState[ind] +=value/2
+            adjMatrixState[:,ind] +=value/2
+            adjMatrixState[ind,ind] -=value/2
+
+        #then, get the non-inf values 
+        #non-inf means there exists a valid connection between the two 
+        #this should never change shape/size, because the topology remains the same 
+        #note, this also automatically reshapes into input shape 
+        overallState = torch.from_numpy(adjMatrixState[adjMatrixState != np.inf])
+
+        self.policy_net.forward(overallState)
+        # #format the network input data 
+        # dont need to do this with modified state now. 
+        # overallState = np.concatenate([adjMatrixState, queueLengthState])
+        # overallState = [float(i) for i in overallState]
+        # overallState = torch.tensor(overallState)
 
         #use epsilon-greedy exploration
         sample = random.random()
