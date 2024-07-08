@@ -37,7 +37,7 @@ class Simulator():
         self.manager = Manager(**managerData)
         
         #create figure and plot to disploy data 
-        self.fig = plt.figure(figsize = (10, 7),facecolor= 'coral')
+        self.fig = plt.figure(figsize = (15, 7))#,facecolor= 'coral')
         self.ax = self.fig.add_subplot(111, projection='3d') 
         self.view = myPlots.GraphicsView(self.manager, self.fig, self.ax)
 
@@ -279,7 +279,12 @@ class Simulator():
             packetSendTimes = np.random.uniform(0, 
                                                 sendTimeFrameLength, 
                                                 (numPeople*numPacketsPerPerson,))
-
+        elif(sendTimeDistribution == "Even"):
+            #if its even, then just space it out
+            packetSendTimes = np.linspace(0, 
+                                          sendTimeFrameLength, 
+                                          numPeople*numPacketsPerPerson)
+            
         #store the indices of the start and end satellites 
         for packetInd in range(len(packets)): 
             satStarts[packetInd], _ = myMath.closest_point(satLocs, 
@@ -341,7 +346,8 @@ class Simulator():
                                  timeFactor = None,
 
                                  fullyFlushedNetworkETA = None,
-                                 routingPolicy = None
+                                 routingPolicy = None,
+                                 sendTimeDistribution = "Uniform"
                                  ): 
         
         """
@@ -411,7 +417,7 @@ class Simulator():
         packets = self.generatePackets(numPeople,
                                        numPacketsPerPerson,
                                        personDistribution,
-                                       "Uniform",
+                                       sendTimeDistribution,
                                        packetSendTimeFrame,
                                        "True")
 
@@ -444,6 +450,15 @@ class Simulator():
             for broadcastAdjMatInd in range(100): 
                 #so create time and events 
                 updateTime = fullyFlushedNetworkETA*broadcastAdjMatInd/100
+                queueEvent = Event(updateTime,
+                                    "updateAdjMats",
+                                    {})
+                eventQueue.push(queueEvent)
+
+        if(routingPolicy == 'mixedSingleAgentRLRestOSPF'): 
+            for broadcastAdjMatInd in range(200): 
+                #so create time and events 
+                updateTime = 10*broadcastAdjMatInd/200
                 queueEvent = Event(updateTime,
                                     "updateAdjMats",
                                     {})
@@ -625,7 +640,7 @@ class Simulator():
         # print(np.average(latencyTimes))
         
         #fit linear regression to see if its decreasing over time 
-        print("Slope of fit line:")
+        #print("Slope of fit line:")
         #polyHold = np.polyfit(np.arange(len(latencyTimes)), latencyTimes, 2)
 
         #then, return it

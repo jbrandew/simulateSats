@@ -72,9 +72,9 @@ class DQN(nn.Module):
         self.n_observations = n_observations
 
         #create layers 
-        self.layer1 = nn.Linear(self.n_observations, 128)
-        self.layer2 = nn.Linear(128, 128)
-        self.layer3 = nn.Linear(128, self.n_actions)
+        self.layer1 = nn.Linear(self.n_observations, 64)
+        self.layer2 = nn.Linear(64, 64)
+        self.layer3 = nn.Linear(64, self.n_actions)
 
     # Called with either one element to determine next action, or a batch
     # during optimization. Returns tensor([[left0exp,right0exp]...]).
@@ -108,11 +108,18 @@ class DQNAgentRouting:
         self.TAU = 0.005
         self.LR = 1e-4
 
+        self.discountFactor = 0.9 
+
         #initialize the # of steps we have completed 
         self.steps_done = 0 
 
         #initialize networks when we first select the action, as by that point, the topology will be set up 
         self.initializedNetworks = False
+
+        #initialize storage across episodes
+        self.crossEpsAction = []
+        self.crossEpsLoss = []
+
 
     def initializeNetworks(self): 
         #from the satellite, get the number of possible actions and the shape of the observation space
@@ -155,12 +162,14 @@ class DQNAgentRouting:
 
         print("Average Loss")
         print(np.average(self.epsLoss))
+        self.crossEpsLoss = self.crossEpsLoss + [np.average(self.epsLoss)]
 
         #also, print the stats of the selected actions 
         print("Action Stats")
-        stats = np.unique(self.epsActions, return_counts=True)
-        
-        print(stats)
+        actionStats = np.unique(self.epsActions, return_counts=True)
+        self.crossEpsAction = self.crossEpsAction + [actionStats]
+
+        print(actionStats)
 
 
     #create function for selecting action based on state 
@@ -186,6 +195,8 @@ class DQNAgentRouting:
 
         #modify adjMatrixState to set the inf values to 10* the non-inf max
         #or, just a high value works ig  
+
+        #so wo
         adjMatrixState[adjMatrixState == np.inf] = 10000 #max(adjMatrixState[adjMatrixState != np.inf])*10
          
         queueLengthState = copy.deepcopy(self.satellite.getQLengths())
@@ -200,8 +211,6 @@ class DQNAgentRouting:
         eps_threshold = self.EPS_END + (self.EPS_START - self.EPS_END) * \
             math.exp(-1. * self.steps_done / self.EPS_DECAY)
         self.steps_done+=1
-
-        #print(eps_threshold)
 
         if sample > eps_threshold:
             with torch.no_grad():
@@ -253,7 +262,11 @@ class DQNAgentRouting:
         #this only works with experiences that have their reward
         #so, read in a value from the buffer: 
 
-        smallBatchSize = 64
+        smallBatchSize = 32
+
+        #small batch size seems better in general 
+        # 2 gave better performance....
+
         #this is useful: torch.cat(batch.state).shape[0]
 
         if len( self.fullExperienceMemory ) < smallBatchSize:
@@ -304,7 +317,7 @@ class DQNAgentRouting:
             next_state_values = self.target_net(next_state_batch).max(1).values
 
         #then get the values for next state actions using the reward  
-        target_state_action_values = (next_state_values * self.GAMMA) + reward_batch
+        target_state_action_values = (next_state_values * self.GAMMA) + self.discountFactor * reward_batch
 
         # Compute Huber loss
         criterion = nn.SmoothL1Loss()

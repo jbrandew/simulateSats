@@ -107,10 +107,6 @@ class Player:
 
         if(self.routingPolicy == 'RL'): 
 
-            #double the relative process rate for RL agent 
-            #TODO: remove this. its only for temporary debugging. 
-            self.packetProcessRate = 2*self.packetProcessRate
-
             #then, first create the routing table accordingly 
             #so, first get how many possible destinations 
             numberPlayers = routingArgs['totalNumPlayers']

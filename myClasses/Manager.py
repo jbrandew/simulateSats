@@ -41,7 +41,8 @@ class Manager():
                  routingPolicy,
                  topologyPolicy,
                  packetProcessRate,
-                 dynamicLocation
+                 dynamicLocation,
+                 RLtraining
                  ): 
         """
         This does the initialization step for internals, as well as generating satellites 
@@ -59,6 +60,7 @@ class Manager():
         routingPolicy: how satellites route packets 
         topologyPolicy: how satellites change their ISLs/connections over time
         packetProcessRate: how fast players process packets they recieve (poisson arrival)
+        RLtraining: the type of training RL agents undergo. Currently either centralized or distributed 
         """
 
         if(constellationType == "walkerDelta"): 
@@ -622,7 +624,8 @@ class Manager():
         if( (not isinstance(packetProcessRate, list)) and (not isinstance(packetProcessRate, np.ndarray) )): 
             #if its not a list, then make it  
             packetProcessRate = packetProcessRate * np.ones([self.numPlanes, self.numSatPerPlane])
-            
+        
+
         #first, check if we have a mixedRoutingPolicy
         if "mixed" in routingPolicy: 
             

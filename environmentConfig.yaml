@@ -2,14 +2,9 @@
 
 #constellation parameters
 #walkerDelta or square  
-
-#please note, only some configuration sets are valid
-#constraints include:
-# #LEO % oribital plane = 0
-# normally its 360, 20
-LEOConstellation: 'walkerDelta' 
-NumberLEOSatellites: 90
-OrbitalPlanes: 10
+LEOConstellation: 'square' #'walkerDelta'
+NumberLEOSatellites: 360
+OrbitalPlanes: 20
 Inclination: 80 
 phasingParameter: 5
 orbitAltitudeLEO: 1000000
@@ -25,23 +20,24 @@ SunLocation: [149.6e+6, 0, 0]
 
 #topology and routing polocy / satellite info
 #either basicSquare or IPO
-initialTopology: 'IPO'
+initialTopology: 'basicSquare'
 #possible values: 
 #OSPF, basic, mixedSingleAgentRLRestOSPF
-routingPolicy: 'basic'
+routingPolicy: 'mixedSingleAgentRLRestOSPF'
 topologyPolicy: null
 #RL training: [[100,70,100,30]]
 #normal behavior: 100
 #cant be 1d array 
-packetProcessRate: 100 #[[100,70,300,30]]
+packetProcessRate: [[100,70,300,30]]
 
 #simulation runtime parameters 
 numPeople: 1
 numPacketsPerPerson: 500
-packetSendTimeFrame: 10
+packetSendTimeFrame: 5
 #PseudoUniform, SingleFar, simpleForSingleRL
 #cant use single far with multiple people 
-personDistribution: 'PseudoUniform'
+personDistribution: 'simpleForSingleRL'
+sendTimeDistribution: 'Uniform'
 
 queingDelaysEnabled: True
 weatherEnabled: False
@@ -53,12 +49,12 @@ outageFrequency: null
 timeFactor: 1
 
 #visualizer parameters 
-visualizerOn: True
+visualizerOn: False
 visualizeTime: 10
 FPS: 3
 
 dynamicLocation: False
-
+RLtraining: 'centralized'
 #could add the server processing time & amount here 
 
 
