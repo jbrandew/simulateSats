@@ -1,4 +1,10 @@
- 
+
+
+        # #format the network input data 
+        # dont need to do this with modified state now. 
+        # overallState = np.concatenate([adjMatrixState, queueLengthState])
+        # overallState = [float(i) for i in overallState]
+        # overallState = torch.tensor(overallState) 
 
 
 # class PacketState: 

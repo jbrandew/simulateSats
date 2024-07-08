@@ -182,6 +182,12 @@ class Player:
             
         return hopTo
 
+    def generateProcessingOnePacketTime(self):
+        """
+        Basic generation of time it takes to process a packet 
+        """
+        return 1/self.packetProcessRate
+
     def generateProcessingOneMorePacketTime(self, timeRequested, packetCollsionEnabled = True): 
         """
         What is this function doing? Its adding one more packet to the

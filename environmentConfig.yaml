@@ -28,7 +28,7 @@ topologyPolicy: null
 #RL training: [[100,70,100,30]]
 #normal behavior: 100
 #cant be 1d array 
-packetProcessRate: [[100,70,300,30]]
+packetProcessRate: [[100,90,300,10]]
 
 #simulation runtime parameters 
 numPeople: 1

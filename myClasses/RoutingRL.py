@@ -105,8 +105,9 @@ class DQNAgentRouting:
         self.EPS_START = 0.9
         self.EPS_END = 0.05
         #lower "decay" value actually increases rate we go to the "eps_end" value 
-        self.EPS_DECAY = 1000
-        self.TAU = 0.005
+        self.EPS_DECAY = 10000
+        #used to be .005
+        self.TAU = 0.1
         self.LR = 1e-3
 
         self.discountFactor = 0.9 
@@ -174,7 +175,11 @@ class DQNAgentRouting:
     #create function for selecting action based on state 
     def select_action(self, packet):
         """
-        Function to select action based on policy using an input packet and the current environment state. 
+        
+        Function to: 
+        1. get and format state 
+        2. get an action based on that state
+        3. update the target network 
 
         Inputs:
         packet: meta data on packet 
@@ -208,12 +213,8 @@ class DQNAgentRouting:
         #note, this also automatically reshapes into input shape 
         overallState = torch.from_numpy(adjMatrixState[adjMatrixState != np.inf])
 
+        #so then, get the selected state 
         self.policy_net.forward(overallState)
-        # #format the network input data 
-        # dont need to do this with modified state now. 
-        # overallState = np.concatenate([adjMatrixState, queueLengthState])
-        # overallState = [float(i) for i in overallState]
-        # overallState = torch.tensor(overallState)
 
         #use epsilon-greedy exploration
         sample = random.random()
@@ -231,16 +232,26 @@ class DQNAgentRouting:
             actionOutput = np.random.randint(self.policy_net.n_actions)
 
         #then, convert it to viable satellite ind 
+        #we need to do this because indexableSats != connectedToPlayers
         indexableSats = sorted(self.satellite.connectedToPlayers)
         satIndToForwardTo = indexableSats[actionOutput].adjMatPersonalIndex
 
         #create predicted state (simple for now)
         #to create the predicted state, get the timing for processing a packet    
-        timeToProcess = indexableSats[actionOutput].generateProcessingOneMorePacketTime(0) 
+        timeToProcess = indexableSats[actionOutput].generateProcessingOnePacketTime() 
+
         #then, increase the associated queueLength state 
-        predictedState = copy.deepcopy(overallState)
-        predictedState[len(adjMatrixState) + indexableSats[actionOutput].adjMatPersonalIndex]+=timeToProcess
+        #so first, get basic adjMatrixState info 
+        predictedState = copy.deepcopy(adjMatrixState)
+        #then, get the predicted state with modifications using time to process 
+        predictedState[satIndToForwardTo]+=timeToProcess/2
+        predictedState[:,satIndToForwardTo]+=timeToProcess/2
+        predictedState[satIndToForwardTo, satIndToForwardTo]-=timeToProcess/2
+
+        #then, reindex the new state 
+        predictedState = torch.from_numpy(predictedState[predictedState != np.inf])
             
+
         #create experience and push it 
         #self.memory.push(overallState, satIndToForwardTo, predictedState, None)
         self.nonRewardMemory[packet.packetIndex] = [overallState, actionOutput, predictedState]
@@ -251,9 +262,18 @@ class DQNAgentRouting:
         #print(actionOutput)
         #print("Satellite index to send to")
         #print(satIndToForwardTo)
-        
+
+        #afterwards, update the target network
+        #so get the dictionaries 
+        target_net_state_dict = self.target_net.state_dict()
+        policy_net_state_dict = self.policy_net.state_dict()
+
+        #then, slowly update the new network 
+        for key in policy_net_state_dict:
+            target_net_state_dict[key] = policy_net_state_dict[key]*self.TAU + target_net_state_dict[key]*(1-self.TAU)
+        self.target_net.load_state_dict(target_net_state_dict)
+
         #return the viable satellite index now :) 
-        
         self.epsActions = self.epsActions + [satIndToForwardTo]
 
         return satIndToForwardTo 
@@ -275,6 +295,8 @@ class DQNAgentRouting:
 
         #small batch size seems better in general 
         # 2 gave better performance....
+        #im not sure why that is. maybe coupling samples in training introduces temporal dependence, which in this case might
+        #be good 
 
         #this is useful: torch.cat(batch.state).shape[0]
 
@@ -322,7 +344,6 @@ class DQNAgentRouting:
         #should be a list here...
         #will need to make modifications for the approach when i use batching instead of single values
         with torch.no_grad():
-        
             next_state_values = self.target_net(next_state_batch).max(1).values
 
         #then get the values for next state actions using the reward  
