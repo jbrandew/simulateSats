@@ -11,6 +11,8 @@ from myClasses.Event import Event
 import time 
 import copy 
 
+import myClasses.centralTrainingNetwork as centralTrainingNetwork
+
 #general manager/scheduler, model of processes   
 class Manager(): 
     """
@@ -602,7 +604,8 @@ class Manager():
                            walkerPoints, 
                            normVecs, 
                            packetProcessRate, 
-                           routingPolicy): 
+                           routingPolicy,
+                           trainingMethod = "distributed"): 
         """
         Just storing satellites when given walker constellation points
 
@@ -660,21 +663,13 @@ class Manager():
                                                             routingPolicy,
                                                             {"totalNumPlayers":self.numPlanes*self.numSatPerPlane}
                                                             ) 
-                    
-        #additionally if the routing policy is fullyRL, then perform setup for central training network. 
-
-    def initCentralTrainingNetwork(self): 
-        """
-        Initialize a central training network. 
-
-        Input: None
-        Output: init it...
-        """
-        #hmm....
+        #if we are working with centralized training 
+        if(trainingMethod == "centralized"): 
+            #then, create a trainer 
+            self.centralTrainer = centralTrainingNetwork.CentralTrainer(self.sats)
 
 
-
-        return 
+            return 
                 
     def connectBaseStationsToSatellites(self): 
         """
