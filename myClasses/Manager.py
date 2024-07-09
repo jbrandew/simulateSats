@@ -627,7 +627,7 @@ class Manager():
         
 
         #first, check if we have a mixedRoutingPolicy
-        if "mixed" in routingPolicy: 
+        if "mixedSingleAgentRLRestOSPF" is routingPolicy: 
             
             #if its one agent with RL for the mixed policy, 
             if(routingPolicy == "mixedSingleAgentRLRestOSPF"):
@@ -648,7 +648,6 @@ class Manager():
                                                                 mixedPolicy,
                                                                 {"totalNumPlayers":self.numPlanes*self.numSatPerPlane}
                                                                 ) 
-
         else: 
             #iterate through planes and then sats within a plane    
             for planeInd in range(self.numPlanes): 
@@ -661,6 +660,21 @@ class Manager():
                                                             routingPolicy,
                                                             {"totalNumPlayers":self.numPlanes*self.numSatPerPlane}
                                                             ) 
+                    
+        #additionally if the routing policy is fullyRL, then perform setup for central training network. 
+
+    def initCentralTrainingNetwork(self): 
+        """
+        Initialize a central training network. 
+
+        Input: None
+        Output: init it...
+        """
+        #hmm....
+
+
+
+        return 
                 
     def connectBaseStationsToSatellites(self): 
         """
@@ -706,14 +720,14 @@ class Manager():
         #choose without repeat of satellites  
         satIndFails = np.random.choice(np.arange(self.numLEOs), numSatellitesFail, replace=False)
 
-#for all topologies in this section there is an important concept: 
-#when we complete a full revolution, the planeIndex can reset to 0.
-#however, the satellite index within a plane must change. this will be 
-#equal to: # satellites per rev. = # planes * phasing parameter / ( 360 / # satellites per plane)
-#which can be thought of as: 
-# # satellites = number of degree increase per revolution / degree increase per satelline in plane
-            
-#in all these topologies, thats the # "5"
+    #for all topologies in this section there is an important concept: 
+    #when we complete a full revolution, the planeIndex can reset to 0.
+    #however, the satellite index within a plane must change. this will be 
+    #equal to: # satellites per rev. = # planes * phasing parameter / ( 360 / # satellites per plane)
+    #which can be thought of as: 
+    # # satellites = number of degree increase per revolution / degree increase per satelline in plane
+                
+    #in all these topologies, thats the # "5"
     def connect2ISL(self): 
         """
         This function connects our satellites in a formation where we have 

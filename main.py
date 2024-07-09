@@ -28,8 +28,19 @@ with open("environmentConfig.yaml", "r") as stream:
     except yaml.YAMLError as exc: 
         print(exc) 
 
-#set constant seed
-random.seed(1)
+#for looking at profiling
+import cProfile
+
+#for setting up torch 
+import torch 
+device = torch.device(
+    "cuda" if torch.cuda.is_available() else
+    "mps" if torch.backends.mps.is_available() else
+    "cpu"
+)
+
+pdb.set_trace() 
+
 
 #format config data for generating constellation
 constellationConfig = [
@@ -57,7 +68,7 @@ managerData = {
     "packetProcessRate": configData['packetProcessRate'],
     "dynamicLocation": configData['dynamicLocation'],
     "RLtraining": configData['RLtraining']
-}
+}   
 
 #simulator args. so environment and stuff 
 #there is some overlap, like the routing policy, because the environment needs to know how to create evnents 
@@ -84,15 +95,18 @@ visualizerArgs = {
 }
 
 #set up RL config: 
-num_episodes = 100
+num_episodes = 3
 
 #get simulator object 
 simmer = Simulator.Simulator(managerData)
 #hold = simmer.simulateWithVisualizer(simulationArgs, visualizerArgs)
 
-
 #iterate through episodes  
 for i_episode in range(num_episodes):
+
+    # #get the run stats 
+    # hold = cProfile.run('simmer.executeGeneralSimulation(**simulationArgs) ', 'restats')
+    # pdb.set_trace()
 
     #get latency each time 
     holdLatencyTimes = simmer.executeGeneralSimulation(**simulationArgs)
@@ -105,45 +119,8 @@ for i_episode in range(num_episodes):
     print("Episode # ")
     print(i_episode)
 
-#after the episodes, examine the data 
-crossEpsLoss = simmer.manager.sats[0][0].agent.crossEpsLoss
-crossEpsAction = simmer.manager.sats[0][0].agent.crossEpsAction
-
-#store the action distribution 
-#shape of numEpisodes by numPossibleActions 
-numPossibleActions = len(crossEpsAction[0][0])
-actionDistributionStorage = np.ones([num_episodes, numPossibleActions])
-
-#get action distribution for going to each satellite
-#so, for each action set 
-for actionSetInd, actionSet in enumerate(crossEpsAction): 
-    #get the num of each action 
-    numTimesSentTo1 = actionSet[1][0]
-    numTimesSentTo3 = actionSet[1][1]
-
-    actionDistributionStorage[actionSetInd, 0] = numTimesSentTo1
-    actionDistributionStorage[actionSetInd, 1] = numTimesSentTo3
-
-
-#then, after we have the stored distribution, plot it over the episode number 
-fig, ax = plt.subplots()
-action1, = ax.plot(np.arange(num_episodes), actionDistributionStorage[:,0], label = '# Packets Directed to Server 2')
-action2, = ax.plot(np.arange(num_episodes), actionDistributionStorage[:,1], label = '# Packets Directed to Server 1')
-ax.set(xlabel='Episode #', ylabel='# of Packets Sent to one direction',
-       title='Action Distribution over Episode. Each episode involves transmission of 500 packets.')
-ax.legend(handles=[action1, action2])
-plt.show()
-
-#simply plot the loss over time
-fig, ax = plt.subplots()
-ax.plot(np.arange(num_episodes), crossEpsLoss)
-ax.set(xlabel='Episode #', ylabel='Loss',
-       title='Loss over Episode')
-plt.show()
-
-pdb.set_trace() 
-simmer.manager.sats[0]
-
+#make the one RL agent plot its training info 
+#simmer.manager.sats[0,0].agent.plotTrainingInfo() 
 
 
 #enact simulation 

@@ -10,10 +10,8 @@ import numpy as np
  
 import matplotlib.pyplot as plt
 import PIL.Image as Image
-import gym
 import random
 
-from gym import Env, spaces
 import time
 import copy
 
@@ -30,7 +28,6 @@ import torch.nn.functional as F
 import pdb 
 
 import math
-
 
 #transition consists of state, action, next state, reward
 #just a tuple of information 
@@ -61,32 +58,59 @@ class ReplayMemory(object):
 
 #create DQN network 
 class DQN(nn.Module):
-
+    """
+    Basic DQN with slight modifications class 
+    """
     #create the initial DQN network
     #just 3 layers, with the input being the observations, and the actions being the output
-    def __init__(self, n_observations, n_actions):
+    def __init__(self, n_observations, n_actions, networkType = "FF"):
         #initialize network 
         super(DQN, self).__init__()
 
         self.n_actions = n_actions
         self.n_observations = n_observations
+        self.networkType = networkType
 
-        #create layers 
-        #using float64 to match input type (only changing this once as opposed to many times for input)
-        self.layer1 = nn.Linear(self.n_observations, 64).to(torch.float64) 
-        self.layer2 = nn.Linear(64, 64).to(torch.float64) 
-        self.layer3 = nn.Linear(64, self.n_actions).to(torch.float64) 
+        if(networkType == "FF"): 
+            self.initializeBasicFFNetwork() 
+        
+        if(networkType == "RNN"): 
+            self.initializeRNNNetwork()
 
     # Called with either one element to determine next action, or a batch
     # during optimization. Returns tensor([[left0exp,right0exp]...]).
 
     #forward pass through the network, using the basic input 
     def forward(self, x):
+        if(self.networkType == "FF"):
+            x = F.relu(self.layer1(x.unsqueeze(0)))
+            x = F.relu(self.layer2(x))
+            #reduce dimensionality
+            return self.layer3(x)[0]
 
-        x = F.relu(self.layer1(x))
-        x = F.relu(self.layer2(x))
-        return self.layer3(x)
+        if(self.networkType == "RNN"): 
+            #pass through RNN, formatting dimensionality and only taking one of the outputs 
+            x = F.relu(self.layer1(x.unsqueeze(0))[0])
+            #pass the last hidden layer output to the feed forward net 
+            x = F.relu(self.layer2(x))
+            #reduce dimensionality 
+            return self.layer3(x)[0]
     
+    def initializeBasicFFNetwork(self): 
+        #create layers 
+        #using float64 to match input type (only changing this once as opposed to many times for input)
+        self.layer1 = nn.Linear(self.n_observations, 64).to(torch.float64) 
+        self.layer2 = nn.Linear(64, 64).to(torch.float64) 
+        self.layer3 = nn.Linear(64, self.n_actions).to(torch.float64) 
+        
+    def initializeRNNNetwork(self): 
+        
+        #set up one RNN layer 
+        self.layer1 = nn.RNN(self.n_observations, 10, 3).to(torch.float64) 
+        #then, set up feed forward layers
+        self.layer2 = nn.Linear(10, 64).to(torch.float64) 
+        self.layer3 = nn.Linear(64, self.n_actions).to(torch.float64) 
+        
 #
 class DQNAgentRouting: 
     
@@ -107,6 +131,7 @@ class DQNAgentRouting:
         #lower "decay" value actually increases rate we go to the "eps_end" value 
         self.EPS_DECAY = 10000
         #used to be .005
+        #make Tau = 1 to disable target network concept 
         self.TAU = 0.1
         self.LR = 1e-3
 
@@ -214,7 +239,7 @@ class DQNAgentRouting:
         overallState = torch.from_numpy(adjMatrixState[adjMatrixState != np.inf])
 
         #so then, get the selected state 
-        self.policy_net.forward(overallState)
+        self.policy_net(overallState)
 
         #use epsilon-greedy exploration
         sample = random.random()
@@ -378,3 +403,46 @@ class DQNAgentRouting:
         #then, create and push the experience 
         self.fullExperienceMemory.push(*self.nonRewardMemory[packet.packetIndex], packetPropDelay)
 
+
+    def plotTrainingInfo(self):
+        """
+        Just plot the info over the episode. This includes both action distribution and model loss over time.
+        
+        """
+
+        #after the episodes, examine the data 
+        crossEpsLoss = self.crossEpsLoss
+        crossEpsAction = self.crossEpsAction
+
+        #store the action distribution 
+        #shape of numEpisodes by numPossibleActions 
+        numPossibleActions = len(crossEpsAction[0][0])
+        num_episodes = len(crossEpsLoss)
+        actionDistributionStorage = np.ones([num_episodes, numPossibleActions])
+
+        #get action distribution for going to each satellite
+        #so, for each action set 
+        for actionSetInd, actionSet in enumerate(crossEpsAction): 
+            #get the num of each action 
+            numTimesSentTo1 = actionSet[1][0]
+            numTimesSentTo3 = actionSet[1][1]
+
+            actionDistributionStorage[actionSetInd, 0] = numTimesSentTo1
+            actionDistributionStorage[actionSetInd, 1] = numTimesSentTo3
+
+
+        #then, after we have the stored distribution, plot it over the episode number 
+        fig, ax = plt.subplots()
+        action1, = ax.plot(np.arange(num_episodes), actionDistributionStorage[:,0], label = '# Packets Directed to Server 2')
+        action2, = ax.plot(np.arange(num_episodes), actionDistributionStorage[:,1], label = '# Packets Directed to Server 1')
+        ax.set(xlabel='Episode #', ylabel='# of Packets Sent to one direction',
+            title='Action Distribution over Episode. Each episode involves transmission of 500 packets.')
+        ax.legend(handles=[action1, action2])
+        plt.show()
+
+        #simply plot the loss over time
+        fig, ax = plt.subplots()
+        ax.plot(np.arange(num_episodes), crossEpsLoss)
+        ax.set(xlabel='Episode #', ylabel='Loss',
+            title='Loss over Episode')
+        plt.show()
