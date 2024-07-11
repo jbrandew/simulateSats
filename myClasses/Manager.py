@@ -44,7 +44,7 @@ class Manager():
                  topologyPolicy,
                  packetProcessRate,
                  dynamicLocation,
-                 RLtraining
+                 RLTrainingMethod
                  ): 
         """
         This does the initialization step for internals, as well as generating satellites 
@@ -62,7 +62,7 @@ class Manager():
         routingPolicy: how satellites route packets 
         topologyPolicy: how satellites change their ISLs/connections over time
         packetProcessRate: how fast players process packets they recieve (poisson arrival)
-        RLtraining: the type of training RL agents undergo. Currently either centralized or distributed 
+        RLTrainingMethod: the type of training RL agents undergo. Currently either centralized or distributed 
         """
 
         if(constellationType == "walkerDelta"): 
@@ -83,6 +83,17 @@ class Manager():
         self.numSatPerPlane = np.shape(constellationPoints)[1]
         self.numLEOs = np.shape(constellationPoints)[0] * np.shape(constellationPoints)[1]
         self.phasingParameter = phasingParameter
+
+        #store training method
+        self.RLTrainingMethod = RLTrainingMethod 
+
+        #if we are working with centralized training 
+        if(self.RLTrainingMethod == "centralized"): 
+            #then, create a trainer 
+            self.centralTrainer = centralTrainingNetwork.CentralTrainer(self.sats)
+        else:
+            #otherwise, leave the trainer blank  
+            self.centralTrainer = None
 
         #call generate satellites function, which initializes our structure 
         self.generateSatellites(constellationPoints, normVecs, packetProcessRate, routingPolicy)
@@ -600,12 +611,24 @@ class Manager():
         else: 
             self.baseStations = [] 
 
+    def propagatePropDelay(self, packet): 
+
+        #if we are doing distributed training 
+        if(self.RLTrainingMethod == "distributed"): 
+            #then send it to all players 
+            for playerInd in packet.playersInvolvedInSending: 
+                self.raveledSats[playerInd].storePropDelay(packet)
+        
+        #if doing centralized training 
+        if(self.RLTrainingMethod == "centralized"): 
+            #then assign prop delay using the packet 
+            self.centralTrainer.assignPropDelay(packet)
+    
     def generateSatellites(self, 
                            walkerPoints, 
                            normVecs, 
                            packetProcessRate, 
-                           routingPolicy,
-                           trainingMethod = "distributed"): 
+                           routingPolicy): 
         """
         Just storing satellites when given walker constellation points
 
@@ -628,10 +651,8 @@ class Manager():
             #if its not a list, then make it  
             packetProcessRate = packetProcessRate * np.ones([self.numPlanes, self.numSatPerPlane])
         
-
         #first, check if we have a mixedRoutingPolicy
-        if "mixedSingleAgentRLRestOSPF" is routingPolicy: 
-            
+        if "mixed" in routingPolicy: 
             #if its one agent with RL for the mixed policy, 
             if(routingPolicy == "mixedSingleAgentRLRestOSPF"):
                 #iterate through planes and then sats within a plane    
@@ -649,8 +670,11 @@ class Manager():
                                                                 self.numSatPerPlane*planeInd + smallSatInd, 
                                                                 normVecs[planeInd], 
                                                                 mixedPolicy,
-                                                                {"totalNumPlayers":self.numPlanes*self.numSatPerPlane}
+                                                                {"totalNumPlayers":self.numPlanes*self.numSatPerPlane},
+                                                                "distributed",
+                                                                self.centralTrainer
                                                                 ) 
+        #if its not mixed then, its all the same 
         else: 
             #iterate through planes and then sats within a plane    
             for planeInd in range(self.numPlanes): 
@@ -661,16 +685,13 @@ class Manager():
                                                             self.numSatPerPlane*planeInd + smallSatInd, 
                                                             normVecs[planeInd],
                                                             routingPolicy,
-                                                            {"totalNumPlayers":self.numPlanes*self.numSatPerPlane}
+                                                            {"totalNumPlayers":self.numPlanes*self.numSatPerPlane},
+                                                            "centralized",
+                                                            self.centralTrainer
                                                             ) 
-        #if we are working with centralized training 
-        if(trainingMethod == "centralized"): 
-            #then, create a trainer 
-            self.centralTrainer = centralTrainingNetwork.CentralTrainer(self.sats)
 
+        self.raveledSats = np.ravel(self.sats)
 
-            return 
-                
     def connectBaseStationsToSatellites(self): 
         """
         Just connects base station to all satellites within each of their field of views

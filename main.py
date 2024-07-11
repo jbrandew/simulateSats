@@ -33,13 +33,11 @@ import cProfile
 
 #for setting up torch 
 import torch 
-device = torch.device(
-    "cuda" if torch.cuda.is_available() else
-    "mps" if torch.backends.mps.is_available() else
-    "cpu"
-)
-
-pdb.set_trace() 
+# device = torch.device(
+#     "cuda" if torch.cuda.is_available() else
+#     "mps" if torch.backends.mps.is_available() else
+#     "cpu"
+# )
 
 
 #format config data for generating constellation
@@ -67,7 +65,7 @@ managerData = {
     "topologyPolicy": configData['topologyPolicy'],
     "packetProcessRate": configData['packetProcessRate'],
     "dynamicLocation": configData['dynamicLocation'],
-    "RLtraining": configData['RLtraining']
+    "RLTrainingMethod": configData['RLTrainingMethod']
 }   
 
 #simulator args. so environment and stuff 
@@ -95,7 +93,7 @@ visualizerArgs = {
 }
 
 #set up RL config: 
-num_episodes = 3
+num_episodes = 100
 
 #get simulator object 
 simmer = Simulator.Simulator(managerData)

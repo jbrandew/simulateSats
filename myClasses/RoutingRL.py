@@ -117,7 +117,10 @@ class DQNAgentRouting:
     Agent that uses DQN for routing decisions 
     """
 
-    def __init__(self, satellite, trainingManager = None): 
+    def __init__(self, 
+                 satellite, 
+                 trainingPolicy, 
+                 trainingManager = None): 
 
 
         #set up hardware:
@@ -137,7 +140,7 @@ class DQNAgentRouting:
         #used to be .005
         #make Tau = 1 to disable target network concept 
         self.TAU = 0.1
-        self.LR = 1e-3
+        self.LR = 1e-2
 
         self.discountFactor = 0.9 
 
@@ -151,11 +154,13 @@ class DQNAgentRouting:
         self.crossEpsAction = []
         self.crossEpsLoss = []
 
+        #store info 
+        self.trainingPolicy = trainingPolicy
+
         #if we actually have a manager, then use centralized training over distributed
-        if(trainingManager is not None): 
-            self.trainingManager = trainingManager
-
-
+        #so, store the training manager
+        self.trainingManager = trainingManager
+        
     def initializeNetworks(self): 
         #from the satellite, get the number of possible actions and the shape of the observation space
         #get number of actions from connected players
@@ -285,20 +290,21 @@ class DQNAgentRouting:
         predictedState = torch.from_numpy(predictedState[predictedState != np.inf])
             
         #if we are doing distributed training, store experience and optimize your self 
-        if(self.trainingManager is not None): 
+        #tra
+        if(self.trainingPolicy == "distributed"): 
             #create experience and push it 
             self.nonRewardMemory[packet.packetIndex] = [overallState, actionOutput, predictedState]
             self.optimize() 
 
         #if we are doing centralized training
         else: 
-            #first, send experience to central network
+            #then just send experience to central network
             self.trainingManager.push(self.satellite.adjMatPersonalIndex,
                                       packet.packetIndex,
-                                      satIndToForwardTo,
-                                      )
-            #this has no optimize method here directly, as the optimization is called by our training manager 
-            #whet it has a complete experience 
+                                      self.policy_net(adjMatrixState),
+                                      self.policy_net(predictedState))
+            #there is no optimize method here, as thats done in the central node training
+            
 
         #target networks != incompatible with centralized training 
         #afterwards, update the target network
@@ -316,18 +322,6 @@ class DQNAgentRouting:
 
         return satIndToForwardTo 
         
-    def manuallyOptimize(self, gradient): 
-        """
-        This method manually optimizes the current network with a precomputed original gradient. 
-        
-        """
-        #so, first 
-        self.optimizer.zero_grad()
-        
-        
-        
-        return 
-
     def optimize(self):
         """
         Optimize the current network with respect to experiences in buffer. 

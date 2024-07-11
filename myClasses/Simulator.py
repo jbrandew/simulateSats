@@ -600,13 +600,9 @@ class Simulator():
                     #then, store the data for when the final arrival of the packet happened 
                     event.kargs["packet"].packetArriveTime = timeOfOccurence
 
-                    #send packet propagation time to all agents                     
-                    for playerInd in event.kargs["packet"].playersInvolvedInSending: 
-                        raveledPlayers[playerInd].storePropDelay(event.kargs["packet"])
+                    #send packet propagation time to all agents          
+                    self.manager.propagatePropDelay(event.kargs["packet"])
                         
-                    #check delay: 
-                    #print(event.kargs["packet"].packetArriveTime - event.kargs["packet"].packetSendTime)
-
                     continue 
                 
                 #get the current and next players 

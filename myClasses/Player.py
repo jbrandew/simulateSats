@@ -123,11 +123,8 @@ class Player:
             self.QFinishTimeStamps = np.zeros(numberPlayers)
 
             #create agent for RL routing 
-            self.agent = RoutingRL.DQNAgentRouting(self, trainingManager)
+            self.agent = RoutingRL.DQNAgentRouting(self, trainingPolicy, trainingManager)
              
-            
-
-
     def resetWorldState(self):
         """
         Reset known view of the world. 
@@ -363,7 +360,10 @@ class LEO(Player):
                  adjMatPersonalIndex = None,
                  normal_vector = [],
                  routingPolicy = "None",
-                 routingArgs = {}):
+                 routingArgs = {},
+                 trainingPolicy = None,
+                 trainingManager = None):
+        
         """
         Init function for LEO.
         Just pass off coordinates to parent "Player" 
@@ -375,7 +375,15 @@ class LEO(Player):
         
         """
         
-        super().__init__(xIn, yIn, zIn, packetProcessRate, adjMatPersonalIndex, routingPolicy, routingArgs)
+        super().__init__(xIn, 
+                         yIn, 
+                         zIn, 
+                         packetProcessRate, 
+                         adjMatPersonalIndex, 
+                         routingPolicy, 
+                         routingArgs,
+                         trainingPolicy,
+                         trainingManager) 
 
         #number links we are allowed to have
         #not sure if we will use this  

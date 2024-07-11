@@ -54,7 +54,7 @@ visualizeTime: 10
 FPS: 3
 
 dynamicLocation: False
-RLtraining: 'centralized'
+RLTrainingMethod: 'distributed'
 #could add the server processing time & amount here 
 
 
