@@ -113,8 +113,12 @@ class DQN(nn.Module):
         
 #
 class DQNAgentRouting: 
-    
-    def __init__(self, satellite): 
+    """
+    Agent that uses DQN for routing decisions 
+    """
+
+    def __init__(self, satellite, trainingManager = None): 
+
 
         #set up hardware:
         # if GPU is to be used
@@ -146,6 +150,10 @@ class DQNAgentRouting:
         #initialize storage across episodes
         self.crossEpsAction = []
         self.crossEpsLoss = []
+
+        #if we actually have a manager, then use centralized training over distributed
+        if(trainingManager is not None): 
+            self.trainingManager = trainingManager
 
 
     def initializeNetworks(self): 
@@ -250,7 +258,7 @@ class DQNAgentRouting:
         if sample > eps_threshold:
             with torch.no_grad():
 
-            #so, get the policy net output
+                #so, get the policy net output
                 actionOutput = self.policy_net(overallState).argmax().item()
         
         else: 
@@ -276,18 +284,23 @@ class DQNAgentRouting:
         #then, reindex the new state 
         predictedState = torch.from_numpy(predictedState[predictedState != np.inf])
             
+        #if we are doing distributed training, store experience and optimize your self 
+        if(self.trainingManager is not None): 
+            #create experience and push it 
+            self.nonRewardMemory[packet.packetIndex] = [overallState, actionOutput, predictedState]
+            self.optimize() 
 
-        #create experience and push it 
-        #self.memory.push(overallState, satIndToForwardTo, predictedState, None)
-        self.nonRewardMemory[packet.packetIndex] = [overallState, actionOutput, predictedState]
+        #if we are doing centralized training
+        else: 
+            #first, send experience to central network
+            self.trainingManager.push(self.satellite.adjMatPersonalIndex,
+                                      packet.packetIndex,
+                                      satIndToForwardTo,
+                                      )
+            #this has no optimize method here directly, as the optimization is called by our training manager 
+            #whet it has a complete experience 
 
-        self.optimize() 
-
-        #print("Action")
-        #print(actionOutput)
-        #print("Satellite index to send to")
-        #print(satIndToForwardTo)
-
+        #target networks != incompatible with centralized training 
         #afterwards, update the target network
         #so get the dictionaries 
         target_net_state_dict = self.target_net.state_dict()
@@ -298,13 +311,23 @@ class DQNAgentRouting:
             target_net_state_dict[key] = policy_net_state_dict[key]*self.TAU + target_net_state_dict[key]*(1-self.TAU)
         self.target_net.load_state_dict(target_net_state_dict)
 
-        #return the viable satellite index now :) 
+        #store the action to episode buffer 
         self.epsActions = self.epsActions + [satIndToForwardTo]
 
         return satIndToForwardTo 
         
-        #torch.tensor([[self.policy_net.forward(overallState)]], device=self.device, dtype=torch.long)
-    
+    def manuallyOptimize(self, gradient): 
+        """
+        This method manually optimizes the current network with a precomputed original gradient. 
+        
+        """
+        #so, first 
+        self.optimizer.zero_grad()
+        
+        
+        
+        return 
+
     def optimize(self):
         """
         Optimize the current network with respect to experiences in buffer. 

@@ -62,14 +62,17 @@ class Player:
                  packetProcessRate = None,
                  adjMatPersonalIndex = None, 
                  routingPolicy = 'NaN',
-                 routingArgs = {}):
+                 routingArgs = {},
+                 trainingPolicy = None,
+                 trainingManager = None):
         """
         xIn, yIn, zIn: personal position
         adjMatPersonalIndex: our own index within the adjMat (so its a column/row index)
         packetProcessRate: how fast we can process packets 
         routingPolicy: how do we route packets
         routingArgs: arguments needed for the respective routing policy 
-        
+        trainingPolicy: if we are using RL for our routing policy, then how are we training our agent's policy 
+        trainingManager: if we are doing centralized training, this is our manager for training 
         """
 
         self.currTime = 0 
@@ -119,7 +122,11 @@ class Player:
             self.QFinishTimes = np.zeros(numberPlayers)
             self.QFinishTimeStamps = np.zeros(numberPlayers)
 
-            self.agent = RoutingRL.DQNAgentRouting(self)
+            #create agent for RL routing 
+            self.agent = RoutingRL.DQNAgentRouting(self, trainingManager)
+             
+            
+
 
     def resetWorldState(self):
         """

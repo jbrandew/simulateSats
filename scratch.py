@@ -1,4 +1,22 @@
 
+#what do we seek to do here? 
+#store gradient for final layer, and then use that to backprop against multiple layers 
+#to do that, need a basic class for testing: 
+class BigSoloNet(nn.Module):
+    def __init__(self):
+        super(BigSoloNet, self).__init__()
+        # Define layers based on the specified sizes
+        self.fc1 = nn.Linear(4, 10)   # First fully connected layer: 4 inputs -> 10 outputs
+        self.fc2 = nn.Linear(10, 4)   # Second fully connected layer: 10 inputs -> 4 outputs
+        self.fc3 = nn.Linear(4, 10)   # Third fully connected layer: 4 inputs -> 10 outputs
+        self.fc4 = nn.Linear(10, 1)   # Fourth fully connected layer: 10 inputs -> 1 output
+
+    def forward(self, x):
+        x = F.relu(self.fc1(x))  # Apply ReLU activation to the first layer
+        x = F.relu(self.fc2(x))  # Apply ReLU activation to the second layer
+        x = F.relu(self.fc3(x))  # Apply ReLU activation to the third layer
+        x = self.fc4(x)          # Output of the fourth layer
+        return x
 
         # #format the network input data 
         # dont need to do this with modified state now. 
