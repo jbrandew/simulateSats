@@ -125,7 +125,7 @@ class Player:
             #create agent for RL routing 
             self.agent = RoutingRL.DQNAgentRouting(self, trainingPolicy, trainingManager)
              
-    def resetWorldState(self):
+    def resetWorldState(self, displayStats = True):
         """
         Reset known view of the world. 
         Only applicable for certain routing protocols. 
@@ -143,13 +143,16 @@ class Player:
             #reset our queue finish time 
             self.finishProcessingTime = 0
 
-            #if we have RL routing policy
-            if(self.routingPolicy == 'RL'): 
 
-                #run episode analysis for past episode 
-                self.agent.episodeAnalysis() 
-                
-                self.agent.resetData()
+            if(displayStats):
+                #if we have RL routing policy
+                if(self.routingPolicy == 'RL'): 
+
+                    #run episode analysis for past episode 
+                    self.agent.episodeAnalysis() 
+                    
+                    self.agent.resetData()
+
 
     def storePropDelay(self, packet): 
         """

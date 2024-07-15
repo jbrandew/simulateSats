@@ -150,21 +150,27 @@ class Manager():
             self.centralTrainer.initializeNetworks(self.raveledSats)
 
 
-    def resetWorldState(self): 
+    def resetWorldState(self, displayStats = True): 
         """
-        Reset the world
+        Reset the world, for all players and our own adj. matrix 
         """
         
         #reset personal variables 
         self.generateAdjacencyMatrix() 
         self.queueFinishTimes = 0*self.queueFinishTimes
+        
+        if(self.RLTrainingMethod == "centralized"):
+            displaySubAgentStats = False
+            self.centralTrainer.resetData(True)  
+        else:
+            displaySubAgentStats = True
 
         #reset each of the satellites and base stations 
         for satellite in np.ravel(self.sats): 
-            satellite.resetWorldState()
+            satellite.resetWorldState(displaySubAgentStats)
 
         for baseStation in self.baseStations: 
-            baseStation.resetWorldState() 
+            baseStation.resetWorldState(displaySubAgentStats) 
 
 
     def initializeSatelliteRoutingTables(self): 

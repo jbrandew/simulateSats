@@ -291,12 +291,11 @@ class DQNAgentRouting:
 
         #if we are doing centralized training
         else: 
-            with torch.no_grad():
-                #then just send experience to central network
-                self.trainingManager.storeExperience([self.satellite.adjMatPersonalIndex,
-                                                    packet.packetIndex,
-                                                    self.policy_net(overallState),
-                                                    self.policy_net(predictedState)])
+            #then just send experience to central network
+            self.trainingManager.storeExperience([self.satellite.adjMatPersonalIndex,
+                                                packet.packetIndex,
+                                                overallState,
+                                                predictedState])
                 
             #there is no optimize method here, as thats done in the central node training
             

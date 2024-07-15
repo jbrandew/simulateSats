@@ -1,4 +1,92 @@
 
+
+    def getUniqueHopsDeprecated(self,experience):
+
+        #duplicate prop delay for easier processing
+        experience[-1] = [experience[-1]]*len(experience[0])
+
+        # Extract unique entries based on the first element of each sublist
+        unique_entries = []
+        seen_entries = set()
+
+        #iterate through list of entries
+        for ind, entry in enumerate(experience[0]):
+            key = entry  # Convert list to tuple to use as a hashable key
+            if key not in seen_entries:
+                unique_entries.append([item[ind] for item in experience])
+                seen_entries.add(key)
+
+        reformatted = []
+
+        #reformat
+        for itemInd in range(len(experience)):
+            reformatted.append( [item[itemInd] for item in unique_entries] )
+
+        return reformatted
+
+    def optimizeMultiAgentDeprecated(self): 
+        """
+        Here, we optimize in our multi agent case, in which we will need to selectively backpropagate, etc. 
+            
+        """
+
+        #first, get experience 
+        #please note, this does not remove it from the buffer 
+        #only using one sample, so not batching currently
+        experience = random.sample(self.memory.completedMemory, 1)[0]
+
+        #reformat experience to only take unique hops
+        experience = self.getUniqueHops(experience)
+
+        #create storage for action values 
+        #this is based on the base structure of the child network outputs
+        fullActionValues = copy.deepcopy(self.jointActionValueNetwork.childOutputStructure)
+       
+        #put in known values, only for agents that are actually used 
+        #        fullActionValues[experience[0]] = experience[1]
+        for index, value in zip(experience[0], experience[1]):
+            fullActionValues[index] = value
+
+        #create storage for next action values 
+        #this is based on the base structure of the child network outputs
+        fullActionValuesNext = copy.deepcopy(self.jointActionValueNetwork.childOutputStructure)
+
+        #put in known values, only for agents that are actually used 
+        #fullActionValuesNext[experience[0]] = experience[2]
+        for index, value in zip(experience[0], experience[2]):
+            fullActionValuesNext[index] = value
+
+        #get parent output for joint value 
+        jointValue = self.jointActionValueNetwork.parentForward(fullActionValues)
+
+        #get parent output for joint value for next  
+        jointValueNext = self.jointActionValueNetwork.parentForward(fullActionValuesNext)
+        
+        #then, get the target. use the prop delay of the experience 
+        jointValueTarget = jointValueNext + self.discountFactor*experience[3][0]
+
+        #then, compute the loss based on this joint target
+        loss = self.criterion(jointValue, jointValueTarget)
+
+        #zero out gradients
+        self.optimizer.zero_grad() 
+
+        #then, go backwards
+        #please note, this only generates gradients for the agents that actually computed values 
+        loss.backward() 
+
+        #then, have the optimizer step in the next direction 
+        self.optimizer.step() 
+
+        #store stats for loss and  
+        self.epsLoss = self.epsLoss + [np.average(loss.detach().numpy())]
+        self.epsRewards = self.epsRewards + []
+
+
+        #yeet and leave :D 
+        return 
+
+
 #what do we seek to do here? 
 #store gradient for final layer, and then use that to backprop against multiple layers 
 #to do that, need a basic class for testing: 
