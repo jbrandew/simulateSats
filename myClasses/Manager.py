@@ -50,6 +50,14 @@ class Manager():
         This does the initialization step for internals, as well as generating satellites 
         and base stations from respective locations 
 
+        Sections of this program are:
+        1. reading in config
+        2. initializing data structures
+        3. creating the trainer
+        4. creating satellites
+        5. implementing topology
+        6. creating respective object decision networks 
+
         walkerPoints: x y z of all walker satellites
         constellationType: type of constellation we want to use 
         constellationConfig: configuration variables needed for creating that constellation
@@ -90,7 +98,7 @@ class Manager():
         #if we are working with centralized training 
         if(self.RLTrainingMethod == "centralized"): 
             #then, create a trainer 
-            self.centralTrainer = centralTrainingNetwork.CentralTrainer(self.sats)
+            self.centralTrainer = centralTrainingNetwork.CentralTrainer()
         else:
             #otherwise, leave the trainer blank  
             self.centralTrainer = None
@@ -119,6 +127,28 @@ class Manager():
             self.connectSingleSquare()
         else:
             raise "This topology isnt integrated/implemented yet"
+
+        #first, set up our own adjacency matrix 
+        self.updateSatelliteStates(0,0)
+
+        #then, for each satellite, set up the adjacency matrix 
+        #make it to be propagation delay instead of distance 
+        for sat in np.ravel(self.sats): 
+            sat.adjMatrix = copy.deepcopy(self.currAdjMat)
+
+        #if we are doing some form of RL training
+        if(self.RLTrainingMethod is not None):
+            #then for each satellite
+            for sat in self.raveledSats:
+                #initialize the networks
+                sat.agent.initializeNetworks()
+
+        #after satellite generation, init the networks for the central trainer
+        #if we are working with centralized training 
+        if(self.RLTrainingMethod == "centralized"): 
+            #then, initialize trainer network
+            self.centralTrainer.initializeNetworks(self.raveledSats)
+
 
     def resetWorldState(self): 
         """

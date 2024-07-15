@@ -591,7 +591,7 @@ class Simulator():
                 if((routingPolicy == "basic" and (len(event.kargs["packet"].routingMetadata["path"]) == 1 or event.kargs["packet"].reachedEnd()))  or
                     #for OSPF, its if the current satellite is the last satellite in the routing path 
                    (routingPolicy == "OSPF"  and (event.kargs["packet"].reachedEnd())) or
-                   (routingPolicy == "mixedSingleAgentRLRestOSPF"  and (event.kargs["packet"].reachedEnd()))):
+                   ("RL" in routingPolicy  and (event.kargs["packet"].reachedEnd()))):
                      
                     #so then, get the time of occurence of landing at the dest 
                     timeOfOccurence = event.timeOfOccurence + myMath.dist3d(event.kargs["packet"].endLocation,  

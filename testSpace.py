@@ -26,7 +26,6 @@ class GenericNet(nn.Module):
         x = self.fc3(x)
         return x
 
-
 # Construct Generic Network 
 input_size = 10
 hidden_size = [20, 15]  # Number of neurons in each hidden layer
@@ -35,26 +34,43 @@ model = GenericNet(input_size, hidden_size, output_size)
 
 # Create synthetic data
 torch.manual_seed(42)
-input_data = torch.randn(10)  # 1 sample with 10 features 
-labels = torch.randn(10)       # 1 target with 10 features 
+input_data1 = torch.randn(10)  # 1 sample with 10 features 
+input_data2 = torch.randn(10)  # 1 sample with 10 features 
+
+labels1 = torch.randn(10)       # 1 target with 10 features 
+labels2 = torch.randn(10)       # 1 target with 10 features 
 
 # Define loss function and optimizer
 criterion = nn.MSELoss()
 optimizer = optim.SGD(model.parameters(), lr=0.1)
 
-#Make 
-
-
-
 
 # Get forward pass data 
-outputs = model(input_data)
+outputs1 = model(input_data1)
+
+#do 2nd pass
+outputs2 = model(input_data2)
 
 # Compute loss
-loss = criterion(outputs, labels)
+loss1 = criterion(outputs1, labels1)
+
+# Compute loss
+loss2 = criterion(outputs1, labels1)
+
+# Have loss go backwards 
+loss2.backward(retain_graph = True)
+
+# Have loss go backwards 
+loss1.backward()
+
+pdb.set_trace()
+
+
+
+
 
 # Zero out gradients 
-optimizer.zero_grad()
+#optimizer.zero_grad()
 
 # Detach tensors 
 model = model.requires_grad_(False)

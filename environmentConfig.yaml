@@ -22,17 +22,17 @@ SunLocation: [149.6e+6, 0, 0]
 #either basicSquare or IPO
 initialTopology: 'basicSquare'
 #possible values: 
-#OSPF, basic, mixedSingleAgentRLRestOSPF
-routingPolicy: 'mixedSingleAgentRLRestOSPF'
+#OSPF, basic, mixedSingleAgentRLRestOSPF, 
+routingPolicy: 'RL'
 topologyPolicy: null
 #RL training: [[100,70,100,30]]
 #normal behavior: 100
 #cant be 1d array 
-packetProcessRate: [[100,90,300,10]]
+packetProcessRate: [[100,60,300,40]]
 
 #simulation runtime parameters 
 numPeople: 1
-numPacketsPerPerson: 500
+numPacketsPerPerson: 5
 packetSendTimeFrame: 5
 #PseudoUniform, SingleFar, simpleForSingleRL
 #cant use single far with multiple people 
@@ -54,7 +54,8 @@ visualizeTime: 10
 FPS: 3
 
 dynamicLocation: False
-RLTrainingMethod: 'distributed'
+#this needs to be None if working with non RL method/decision style
+RLTrainingMethod: 'centralized'
 #could add the server processing time & amount here 
 
 

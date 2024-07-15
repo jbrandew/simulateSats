@@ -147,9 +147,6 @@ class DQNAgentRouting:
         #initialize the # of steps we have completed 
         self.steps_done = 0 
 
-        #initialize networks when we first select the action, as by that point, the topology will be set up 
-        self.initializedNetworks = False
-
         #initialize storage across episodes
         self.crossEpsAction = []
         self.crossEpsLoss = []
@@ -219,6 +216,9 @@ class DQNAgentRouting:
         2. get an action based on that state
         3. update the target network 
 
+        Kind of convoluted, because at different times we need to index by adjacency matrix
+        in 2d format, vs 1d for the network input
+
         Inputs:
         packet: meta data on packet 
 
@@ -226,11 +226,6 @@ class DQNAgentRouting:
         action: what satellite to route the packet towards 
 
         """
-
-        #if we have not initialized the networks, then do that. 
-        if(not self.initializedNetworks): 
-            self.initializedNetworks = True
-            self.initializeNetworks() 
         
         #create experience from adjMatrix and QLengths
         adjMatrixState = copy.deepcopy(self.satellite.adjMatrix)
@@ -239,6 +234,7 @@ class DQNAgentRouting:
         queueLengthState = copy.deepcopy(self.satellite.getQLengths())
 
         #then, combine the adjMatrixState and the qeue lengths 
+        #need the 2d format for this 
         for ind, value in enumerate(queueLengthState): 
             
             adjMatrixState[ind] +=value/2
@@ -250,9 +246,6 @@ class DQNAgentRouting:
         #this should never change shape/size, because the topology remains the same 
         #note, this also automatically reshapes into input shape 
         overallState = torch.from_numpy(adjMatrixState[adjMatrixState != np.inf])
-
-        #so then, get the selected state 
-        self.policy_net(overallState)
 
         #use epsilon-greedy exploration
         sample = random.random()
@@ -281,6 +274,7 @@ class DQNAgentRouting:
         #then, increase the associated queueLength state 
         #so first, get basic adjMatrixState info 
         predictedState = copy.deepcopy(adjMatrixState)
+
         #then, get the predicted state with modifications using time to process 
         predictedState[satIndToForwardTo]+=timeToProcess/2
         predictedState[:,satIndToForwardTo]+=timeToProcess/2
@@ -288,9 +282,8 @@ class DQNAgentRouting:
 
         #then, reindex the new state 
         predictedState = torch.from_numpy(predictedState[predictedState != np.inf])
-            
+
         #if we are doing distributed training, store experience and optimize your self 
-        #tra
         if(self.trainingPolicy == "distributed"): 
             #create experience and push it 
             self.nonRewardMemory[packet.packetIndex] = [overallState, actionOutput, predictedState]
@@ -298,11 +291,13 @@ class DQNAgentRouting:
 
         #if we are doing centralized training
         else: 
-            #then just send experience to central network
-            self.trainingManager.push(self.satellite.adjMatPersonalIndex,
-                                      packet.packetIndex,
-                                      self.policy_net(adjMatrixState),
-                                      self.policy_net(predictedState))
+            with torch.no_grad():
+                #then just send experience to central network
+                self.trainingManager.storeExperience([self.satellite.adjMatPersonalIndex,
+                                                    packet.packetIndex,
+                                                    self.policy_net(overallState),
+                                                    self.policy_net(predictedState)])
+                
             #there is no optimize method here, as thats done in the central node training
             
 
