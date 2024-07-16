@@ -1,150 +1,110 @@
 import torch
-import torch.nn as nn
+from tensordict import TensorDict
+from tensordict.nn import TensorDictModule
+from torchrl.modules.models.multiagent import QMixer
 import torch.optim as optim
 
-import pdb 
+import torch.nn as nn
 
-class GenericNet(nn.Module):
+import pdb
+import numpy as np 
+import matplotlib.pyplot as plt
+
+n_agents = 3
+
+# Define QMix architecture wrapped in TensorDictModule
+qMix = TensorDictModule(
+    module=QMixer(
+        state_shape=(10, 10, 2),
+        mixing_embed_dim=32,
+        n_agents=n_agents,
+        device="cpu",
+    ),
+    in_keys=[("agents", "chosen_action_value"), "state"],
+    out_keys=["chosen_action_value"],
+)
+
+class FeedForwardNet(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
-        super(GenericNet, self).__init__()
-        self.fc1 = nn.Linear(input_size, hidden_size[0])
+        super(FeedForwardNet, self).__init__()
+        self.fc1 = nn.Linear(input_size, hidden_size)
         self.relu = nn.ReLU()
-        self.fc2 = nn.Linear(hidden_size[0], hidden_size[1])
-        self.fc3 = nn.Linear(hidden_size[1], output_size)
+        self.fc2 = nn.Linear(hidden_size, output_size)
 
     def forward(self, x):
         x = self.fc1(x)
         x = self.relu(x)
         x = self.fc2(x)
-        x = self.relu(x)
-        x = self.fc3(x)
         return x
 
-    def partialForward(self,x): 
-        x = self.fc2(x)
-        x = self.relu(x)
-        x = self.fc3(x)
-        return x
-
-# Construct Generic Network 
+# Example usage:
 input_size = 10
-hidden_size = [20, 15]  # Number of neurons in each hidden layer
-output_size = 10
-model = GenericNet(input_size, hidden_size, output_size)
+hidden_size = 20
+output_size = 1  # Output size is 1 for a single output node
 
-# Create synthetic data
-torch.manual_seed(42)
-input_data1 = torch.randn(10)  # 1 sample with 10 features 
-input_data2 = torch.randn(10)  # 1 sample with 10 features 
+batch_size = 64
 
-labels1 = torch.randn(10)       # 1 target with 10 features 
-labels2 = torch.randn(10)       # 1 target with 10 features 
+# Instantiate 3 feed forward nets 
+model1 = FeedForwardNet(input_size, hidden_size, output_size)
+model2 = FeedForwardNet(input_size, hidden_size, output_size)
+model3 = FeedForwardNet(input_size, hidden_size, output_size)
 
-# Define loss function and optimizer
+# Example agent input tensor
+agent_input_tensor = torch.randn(batch_size, input_size)  # Batch size of 32
+
+# Example state input tensor 
+state_input_tensor = torch.randn(batch_size, 10, 10, 2)
+
+# Target value 
+qMixTarget = torch.randn(batch_size)
+
+# Create optimizer
+optimizer = optim.Adam(qMix.parameters(), lr=0.1)
 criterion = nn.MSELoss()
-optimizer = optim.SGD(model.parameters(), lr=0.1)
 
+holdError = np.zeros(1000)
 
-# Get forward pass data 
-outputs1 = model(input_data1)
-
-#do 2nd pass
-outputs2 = model(input_data2)
-
-# Compute loss
-loss1 = criterion(outputs1, labels1)
-
-# Compute loss
-loss2 = criterion(outputs1, labels1)
-
-# Have loss go backwards 
-loss2.backward(retain_graph = True)
-
-# Have loss go backwards 
-loss1.backward()
-
-pdb.set_trace()
-
-
-
-
-
-# Zero out gradients 
-#optimizer.zero_grad()
-
-# Detach tensors 
-model = model.requires_grad_(False)
-
-# Have loss go backwards 
-loss.backward()
-
-# Then, examine the grads 
-print("Grads After")
-print("Last layer weight grad")
-print(model.fc3.weight.grad)
-print("Second to last layer weight grad")
-print(model.fc2.weight.grad)
-
-#so, it doesnt prevent its computation recursively. 
-#hm. for now, just 
-
-pdb.set_trace() 
-
-optimizer.step()
-
-
-
-
-
-
-
-
-
-# check if we set the inputs = -biases, if the gradients = 0
-layer1Bias = model.fc1.bias
-
-# Forward pass with opposite of layer1bias
-outputs = model.partialForward(-layer1Bias)
-
-# Compute loss
-loss = criterion(outputs, labels)
-
-# Backward pass and optimization
-optimizer.zero_grad()
-loss.backward()
-optimizer.step()
-
-#then, look at the gradients for layer1 
-pdb.set_trace() 
-
-print(loss)
-
-
-# Training loop
-num_episodes = 100
-for episode in range(1, num_episodes + 1):
-    
-    # Forward pass
-    outputs = model(input_data)
-    
-    # Compute loss
-    loss = criterion(outputs, labels)
-    
-    # Backward pass and optimization
+# Training loop 
+for epoch in range(1000):
     optimizer.zero_grad()
+
+    #create dummy inputs:
+    # Example agent input tensor
+    agent_input_tensor = torch.randn(batch_size, input_size)  # Batch size of 32
+
+    # Example state input tensor 
+    state_input_tensor = torch.randn(batch_size, 10, 10, 2)
+
+    #Create storage for the child network outputs
+    childOutput = torch.zeros(batch_size, n_agents, 1)
+
+    # Then, propagate through child networks
+    childOutput[:, 0] = model1(agent_input_tensor)
+    childOutput[:, 1] = model2(agent_input_tensor)
+    childOutput[:, 2] = model3(agent_input_tensor)
+
+    # Then, create dictionary for input to central node 
+    qMixInput = TensorDict({
+        "agents": TensorDict({
+            "chosen_action_value": childOutput
+        }),
+        "state": state_input_tensor
+    }, [batch_size])
+
+    qMixOutput = qMix(qMixInput)['chosen_action_value'].unsqueeze(1)
+
+    #get loss based on single output 
+    loss = criterion(qMixTarget, qMixOutput)
     loss.backward()
-    optimizer.step()
     
-    print(loss)
+    optimizer.step()
 
-    #look at the gradients for parent net over time 
-    #childGrad = model.subnets[0].fc1.weight.grad
-    #print(childGrad)
+    error = np.average(qMixTarget - qMixOutput.detach()) 
+    holdError[epoch] = error
 
+    #print("Prediction Error Batch Average:") 
+    #print(np.average(qMixTarget - qMixOutput.detach()))
 
-# Evaluate the model after training
-model.eval()
-predicted = model(input_data)
+plt.plot(holdError)
+plt.show()
 
-print("Post Training Performance")
-print(predicted - labels)
