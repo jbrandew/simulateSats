@@ -650,6 +650,12 @@ class Manager():
         else: 
             self.baseStations = [] 
 
+    def startExperience(self, packet): 
+        #if doing centralized training 
+        if(self.RLTrainingMethod == "centralized"): 
+            #then assign prop delay using the packet 
+            self.qMixerAgent.startExperience(packet, self.generateDeepAdjMatWithQueues())        
+
     def propagatePropDelay(self, packet): 
 
         #if we are doing distributed training 

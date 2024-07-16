@@ -560,7 +560,10 @@ class Simulator():
                 
             #if our event type is arriving at next player,
             if event.eventType == "packetArriveAtNextPlayer": 
-                
+                #if this is our initial hop, create path experience
+                if(event.kargs["packet"].currSat == event.kargs["packet"].startSat):
+                    self.manager.startExperience(event.kargs["packet"])
+
                 #get our current satellite 
                 satelliteIndWeAreAt = event.kargs["packet"].currSat
                 
