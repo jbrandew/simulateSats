@@ -11,7 +11,10 @@ from myClasses.Event import Event
 import time 
 import copy 
 
-import myClasses.centralTrainingNetwork as centralTrainingNetwork
+#import myClasses.centralTrainingNetwork as centralTrainingNetwork
+
+import myClasses.qMixerAgent as qMixerAgent
+
 
 #general manager/scheduler, model of processes   
 class Manager(): 
@@ -98,10 +101,10 @@ class Manager():
         #if we are working with centralized training 
         if(self.RLTrainingMethod == "centralized"): 
             #then, create a trainer 
-            self.centralTrainer = centralTrainingNetwork.CentralTrainer()
+            self.qMixerAgent = qMixerAgent.QMixerAgent()
         else:
             #otherwise, leave the trainer blank  
-            self.centralTrainer = None
+            self.qMixerAgent = None
 
         #call generate satellites function, which initializes our structure 
         self.generateSatellites(constellationPoints, normVecs, packetProcessRate, routingPolicy)
@@ -147,7 +150,7 @@ class Manager():
         #if we are working with centralized training 
         if(self.RLTrainingMethod == "centralized"): 
             #then, initialize trainer network
-            self.centralTrainer.initializeNetworks(self.raveledSats)
+            self.qMixerAgent.initializeNetworks(self.raveledSats)
 
 
     def resetWorldState(self, displayStats = True): 
@@ -161,7 +164,7 @@ class Manager():
         
         if(self.RLTrainingMethod == "centralized"):
             displaySubAgentStats = False
-            self.centralTrainer.resetData(True)  
+            self.qMixerAgent.resetData(True)  
         else:
             displaySubAgentStats = True
 
@@ -658,7 +661,7 @@ class Manager():
         #if doing centralized training 
         if(self.RLTrainingMethod == "centralized"): 
             #then assign prop delay using the packet 
-            self.centralTrainer.assignPropDelay(packet)
+            self.qMixerAgent.assignPropDelay(packet, self.generateDeepAdjMatWithQueues())
     
     def generateSatellites(self, 
                            walkerPoints, 
@@ -708,7 +711,7 @@ class Manager():
                                                                 mixedPolicy,
                                                                 {"totalNumPlayers":self.numPlanes*self.numSatPerPlane},
                                                                 "distributed",
-                                                                self.centralTrainer
+                                                                self.qMixerAgent
                                                                 ) 
         #if its not mixed then, its all the same 
         else: 
@@ -723,7 +726,7 @@ class Manager():
                                                             routingPolicy,
                                                             {"totalNumPlayers":self.numPlanes*self.numSatPerPlane},
                                                             "centralized",
-                                                            self.centralTrainer
+                                                            self.qMixerAgent
                                                             ) 
 
         self.raveledSats = np.ravel(self.sats)
@@ -1101,3 +1104,25 @@ class Manager():
         self.currAdjMat = adjMat
 
 
+    def generateDeepAdjMatWithQueues(self): 
+        """
+        Generate deep copy of adjmat, which also uses queue lengths 
+        """
+        
+        #create experience from adjMatrix and QLengths
+        adjMatrixState = copy.deepcopy(self.currAdjMat)
+
+        #get the queue lengths 
+        #might not need to deepcopy 
+        queueLengthState = copy.deepcopy(self.queueFinishTimes)
+
+        #then, combine the adjMatrixState and the qeue lengths 
+        #need the 2d format for this 
+        for ind, value in enumerate(queueLengthState): 
+            
+            adjMatrixState[ind] +=value/2
+            adjMatrixState[:,ind] +=value/2
+            adjMatrixState[ind,ind] -=value/2
+
+        return adjMatrixState
+    
