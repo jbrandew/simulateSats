@@ -1,4 +1,61 @@
 
+    def getUniqueHopsBad(self, jointExperienceToFormat):
+        #we want the structure of: [0] = agentInds. [1] = currStates. [2] = nextStates. [3] = propDelay. 
+        
+        #create storage for reformatted experiences 
+        reformatted = [[] for _ in range(5)]
+        
+        #for each agent index 
+        for subAgentExperienceInd, agentInd in enumerate(jointExperienceToFormat[0]):
+            
+            #if we have not seen the agent before in this path experience:
+            if len(reformatted) == 0 or agentInd not in reformatted[0]: 
+                #then, append necessary data 
+                reformatted[0].append(agentInd)
+                reformatted[1].append(jointExperienceToFormat[1][subAgentExperienceInd])
+                reformatted[2].append(jointExperienceToFormat[2][subAgentExperienceInd])
+
+        #then, append the global state and propagation delay
+        reformatted[3].append(jointExperienceToFormat[-2])
+        reformatted[4].append(jointExperienceToFormat[-1])
+
+        return reformatted
+
+
+
+            globalState = [subExperience.finalGlobalState for subExperience in experienceBatch]
+
+            globalState = [subExperience.initialGlobalState for subExperience in experienceBatch]
+
+def selectiveChildForward(self, 
+                              childAgentInds, 
+                              childObservations,
+                              globalState, 
+                              batchSize,
+                              withGrad = True): 
+     
+
+jointActionValueBatch = [self.jointActionValueNetwork.selectiveChildForward(subExperience.agentInds,
+                                                                                subExperience.agentCurrStates,
+                                                                                subExperience.initialGlobalState,
+                                                                                self.BATCH_SIZE) for subExperience in experience]
+
+        # jointActionValue = self.jointActionValueNetwork.selectiveChildForward(experience.agentInds,
+        #                                                                         experience.agentCurrStates,
+        #                                                                         experience.initialGlobalState,
+        #                                                                         self.BATCH_SIZE)
+
+        jointActionValueNextBatch = [self.jointActionValueNetwork.selectiveChildForward(subExperience.agentInds,
+                                                                                subExperience.agentPredictedStates,
+                                                                                subExperience.initialGlobalState,
+                                                                                self.BATCH_SIZE) for subExperience in experience]
+
+        # #get joint action value using next state. dont store gradients when doing it
+        # jointActionValueNext = self.jointActionValueNetwork.selectiveChildForward(experience.agentInds,
+        #                                                                             experience.agentPredictedStates,
+        #                                                                             experience.finalGlobalState,
+        #                                                                             1,
+        #                                                                             self.BATCH_SIZE)
 
     def getUniqueHopsDeprecated(self,experience):
 

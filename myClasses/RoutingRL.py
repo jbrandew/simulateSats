@@ -63,7 +63,7 @@ class DQN(nn.Module):
     """
     #create the initial DQN network
     #just 3 layers, with the input being the observations, and the actions being the output
-    def __init__(self, n_observations, n_actions, networkType = "FF"):
+    def __init__(self, n_observations, n_actions, networkType = "RNN"):
         #initialize network 
         super(DQN, self).__init__()
 
@@ -82,6 +82,10 @@ class DQN(nn.Module):
 
     #forward pass through the network, using the basic input 
     def forward(self, x):
+
+        #convert to proper data type 
+        x = x.to(torch.float32)
+
         if(self.networkType == "FF"):
             x = F.relu(self.layer1(x.unsqueeze(0)))
             x = F.relu(self.layer2(x))
@@ -94,22 +98,23 @@ class DQN(nn.Module):
             #pass the last hidden layer output to the feed forward net 
             x = F.relu(self.layer2(x))
             #reduce dimensionality 
+
             return self.layer3(x)[0]
+        
     
     def initializeBasicFFNetwork(self): 
         #create layers 
-        #using float64 to match input type (only changing this once as opposed to many times for input)
-        self.layer1 = nn.Linear(self.n_observations, 64).to(torch.float64) 
-        self.layer2 = nn.Linear(64, 64).to(torch.float64) 
-        self.layer3 = nn.Linear(64, self.n_actions).to(torch.float64) 
+        self.layer1 = nn.Linear(self.n_observations, 32)
+        self.layer2 = nn.Linear(32, 32)
+        self.layer3 = nn.Linear(32, self.n_actions)
         
     def initializeRNNNetwork(self): 
         
         #set up one RNN layer 
-        self.layer1 = nn.RNN(self.n_observations, 10, 3).to(torch.float64) 
+        self.layer1 = nn.RNN(self.n_observations, 10, 3)
         #then, set up feed forward layers
-        self.layer2 = nn.Linear(10, 64).to(torch.float64) 
-        self.layer3 = nn.Linear(64, self.n_actions).to(torch.float64) 
+        self.layer2 = nn.Linear(10, 32)
+        self.layer3 = nn.Linear(32, self.n_actions)
         
 #
 class DQNAgentRouting: 

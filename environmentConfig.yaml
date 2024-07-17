@@ -32,8 +32,8 @@ packetProcessRate: [[100,60,300,40]]
 
 #simulation runtime parameters 
 numPeople: 1
-numPacketsPerPerson: 500
-packetSendTimeFrame: 5
+numPacketsPerPerson: 50
+packetSendTimeFrame: 500
 #PseudoUniform, SingleFar, simpleForSingleRL
 #cant use single far with multiple people 
 personDistribution: 'simpleForSingleRL'
