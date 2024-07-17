@@ -97,9 +97,10 @@ class DQN(nn.Module):
             x = F.relu(self.layer1(x.unsqueeze(0))[0])
             #pass the last hidden layer output to the feed forward net 
             x = F.relu(self.layer2(x))
+            #forward again 
+            x = F.relu(self.layer3(x))
             #reduce dimensionality 
-
-            return self.layer3(x)[0]
+            return self.layer4(x)[0]
         
     
     def initializeBasicFFNetwork(self): 
@@ -111,10 +112,11 @@ class DQN(nn.Module):
     def initializeRNNNetwork(self): 
         
         #set up one RNN layer 
-        self.layer1 = nn.RNN(self.n_observations, 10, 3)
+        self.layer1 = nn.RNN(self.n_observations, 10, 4)
         #then, set up feed forward layers
         self.layer2 = nn.Linear(10, 32)
-        self.layer3 = nn.Linear(32, self.n_actions)
+        self.layer3 = nn.Linear(32, 32)
+        self.layer4 = nn.Linear(32, self.n_actions)
         
 #
 class DQNAgentRouting: 
@@ -141,11 +143,11 @@ class DQNAgentRouting:
         self.EPS_START = 0.9
         self.EPS_END = 0.05
         #lower "decay" value actually increases rate we go to the "eps_end" value 
-        self.EPS_DECAY = 1000
+        self.EPS_DECAY = 3000
         #used to be .005
         #make Tau = 1 to disable target network concept 
         self.TAU = 0.1
-        self.LR = 1e-4
+        self.LR = 1e-3
 
         self.discountFactor = 0.9 
 
@@ -155,6 +157,7 @@ class DQNAgentRouting:
         #initialize storage across episodes
         self.crossEpsAction = []
         self.crossEpsLoss = []
+        self.crossEpsReward = []
 
         #store info 
         self.trainingPolicy = trainingPolicy
@@ -208,6 +211,8 @@ class DQNAgentRouting:
         print("Action Stats")
         actionStats = np.unique(self.epsActions, return_counts=True)
         self.crossEpsAction = self.crossEpsAction + [actionStats]
+
+        self.crossEpsReward = self.crossEpsReward + [np.average(self.epsRewards)]
 
         print(actionStats)
 
@@ -332,7 +337,7 @@ class DQNAgentRouting:
         #this only works with experiences that have their reward
         #so, read in a value from the buffer: 
 
-        smallBatchSize = 32
+        smallBatchSize = 2
 
         #small batch size seems better in general 
         # 2 gave better performance....
@@ -459,6 +464,14 @@ class DQNAgentRouting:
         #simply plot the loss over time
         fig, ax = plt.subplots()
         ax.plot(np.arange(num_episodes), crossEpsLoss)
+        ax.set(xlabel='Episode #', ylabel='Loss',
+            title='Loss over Episode')
+        plt.show()
+
+
+        #simply plot the loss over time
+        fig, ax = plt.subplots()
+        ax.plot(np.arange(num_episodes), crossEpsAction)
         ax.set(xlabel='Episode #', ylabel='Loss',
             title='Loss over Episode')
         plt.show()

@@ -153,27 +153,26 @@ class Simulator():
         #if we are going to visualize, we need snapshots within the event stack 
         simulationArgs["takeSnapshots"] = visualizerArgs["visualizerOn"]
 
+        #first get how much in simulation time the frames should be spaced between each other
+        #so get the period that we are sending packets over 
+        packetSendTimeFrame = simulationArgs["packetSendTimeFrame"]
+
         #if we are enabling a visualizer 
         if(visualizerArgs["visualizerOn"]): 
         
-            #first get how much in simulation time the frames should be spaced between each other
-            #so get the period that we are sending packets over 
-            packetSendTimeFrame = simulationArgs["packetSendTimeFrame"]
-        
             #then get how many frames we have 
             numFrames = visualizerArgs["visualizeTime"] * visualizerArgs["FPS"]
+            #set up storage for the snapshots by creating list, with one entry allotted for one frame  
+            self.snapshotStorage = [0]*numFrames
 
             #then, we have an "adjustment factor" to account for visualizing the environment while the packets are being processed/going through the network
             simulationTimeBetweenFrames = packetSendTimeFrame*simulationArgs["timeFactor"]/(numFrames)
             simulationArgs["simulationTimeBetweenSnapshots"] = simulationTimeBetweenFrames
             simulationArgs["numEnvironmentSnapshots"] = numFrames
-            
-            #create variable for expected time of fully flushed network
-            simulationArgs["fullyFlushedNetworkETA"] = packetSendTimeFrame*simulationArgs["timeFactor"]
-            simulationArgs["routingPolicy"] = simulationArgs["routingPolicy"]
-
-            #set up storage for the snapshots by creating list, with one entry allotted for one frame  
-            self.snapshotStorage = [0]*numFrames
+        
+        #create variable for expected time of fully flushed network
+        simulationArgs["fullyFlushedNetworkETA"] = packetSendTimeFrame*simulationArgs["timeFactor"]
+        simulationArgs["routingPolicy"] = simulationArgs["routingPolicy"]
 
         #after getting that, do the computation in the event stack
         holdData = self.executeGeneralSimulation(**simulationArgs)
@@ -393,6 +392,7 @@ class Simulator():
 
         """
         #this is the initialization section 
+        fullyFlushedNetworkETA = packetSendTimeFrame*timeFactor
 
         #get satellite locations
         satLocs = self.manager.getSatLocations() 
@@ -436,7 +436,7 @@ class Simulator():
         #just because computationally one is way more than the other 
 
         if(routingPolicy == 'OSPF'): 
-            for updateRoutingTableInd in range(3): 
+            for updateRoutingTableInd in range(500): 
                 #so create time and events 
                 updateTime = fullyFlushedNetworkETA*updateRoutingTableInd/3
                 queueEvent = Event(updateTime,
@@ -447,7 +447,7 @@ class Simulator():
                 eventQueue.push(queueEvent)
         
         if(routingPolicy == 'OSPF'): 
-            for broadcastAdjMatInd in range(100): 
+            for broadcastAdjMatInd in range(500): 
                 #so create time and events 
                 updateTime = fullyFlushedNetworkETA*broadcastAdjMatInd/100
                 queueEvent = Event(updateTime,

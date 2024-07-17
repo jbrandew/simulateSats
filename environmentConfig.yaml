@@ -23,7 +23,7 @@ SunLocation: [149.6e+6, 0, 0]
 initialTopology: 'basicSquare'
 #possible values: 
 #OSPF, basic, mixedSingleAgentRLRestOSPF, RL
-routingPolicy: 'mixedSingleAgentRLRestOSPF'
+routingPolicy: 'OSPF'
 topologyPolicy: null
 #RL training: [[100,70,100,30]]
 #eh
@@ -33,12 +33,12 @@ packetProcessRate: [[100,70,300,30]]
 
 #simulation runtime parameters 
 numPeople: 1
-numPacketsPerPerson: 500
-packetSendTimeFrame: 5
+numPacketsPerPerson: 30
+packetSendTimeFrame: 1
 #PseudoUniform, SingleFar, simpleForSingleRL
 #cant use single far with multiple people 
 personDistribution: 'simpleForSingleRL'
-sendTimeDistribution: 'Uniform'
+sendTimeDistribution: 'Even'
 
 queingDelaysEnabled: True
 weatherEnabled: False
@@ -47,7 +47,7 @@ environmentUpdateInterval: 10
 outageFrequency: null
 #takes care of how long we want the visualizer to take data for. Should be greater for more traffic.
 #its a ratio of the visualize time vs the time frame length that packets are being sent over. 
-timeFactor: 1
+timeFactor: 100
 
 #visualizer parameters 
 visualizerOn: False
@@ -57,7 +57,7 @@ FPS: 3
 dynamicLocation: False
 #this needs to be None if working with non RL method/decision style
 #can either be centralized or distributed 
-RLTrainingMethod: 'distributed'
+RLTrainingMethod: None 
 #could add the server processing time & amount here 
 
 
