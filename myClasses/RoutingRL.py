@@ -145,7 +145,7 @@ class DQNAgentRouting:
         #used to be .005
         #make Tau = 1 to disable target network concept 
         self.TAU = 0.1
-        self.LR = 1e-2
+        self.LR = 1e-3
 
         self.discountFactor = 0.9 
 
