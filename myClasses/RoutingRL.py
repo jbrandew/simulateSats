@@ -141,11 +141,11 @@ class DQNAgentRouting:
         self.EPS_START = 0.9
         self.EPS_END = 0.05
         #lower "decay" value actually increases rate we go to the "eps_end" value 
-        self.EPS_DECAY = 10000
+        self.EPS_DECAY = 1000
         #used to be .005
         #make Tau = 1 to disable target network concept 
         self.TAU = 0.1
-        self.LR = 1e-3
+        self.LR = 1e-4
 
         self.discountFactor = 0.9 
 

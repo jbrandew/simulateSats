@@ -605,7 +605,7 @@ class Simulator():
 
                     #send packet propagation time to all agents          
                     self.manager.propagatePropDelay(event.kargs["packet"])
-                        
+                    
                     continue 
                 
                 #get the current and next players 
@@ -633,7 +633,7 @@ class Simulator():
         #then, iterating through the packets
         for packetInd in range(len(packets)): 
             latencyTimes[packetInd] = packets[packetInd].packetArriveTime - packets[packetInd].packetSendTime
-
+        
         # #print average latency
         # print("Average latency")
         # print(np.average(latencyTimes))

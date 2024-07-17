@@ -143,8 +143,10 @@ class Manager():
         if(self.RLTrainingMethod is not None):
             #then for each satellite
             for sat in self.raveledSats:
-                #initialize the networks
-                sat.agent.initializeNetworks()
+                #if they are RL, then make the networks
+                if(sat.routingPolicy == "RL"): 
+                    #initialize the networks
+                    sat.agent.initializeNetworks()
 
         #after satellite generation, init the networks for the central trainer
         #if we are working with centralized training 
@@ -984,12 +986,13 @@ class Manager():
         Effect: 
         satellites are connected in a 2x2 square....
         """
+        
         #so only create 4 connections, creating a place for the decision of an RL agent  
         self.createISL(self.sats[0,0],self.sats[0,1], False)
-        self.createISL(self.sats[0,0],self.sats[0,3], False)
+        self.createISL(self.sats[0,1],self.sats[0,2], False)
 
-        self.createISL(self.sats[0,2],self.sats[0,1], False)
         self.createISL(self.sats[0,2],self.sats[0,3], False)
+        self.createISL(self.sats[0,3],self.sats[0,0], False)
 
 
     def connectSpiralTopologySimple(self, satsBetweenConnections= 1, numberConnections = -1, startPlaneInd = 0, startSatInd = 0, ISL2Done = False): 

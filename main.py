@@ -93,7 +93,7 @@ visualizerArgs = {
 }
 
 #set up RL config: 
-num_episodes = 100
+num_episodes = 30
 
 #get simulator object 
 simmer = Simulator.Simulator(managerData)
@@ -118,7 +118,7 @@ for i_episode in range(num_episodes):
     print(i_episode)
 
 #make the one RL agent plot its training info 
-#simmer.manager.sats[0,0].agent.plotTrainingInfo() 
+simmer.manager.sats[0,0].agent.plotTrainingInfo() 
 
 
 #enact simulation 
