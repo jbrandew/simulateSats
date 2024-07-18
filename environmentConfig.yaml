@@ -1,4 +1,6 @@
 ---
+#config file. some parameters are not compatable with others....
+
 
 #constellation parameters
 #walkerDelta or square  
@@ -23,22 +25,23 @@ SunLocation: [149.6e+6, 0, 0]
 initialTopology: 'basicSquare'
 #possible values: 
 #OSPF, basic, mixedSingleAgentRLRestOSPF, RL
-routingPolicy: 'OSPF'
+routingPolicy: 'RL'
 topologyPolicy: null
 #RL training: [[100,70,100,30]]
 #eh
 #normal behavior: 100
 #cant be 1d array 
-packetProcessRate: [[100,70,300,30]]
+packetProcessRate: [[300,150,300,30]]
 
 #simulation runtime parameters 
 numPeople: 1
-numPacketsPerPerson: 30
-packetSendTimeFrame: 1
+numPacketsPerPerson: 500
+packetSendTimeFrame: 5
 #PseudoUniform, SingleFar, simpleForSingleRL
 #cant use single far with multiple people 
 personDistribution: 'simpleForSingleRL'
-sendTimeDistribution: 'Even'
+#can be Even or Uniform
+sendTimeDistribution: 'Uniform'
 
 queingDelaysEnabled: True
 weatherEnabled: False
@@ -57,7 +60,7 @@ FPS: 3
 dynamicLocation: False
 #this needs to be None if working with non RL method/decision style
 #can either be centralized or distributed 
-RLTrainingMethod: None 
+RLTrainingMethod: 'centralized' 
 #could add the server processing time & amount here 
 
 

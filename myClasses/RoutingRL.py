@@ -98,9 +98,9 @@ class DQN(nn.Module):
             #pass the last hidden layer output to the feed forward net 
             x = F.relu(self.layer2(x))
             #forward again 
-            x = F.relu(self.layer3(x))
+            #x = F.relu(self.layer3(x))
             #reduce dimensionality 
-            return self.layer4(x)[0]
+            return self.layer3(x)[0]
         
     
     def initializeBasicFFNetwork(self): 
@@ -112,11 +112,10 @@ class DQN(nn.Module):
     def initializeRNNNetwork(self): 
         
         #set up one RNN layer 
-        self.layer1 = nn.RNN(self.n_observations, 10, 4)
+        self.layer1 = nn.RNN(self.n_observations, 5, 6)
         #then, set up feed forward layers
-        self.layer2 = nn.Linear(10, 32)
-        self.layer3 = nn.Linear(32, 32)
-        self.layer4 = nn.Linear(32, self.n_actions)
+        self.layer2 = nn.Linear(5, 32)
+        self.layer3 = nn.Linear(32, self.n_actions)
         
 #
 class DQNAgentRouting: 
@@ -141,12 +140,13 @@ class DQNAgentRouting:
         self.BATCH_SIZE = 128
         self.GAMMA = 0.99
         self.EPS_START = 0.9
-        self.EPS_END = 0.05
+        #used to be .05 
+        self.EPS_END = 0.5
         #lower "decay" value actually increases rate we go to the "eps_end" value 
         self.EPS_DECAY = 3000
         #used to be .005
         #make Tau = 1 to disable target network concept 
-        self.TAU = 0.1
+        self.TAU = 0.5
         self.LR = 1e-3
 
         self.discountFactor = 0.9 

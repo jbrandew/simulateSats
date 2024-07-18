@@ -458,7 +458,7 @@ class Simulator():
         if(routingPolicy == 'mixedSingleAgentRLRestOSPF'): 
             for broadcastAdjMatInd in range(200): 
                 #so create time and events 
-                updateTime = 10*broadcastAdjMatInd/200
+                updateTime = fullyFlushedNetworkETA*broadcastAdjMatInd/200
                 queueEvent = Event(updateTime,
                                     "updateAdjMats",
                                     {})
