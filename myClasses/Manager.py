@@ -652,6 +652,8 @@ class Manager():
         else: 
             self.baseStations = [] 
 
+    #two functions. one for starting the experience, and the other for ending it. 
+    
     def startExperience(self, packet): 
         #if doing centralized training 
         if(self.RLTrainingMethod == "centralized"): 

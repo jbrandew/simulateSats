@@ -419,9 +419,9 @@ class Simulator():
                                        personDistribution,
                                        sendTimeDistribution,
                                        packetSendTimeFrame,
-                                       "True")
+                                       "False")
 
-        #create the events fro the packets being sent 
+        #create the events for the packets being sent 
         for packetInd in range(len(packets)):
             kargs = {"packet": packets[packetInd]} 
             queueEvent = Event(packets[packetInd].packetSendTime,
@@ -445,24 +445,14 @@ class Simulator():
                 
                 #then push the events 
                 eventQueue.push(queueEvent)
-        
-        if(routingPolicy == 'OSPF'): 
-            for broadcastAdjMatInd in range(500): 
-                #so create time and events 
-                updateTime = fullyFlushedNetworkETA*broadcastAdjMatInd/100
-                queueEvent = Event(updateTime,
-                                    "updateAdjMats",
-                                    {})
-                eventQueue.push(queueEvent)
 
-        if(routingPolicy == 'mixedSingleAgentRLRestOSPF'): 
-            for broadcastAdjMatInd in range(200): 
-                #so create time and events 
-                updateTime = fullyFlushedNetworkETA*broadcastAdjMatInd/200
-                queueEvent = Event(updateTime,
-                                    "updateAdjMats",
-                                    {})
-                eventQueue.push(queueEvent)
+        for broadcastAdjMatInd in range(200): 
+            #so create time and events 
+            updateTime = fullyFlushedNetworkETA*broadcastAdjMatInd/100
+            queueEvent = Event(updateTime,
+                                "updateAdjMats",
+                                {})
+            eventQueue.push(queueEvent)
 
         #otherwise, compute path at every recieval instance 
         #then, create the snapshot events if we are supposed to 
@@ -482,7 +472,6 @@ class Simulator():
         #first, create the reference time for when to update environment parameters 
         updateReferenceTime = 0 
         
-        updatedAlready = False 
         #while we arent empty in the eventQueue
         while not eventQueue.is_empty(): 
 
@@ -561,7 +550,8 @@ class Simulator():
             #if our event type is arriving at next player,
             if event.eventType == "packetArriveAtNextPlayer": 
                 #if this is our initial hop, create path experience
-                if(event.kargs["packet"].currSat == event.kargs["packet"].startSat):
+                #need to check the players stat 
+                if(len(event.kargs["packet"].playersInvolvedInSending) == 0):
                     self.manager.startExperience(event.kargs["packet"])
 
                 #get our current satellite 
@@ -581,6 +571,8 @@ class Simulator():
                 
                 #push the event 
                 eventQueue.push(queueEvent)                
+
+                event.kargs["packet"].path.append(satelliteIndWeAreAt)
 
                 continue 
 

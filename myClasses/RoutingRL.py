@@ -141,15 +141,16 @@ class DQNAgentRouting:
         self.GAMMA = 0.99
         self.EPS_START = 0.9
         #used to be .05 
-        self.EPS_END = 0.5
+        #so regardless of poliy we learned, we always go random at least 5% of the time. 
+        self.EPS_END = 0.05
         #lower "decay" value actually increases rate we go to the "eps_end" value 
-        self.EPS_DECAY = 3000
+        self.EPS_DECAY = 10000
         #used to be .005
         #make Tau = 1 to disable target network concept 
-        self.TAU = 0.5
-        self.LR = 1e-3
+        self.TAU = 1
+        self.LR = 1e-4
 
-        self.discountFactor = 0.9 
+        self.discountFactor = 0.95
 
         #initialize the # of steps we have completed 
         self.steps_done = 0 
@@ -208,7 +209,8 @@ class DQNAgentRouting:
         self.crossEpsLoss = self.crossEpsLoss + [np.average(self.epsLoss)]
 
         #also, print the stats of the selected actions 
-        print("Action Stats")
+        #print("Action Stats")
+        #print(self.epsActions)
         actionStats = np.unique(self.epsActions, return_counts=True)
         self.crossEpsAction = self.crossEpsAction + [actionStats]
 
@@ -301,12 +303,15 @@ class DQNAgentRouting:
 
         #if we are doing centralized training
         else: 
+
             #then just send experience to central network
             self.trainingManager.storeExperience([self.satellite.adjMatPersonalIndex,
                                                 packet.packetIndex,
                                                 overallState,
                                                 predictedState])
                 
+
+
             #there is no optimize method here, as thats done in the central node training
             
 
@@ -337,7 +342,7 @@ class DQNAgentRouting:
         #this only works with experiences that have their reward
         #so, read in a value from the buffer: 
 
-        smallBatchSize = 2
+        smallBatchSize = 64
 
         #small batch size seems better in general 
         # 2 gave better performance....

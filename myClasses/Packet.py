@@ -38,6 +38,8 @@ class Packet:
         #this is only used within the "basic" protocol
         self.routingMetadata["currIndInPath"] = 0
 
+        self.path = []
+
     def reachedEnd(self):
         return self.endSat == self.currSat
         

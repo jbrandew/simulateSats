@@ -8,6 +8,9 @@ import pdb
 import myClasses.Simulator as Simulator
 import myClasses.Manager as Manager
 
+#for skewness
+from scipy.stats import skew 
+
 #just for now
 import matplotlib.pyplot as plt
 
@@ -114,6 +117,8 @@ for i_episode in range(num_episodes):
 
     print("Average latency for packets for this episode:")
     print(np.average(holdLatencyTimes))
+    print("Packet Latency")
+    print(holdLatencyTimes)
     print("Episode # ")
     print(i_episode)
 

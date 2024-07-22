@@ -1,4 +1,74 @@
 
+
+        # if(routingPolicy == 'OSPF'): 
+        #     for broadcastAdjMatInd in range(200): 
+        #         #so create time and events 
+        #         updateTime = fullyFlushedNetworkETA*broadcastAdjMatInd/100
+        #         queueEvent = Event(updateTime,
+        #                             "updateAdjMats",
+        #                             {})
+        #         eventQueue.push(queueEvent)
+
+        # if(routingPolicy == 'mixedSingleAgentRLRestOSPF'): 
+        #     for broadcastAdjMatInd in range(200): 
+        #         #so create time and events 
+        #         updateTime = fullyFlushedNetworkETA*broadcastAdjMatInd/200
+        #         queueEvent = Event(updateTime,
+        #                             "updateAdjMats",
+        #                             {})
+        #         eventQueue.push(queueEvent)
+
+        # if(routingPolicy == 'RL'): 
+        #     for broadcastAdjMatInd in range(200): 
+        #         #so create time and events 
+        #         updateTime = fullyFlushedNetworkETA*broadcastAdjMatInd/200
+        #         queueEvent = Event(updateTime,
+        #                             "updateAdjMats",
+        #                             {})
+        #         eventQueue.push(queueEvent)
+            # print(self.packet.packetSendTime)
+            # print(self.packetDelay)
+            # print(self.packet.routingMetadata)
+            # pdb.set_trace()
+        
+    def forwardBad(self, 
+                childObservations, 
+                globalState, 
+                batchSize):
+        
+        """
+        Full pass through our networks
+
+        Inputs:
+        childObservations: states that the children see of the world around
+        globalState: state of the world, as the central node sees it
+        batchSize: batching size of the data :D
+
+        Output: 
+        joint action value 
+        """
+
+        # Pass input through each sub-network and collect outputs
+        subnet_outputs = [subnet(childObservations) for subnet in self.subnets]
+        
+        #get chosen action values
+        chosen_action_values = [torch.max(subOutput) for subOutput in subnet_outputs]
+
+        #create qMixInput
+        # Then, create dictionary for input to central node 
+        qMixInput = TensorDict({
+            "agents": TensorDict({
+                "chosen_action_value": chosen_action_values
+            }),
+            "state": globalState
+        }, [batchSize])
+
+        #after creating dictionary, pass through qMix and get output
+        with torch.no_grad(): 
+            qMixOutput = self.qMix(qMixInput)['chosen_action_value'].unsqueeze(1)
+        
+        return qMixOutput
+
     def getUniqueHopsBad(self, jointExperienceToFormat):
         #we want the structure of: [0] = agentInds. [1] = currStates. [2] = nextStates. [3] = propDelay. 
         

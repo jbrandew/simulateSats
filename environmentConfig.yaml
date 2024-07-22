@@ -35,8 +35,8 @@ packetProcessRate: [[300,150,300,30]]
 
 #simulation runtime parameters 
 numPeople: 1
-numPacketsPerPerson: 500
-packetSendTimeFrame: 5
+numPacketsPerPerson: 2
+packetSendTimeFrame: 200
 #PseudoUniform, SingleFar, simpleForSingleRL
 #cant use single far with multiple people 
 personDistribution: 'simpleForSingleRL'
@@ -59,7 +59,7 @@ FPS: 3
 
 dynamicLocation: False
 #this needs to be None if working with non RL method/decision style
-#can either be centralized or distributed 
+#can either be centralized or distributed. distributed if single RL agent
 RLTrainingMethod: 'centralized' 
 #could add the server processing time & amount here 
 
