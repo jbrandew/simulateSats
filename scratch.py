@@ -1,4 +1,33 @@
 
+            # #so, take the packet and for the path used
+            # for satUsed in packet.playersInvolvedInSending:
+            #     #get the process time 
+            #     processTime = satUsed.generateProcessingOnePacketTime()
+            #     #then, add it to the rows and cols of adj mat
+            #     ind = satUsed.adjMatPersonalIndex()
+
+            #     #create copy of initial state 
+            #     self.finalGlobalState = copy.deepcopy(self.initialGlobalState)
+            #     #then, add it in to respective values 
+            #     self.finalGlobalState[ind]+=processTime/2
+            #     self.finalGlobalState[:,ind]+=processTime/2
+            #     self.finalGlobalState[ind,ind]-=processTime/2
+                
+            #     return
+
+if(ind == 1 and False): 
+
+                        #analyze the difference in routing table 
+                        QLengths = np.maximum(player.QFinishTimes, player.currTime)
+                        QLengths = QLengths - player.currTime
+
+                        #get traffic aware table
+                        trafficAwareRoutingTable = myMath.dijkstraWithNodeValuesAllInitialHops(player.adjMatrix, player.adjMatPersonalIndex, QLengths)
+
+                        #get non traffic aware routing table
+                        nonTrafficAwareRoutingTable = myMath.dijkstraWithNodeValuesAllInitialHops(player.adjMatrix, player.adjMatPersonalIndex)
+
+                 
 
         # if(routingPolicy == 'OSPF'): 
         #     for broadcastAdjMatInd in range(200): 

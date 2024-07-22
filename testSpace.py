@@ -1,21 +1,21 @@
-import pdb
-def unique_indices(lst):
-    unique_elements = set(lst)
-    indices = {element: lst.index(element) for element in unique_elements}
-    return indices
+#what am i doing? 
+import numpy as np 
+import torch
 
-# Example usage:
-my_list = [1, 1, 6, 2, 3, 1, 2, 4, 5, 3, 6]
-indices = unique_indices(my_list)
-print("Indices of unique elements:", indices)
+def func(nums):
 
-#for key in indices.values():
-#    print(key)
+    sum = 0
+    for num in nums: 
+        sum+=num
+    return sum 
 
-#store values 
-vals = [*indices.values()]
+data = np.arange(10)
 
-#after storing values, then get the subset
-newList = [my_list[val] for val in vals]
+class Processor:
+    def __init__(self):
+        self.mixer = torch.sum
 
-pdb.set_trace() 
+
+processor = Processor() 
+
+print(processor.mixer(torch.from_numpy(data)))

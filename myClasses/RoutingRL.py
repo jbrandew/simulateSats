@@ -200,23 +200,25 @@ class DQNAgentRouting:
     
     def episodeAnalysis(self): 
         
+    
         #print the past average reward and loss  
-        print("Average Reward")
+        print("Average Reward, for the following satellite")
+        print(self.satellite.adjMatPersonalIndex)
         print(np.average(self.epsRewards))
 
-        print("Average Loss")
-        print(np.average(self.epsLoss))
-        self.crossEpsLoss = self.crossEpsLoss + [np.average(self.epsLoss)]
+        # print("Average Loss")
+        # print(np.average(self.epsLoss))
+        # self.crossEpsLoss = self.crossEpsLoss + [np.average(self.epsLoss)]
 
-        #also, print the stats of the selected actions 
-        #print("Action Stats")
-        #print(self.epsActions)
-        actionStats = np.unique(self.epsActions, return_counts=True)
-        self.crossEpsAction = self.crossEpsAction + [actionStats]
+        # #also, print the stats of the selected actions 
+        # #print("Action Stats")
+        # #print(self.epsActions)
+        # actionStats = np.unique(self.epsActions, return_counts=True)
+        # self.crossEpsAction = self.crossEpsAction + [actionStats]
 
-        self.crossEpsReward = self.crossEpsReward + [np.average(self.epsRewards)]
+        # self.crossEpsReward = self.crossEpsReward + [np.average(self.epsRewards)]
 
-        print(actionStats)
+        # print(actionStats)
 
 
     #create function for selecting action based on state 
@@ -427,8 +429,10 @@ class DQNAgentRouting:
         #first get the time it took for the packet to go through the network 
         packetPropDelay = packet.packetArriveTime - packet.packetSendTime
         #then, create and push the experience 
-        self.fullExperienceMemory.push(*self.nonRewardMemory[packet.packetIndex], packetPropDelay)
-
+        try: 
+            self.fullExperienceMemory.push(*self.nonRewardMemory[packet.packetIndex], packetPropDelay)
+        except Exception as e: 
+            pdb.set_trace()
 
     def plotTrainingInfo(self):
         """

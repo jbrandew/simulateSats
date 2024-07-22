@@ -68,6 +68,7 @@ managerData = {
     "topologyPolicy": configData['topologyPolicy'],
     "packetProcessRate": configData['packetProcessRate'],
     "dynamicLocation": configData['dynamicLocation'],
+    "RLTrainingMethod": configData['RLTrainingMethod'],
     "RLTrainingMethod": configData['RLTrainingMethod']
 }   
 
@@ -117,8 +118,8 @@ for i_episode in range(num_episodes):
 
     print("Average latency for packets for this episode:")
     print(np.average(holdLatencyTimes))
-    print("Packet Latency")
-    print(holdLatencyTimes)
+    #print("Packet Latency")
+    #print(holdLatencyTimes)
     print("Episode # ")
     print(i_episode)
 

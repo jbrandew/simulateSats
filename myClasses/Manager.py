@@ -107,7 +107,7 @@ class Manager():
             self.qMixerAgent = None
 
         #call generate satellites function, which initializes our structure 
-        self.generateSatellites(constellationPoints, normVecs, packetProcessRate, routingPolicy)
+        self.generateSatellites(constellationPoints, normVecs, packetProcessRate, routingPolicy, RLTrainingMethod)
         
         #first, format the baseStationInputs 
         self.baseStations = []
@@ -677,7 +677,8 @@ class Manager():
                            walkerPoints, 
                            normVecs, 
                            packetProcessRate, 
-                           routingPolicy): 
+                           routingPolicy,
+                           RLTrainingMethod): 
         """
         Just storing satellites when given walker constellation points
 
@@ -688,7 +689,8 @@ class Manager():
         circular path  
         packetProcessRate: how fast the satellites can process packets 
         routingPolicy: how satellites route their respective packets
-
+        trainingMethod: how we train our agents together 
+        
         Effect: sets up our satellite internals using walkerPoints 
         """
 
@@ -720,7 +722,7 @@ class Manager():
                                                                 normVecs[planeInd], 
                                                                 mixedPolicy,
                                                                 {"totalNumPlayers":self.numPlanes*self.numSatPerPlane},
-                                                                "distributed",
+                                                                RLTrainingMethod,
                                                                 self.qMixerAgent
                                                                 ) 
         #if its not mixed then, its all the same 
@@ -735,7 +737,7 @@ class Manager():
                                                             normVecs[planeInd],
                                                             routingPolicy,
                                                             {"totalNumPlayers":self.numPlanes*self.numSatPerPlane},
-                                                            "centralized",
+                                                            RLTrainingMethod,
                                                             self.qMixerAgent
                                                             ) 
 

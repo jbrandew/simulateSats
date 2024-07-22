@@ -436,9 +436,10 @@ class Simulator():
         #just because computationally one is way more than the other 
 
         if(routingPolicy == 'OSPF'): 
-            for updateRoutingTableInd in range(500): 
+            numUpdates = 30
+            for updateRoutingTableInd in range(numUpdates): 
                 #so create time and events 
-                updateTime = fullyFlushedNetworkETA*updateRoutingTableInd/3
+                updateTime = fullyFlushedNetworkETA*updateRoutingTableInd/numUpdates
                 queueEvent = Event(updateTime,
                                     "updateRoutingTable",
                                     {})
@@ -446,9 +447,10 @@ class Simulator():
                 #then push the events 
                 eventQueue.push(queueEvent)
 
-        for broadcastAdjMatInd in range(200): 
+        numBroadcasts = 100
+        for broadcastAdjMatInd in range(numBroadcasts): 
             #so create time and events 
-            updateTime = fullyFlushedNetworkETA*broadcastAdjMatInd/100
+            updateTime = fullyFlushedNetworkETA*broadcastAdjMatInd/numBroadcasts
             queueEvent = Event(updateTime,
                                 "updateAdjMats",
                                 {})
@@ -510,21 +512,8 @@ class Simulator():
             if event.eventType == "updateRoutingTable": 
                 #just update the respective routing tables 
                 for ind, player in enumerate(raveledPlayers):
-                    if(ind == 1 and False): 
 
-                        #analyze the difference in routing table 
-                        QLengths = np.maximum(player.QFinishTimes, player.currTime)
-                        QLengths = QLengths - player.currTime
-
-                        #get traffic aware table
-                        trafficAwareRoutingTable = myMath.dijkstraWithNodeValuesAllInitialHops(player.adjMatrix, player.adjMatPersonalIndex, QLengths)
-
-                        #get non traffic aware routing table
-                        nonTrafficAwareRoutingTable = myMath.dijkstraWithNodeValuesAllInitialHops(player.adjMatrix, player.adjMatPersonalIndex)
-
-                 
                     player.updateRoutingTable() 
-
 
             #if its for sending a packet :D 
             if event.eventType  == "packetSent":
@@ -562,7 +551,10 @@ class Simulator():
                 endProcessTime = raveledPlayers[satelliteIndWeAreAt].generateProcessingOneMorePacketTime(event.timeOfOccurence, queingDelaysEnabled) 
                 
                 #add index to the set for packet data
-                event.kargs["packet"].playersInvolvedInSending.add(satelliteIndWeAreAt)
+                #only do this if we are not at the last hop
+                #essentially, we the last hop doesnt make a decision, as its just forwarding to the ground 
+                if( not event.kargs["packet"].reachedEnd()):
+                    event.kargs["packet"].playersInvolvedInSending.add(satelliteIndWeAreAt)
 
                 #create event to queue, based on when we finish processing 
                 queueEvent = Event(endProcessTime,
@@ -571,8 +563,6 @@ class Simulator():
                 
                 #push the event 
                 eventQueue.push(queueEvent)                
-
-                event.kargs["packet"].path.append(satelliteIndWeAreAt)
 
                 continue 
 
