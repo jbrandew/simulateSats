@@ -220,27 +220,18 @@ class DQNAgentRouting:
 
         # print(actionStats)
 
-
-    #create function for selecting action based on state 
-    def select_action(self, packet):
+    def getOverallState(self):
         """
-        
-        Function to: 
-        1. get and format state 
-        2. get an action based on that state
-        3. update the target network 
-
-        Kind of convoluted, because at different times we need to index by adjacency matrix
-        in 2d format, vs 1d for the network input
+        Function to get the state of the network. 
+        Index using only non-inf values for overallState. adjMatrixState incorporates q lengths. 
 
         Inputs:
-        packet: meta data on packet 
 
-        Outputs: 
-        action: what satellite to route the packet towards 
+        Outputs:
+        adjMatrixState: adjMatrix incorporating q lengths and prop delay. 
+        overallState: adjMatrix properly indexed 
 
         """
-        
         #create experience from adjMatrix and QLengths
         adjMatrixState = copy.deepcopy(self.satellite.adjMatrix)
 
@@ -261,25 +252,150 @@ class DQNAgentRouting:
         #note, this also automatically reshapes into input shape 
         overallState = torch.from_numpy(adjMatrixState[adjMatrixState != np.inf])
 
-        #use epsilon-greedy exploration
-        sample = random.random()
-        eps_threshold = self.EPS_END + (self.EPS_START - self.EPS_END) * \
-            math.exp(-1. * self.steps_done / self.EPS_DECAY)
-        self.steps_done+=1
+        return adjMatrixState, overallState
 
-        if sample > eps_threshold:
-            with torch.no_grad():
+    def getAction(self,
+                  overallState,
+                  packet,
+                  explorationType = "eps",
+                  selectiveActions = True):
+        """
+        This function gets the action. First, it uses a specific exploration type. 
+        Then, it uses the proper action space restriction to generate an action that 
+        it can end up using. 
 
-                #so, get the policy net output
-                actionOutput = self.policy_net(overallState).argmax().item()
+        Inputs:
+        overallState: state of network, probably including qing delay
+        packet: packet we are sending. used in "restrictive action space" stuff
+        explorationType: how we are exploring things. Default is epsilon greedy.
+        selectiveActions: do we restrict our action space based on the packet's history? 
+
+        Output: 
+        satIndToForwardTo: which satellite we are forwarding to. 
         
-        else: 
-            actionOutput = np.random.randint(self.policy_net.n_actions)
+        """
+        
+        #first, get the fullActionOutput
+        if(explorationType == "eps"):
+            #use epsilon-greedy exploration
+            sample = random.random()
+            eps_threshold = self.EPS_END + (self.EPS_START - self.EPS_END) * \
+                math.exp(-1. * self.steps_done / self.EPS_DECAY)
+            self.steps_done+=1
 
-        #then, convert it to viable satellite ind 
-        #we need to do this because indexableSats != connectedToPlayers
+            #then, if we are using our policy 
+            if sample > eps_threshold:
+                with torch.no_grad():
+                    #first, get the policy net output
+                    fullActionOutput = self.policy_net(overallState)
+            else: 
+                #generate a random policy net output
+                fullActionOutput = torch.rand(self.policy_net.n_actions)
+        else: 
+            raise Exception("This exploration type hasnt been implemented.")
+
+        #if we arent doing selective action space restriction
+        if(not selectiveActions): 
+            #then just get the max 
+            actionOutput = fullActionOutput.argmax().item()
+            satIndToForwardTo = indexableSats[actionOutput].adjMatPersonalIndex
+
+        else:
+            #then, get the argsort for the policy net output
+            actionPreferenceList = torch.argsort(fullActionOutput, descending=True)
+
+            #after getting the actionPreferenceList, then....convert the actionPreferenceList into 
+            #satelliteInds to send to 
+            indexableSats = sorted(self.satellite.connectedToPlayers)
+            satPreferenceList = [indexableSats[idx] for idx in actionPreferenceList]
+            satIndexPreferenceList = [sat.adjMatPersonalIndex for sat in satPreferenceList]
+
+            #after getting the preference list, then get the nodes we cant send to 
+            nodesToNotSendTo = packet.playersInvolvedInSending
+
+            #then, get the first item in satPreferenceList that doesnt appear in nodesToNotSendTo
+            satIndToForwardTo = next(item for item in satIndexPreferenceList if item not in nodesToNotSendTo)            
+
+        
+    #create function for selecting action based on state 
+    def select_action(self, 
+                      packet,
+                      explorationType = "eps",
+                      selectiveActions = False):
+        """
+        
+        Function to: 
+        1. get and format state 
+        2. get an action based on that state
+        3. update the target network 
+
+        Kind of convoluted, because at different times we need to index by adjacency matrix
+        in 2d format, vs 1d for the network input
+
+        Inputs:
+        packet: meta data on packet 
+        selectiveActions: do we restrict our action space based on what the packet has seen?
+        
+        Outputs: 
+        action: what satellite to route the packet towards 
+
+        """
+        
+        #get the state stuff 
+        adjMatrixState, overallState = self.getOverallState()
+
+        #first, get the fullActionOutput
+        if(explorationType == "eps"):
+            #use epsilon-greedy exploration
+            sample = random.random()
+            eps_threshold = self.EPS_END + (self.EPS_START - self.EPS_END) * \
+                math.exp(-1. * self.steps_done / self.EPS_DECAY)
+            self.steps_done+=1
+
+            #then, if we are using our policy 
+            if sample > eps_threshold:
+                with torch.no_grad():
+                    #first, get the policy net output
+                    fullActionOutput = self.policy_net(overallState)
+            else: 
+                #generate a random policy net output
+                fullActionOutput = torch.rand(self.policy_net.n_actions)
+        else: 
+            raise Exception("This exploration type hasnt been implemented.")
+
+        #get the indexable version of the satellites we are connected to
         indexableSats = sorted(self.satellite.connectedToPlayers)
-        satIndToForwardTo = indexableSats[actionOutput].adjMatPersonalIndex
+
+        #if we arent doing selective action space restriction
+        if(not selectiveActions): 
+            #then just get the max 
+            actionOutput = fullActionOutput.argmax().item()
+            satIndToForwardTo = indexableSats[actionOutput].adjMatPersonalIndex
+
+        else:
+            #then, get the argsort for the policy net output
+            actionPreferenceList = torch.argsort(fullActionOutput, descending=True)
+
+            #so then, get the satellites in the order that we prefer them 
+            satPreferenceList = [indexableSats[idx] for idx in actionPreferenceList]
+
+            #then, get the adjMatIndices for each 
+            satIndexPreferenceList = [sat.adjMatPersonalIndex for sat in satPreferenceList]
+
+            #after getting the preference list, then get the nodes we cant send to 
+            nodesToNotSendTo = packet.playersInvolvedInSending
+
+            #then, get the first item in satPreferenceList that doesnt appear in nodesToNotSendTo
+            satIndToForwardTo, index = next((item, idx) for idx, item in enumerate(satIndexPreferenceList) if item not in nodesToNotSendTo)
+
+            #then, use the index to get the "actionOutput"
+            #actionOutput is the corresponding action value for the first viable action
+            # 
+            # so index = the index of the argsorted actionPreferenceList and satInds that is viable and maximized
+            # actionPreferenceList[index] = the index of the max viable action value 
+            # fullActionOutput[^] = action value corresponding to the chosen action 
+            # phew  
+            actionOutput = fullActionOutput[actionPreferenceList[index]]
 
         #create predicted state (simple for now)
         #to create the predicted state, get the timing for processing a packet    
@@ -305,18 +421,15 @@ class DQNAgentRouting:
 
         #if we are doing centralized training
         else: 
-
+            
             #then just send experience to central network
             self.trainingManager.storeExperience([self.satellite.adjMatPersonalIndex,
                                                 packet.packetIndex,
                                                 overallState,
                                                 predictedState])
                 
-
-
             #there is no optimize method here, as thats done in the central node training
             
-
         #target networks != incompatible with centralized training 
         #afterwards, update the target network
         #so get the dictionaries 

@@ -1,4 +1,43 @@
+        #if we are doing iterative action space restriction, 
+        if(True): 
+            #then, if we are using our policy 
+            if sample > eps_threshold:
+                with torch.no_grad():
+                    #first, get the policy net output
+                    actionOutput = self.policy_net(overallState)
 
+            #if we are not using our policy
+            else: 
+                #generate a random policy net output
+                fullActionOutput = torch.rand(self.policy_net.n_actions)
+
+            #then, get the argsort for the policy net output
+            actionPreferenceList = torch.argsort(fullActionOutput, descending=True)
+
+            #after getting the actionPreferenceList, then....convert the actionPreferenceList into 
+            #satelliteInds to send to 
+            indexableSats = sorted(self.satellite.connectedToPlayers)
+            satPreferenceList = [indexableSats[idx] for idx in actionPreferenceList]
+            satIndexPreferenceList = [sat.adjMatPersonalIndex for sat in satPreferenceList]
+
+            #after getting the preference list, then get the nodes we cant send to 
+            nodesToNotSendTo = packet.playersInvolvedInSending
+
+            #then, get the first item in satPreferenceList that doesnt appear in nodesToNotSendTo
+            satIndToForwardTo = next(item for item in satIndexPreferenceList if item not in nodesToNotSendTo)
+
+        if sample > eps_threshold:
+            with torch.no_grad():
+                #so, get the policy net output
+                actionOutput = self.policy_net(overallState).argmax().item()
+        
+        else: 
+            actionOutput = np.random.randint(self.policy_net.n_actions)
+
+        #then, convert it to viable satellite ind 
+        #we need to do this because indexableSats != connectedToPlayers
+        indexableSats = sorted(self.satellite.connectedToPlayers)
+        satIndToForwardTo = indexableSats[actionOutput].adjMatPersonalIndex
             # #so, take the packet and for the path used
             # for satUsed in packet.playersInvolvedInSending:
             #     #get the process time 

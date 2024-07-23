@@ -1,21 +1,10 @@
-#what am i doing? 
 import numpy as np 
-import torch
 
-def func(nums):
+arr1 = np.arange(10)+100
+arr2 = np.arange(10)+105
 
-    sum = 0
-    for num in nums: 
-        sum+=num
-    return sum 
+firstDiff, indexOfFirstDiff = next((item, idx) for idx, item in enumerate(arr2) if item not in arr1)
 
-data = np.arange(10)
-
-class Processor:
-    def __init__(self):
-        self.mixer = torch.sum
-
-
-processor = Processor() 
-
-print(processor.mixer(torch.from_numpy(data)))
+print("Hehe")
+print(firstDiff)
+print(indexOfFirstDiff)

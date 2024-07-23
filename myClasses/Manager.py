@@ -661,6 +661,14 @@ class Manager():
             self.qMixerAgent.startExperience(packet, self.generateDeepAdjMatWithQueues())        
 
     def propagatePropDelay(self, packet): 
+        """
+        This function propagates the packet delay experience through the network to all relevant players/actors
+        
+        """
+
+        #if there is no path length/no decisions were made, then dont optimize 
+        if(packet.startSat == packet.endSat):
+            return
 
         #if we are doing distributed training 
         if(self.RLTrainingMethod == "distributed"): 

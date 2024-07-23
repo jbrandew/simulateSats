@@ -1,6 +1,6 @@
 ---
 #config file. some parameters are not compatable with others....
-
+#some inherent restrictions exist, like: numberLEO%oprbitalPlanes
 
 #constellation parameters
 #walkerDelta or square  
@@ -31,7 +31,7 @@ topologyPolicy: null
 #eh
 #normal behavior: 100
 #cant be 1d array 
-packetProcessRate: [[150,75,300,75]]
+packetProcessRate: [[100,70,100,30]]
 
 #simulation runtime parameters 
 numPeople: 1
@@ -60,7 +60,7 @@ FPS: 3
 dynamicLocation: False
 #this needs to be None if working with non RL method/decision style
 #can either be centralized or distributed. distributed if single RL agent
-RLTrainingMethod: 'distributed' 
+RLTrainingMethod: 'centralized' 
 #could add the server processing time & amount here 
 
 
