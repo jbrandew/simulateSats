@@ -113,6 +113,11 @@ for i_episode in range(num_episodes):
     #get latency each time 
     holdLatencyTimes = simmer.executeGeneralSimulation(**simulationArgs)
 
+    actions = simmer.manager.sats[0,0].agent.epsActions
+    toPrint = np.unique(actions, return_counts=True) 
+
+    print(toPrint)
+
     #reset the state of the simulator
     simmer.resetWorldState()
 

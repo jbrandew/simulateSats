@@ -447,7 +447,7 @@ class Simulator():
                 #then push the events 
                 eventQueue.push(queueEvent)
 
-        numBroadcasts = 20
+        numBroadcasts = 200
         for broadcastAdjMatInd in range(numBroadcasts): 
             #so create time and events 
             updateTime = fullyFlushedNetworkETA*broadcastAdjMatInd/numBroadcasts

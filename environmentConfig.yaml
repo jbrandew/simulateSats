@@ -31,12 +31,12 @@ topologyPolicy: null
 #eh
 #normal behavior: 100
 #cant be 1d array 
-packetProcessRate: [[100,70,100,30]]
+packetProcessRate: [[100,90,100,10]]
 
 #simulation runtime parameters 
 numPeople: 1
 numPacketsPerPerson: 500
-packetSendTimeFrame: 5
+packetSendTimeFrame: 50
 #PseudoUniform, SingleFar, simpleForSingleRL
 #cant use single far with multiple people 
 personDistribution: 'simpleForSingleRL'

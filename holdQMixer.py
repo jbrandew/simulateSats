@@ -139,16 +139,19 @@ class DQNAgentRouting:
         #setup hyperparameters; used for training 
         self.BATCH_SIZE = 128
         self.GAMMA = 0.99
+        
         self.EPS_START = 0.9
+        
         #used to be .05 
-        #so regardless of poliy we learned, we always go random at least 5% of the time. 
-        self.EPS_END = 0.05
+        #so regardless of policy we learned, we always go random at least 5% of the time. 
+        self.EPS_END = 0.3
         #lower "decay" value actually increases rate we go to the "eps_end" value 
-        self.EPS_DECAY = 10000
+        self.EPS_DECAY = 20000
+        
         #used to be .005
         #make Tau = 1 to disable target network concept 
-        self.TAU = 1
-        self.LR = 1e-4
+        self.TAU = 0.1
+        self.LR = 1e-3
 
         self.discountFactor = 0.95
 
@@ -192,10 +195,7 @@ class DQNAgentRouting:
         self.epsLoss = []
         self.epsActions = []
 
-        self.crossPerformance = []
-
-    def resetData(self):
-
+    def resetData(self): 
         #then reset the episode rewards for the agent
         self.epsRewards = []
         self.epsLoss = []
@@ -256,12 +256,7 @@ class DQNAgentRouting:
         overallState = torch.from_numpy(adjMatrixState[adjMatrixState != np.inf])
 
         return adjMatrixState, overallState
-
-        
-    def getEpsThreshold(self):
-        return self.EPS_END + (self.EPS_START - self.EPS_END) * \
-                math.exp(-1. * self.steps_done / self.EPS_DECAY)
-
+           
     #create function for selecting action based on state 
     def select_action(self, 
                       packet,
@@ -293,7 +288,8 @@ class DQNAgentRouting:
         if(explorationType == "eps"):
             #use epsilon-greedy exploration
             sample = random.random()
-            eps_threshold = self.getEpsThreshold() 
+            eps_threshold = self.EPS_END + (self.EPS_START - self.EPS_END) * \
+                math.exp(-1. * self.steps_done / self.EPS_DECAY)
             self.steps_done+=1
 
             #then, if we are using our policy 
@@ -330,22 +326,19 @@ class DQNAgentRouting:
             nodesToNotSendTo = packet.playersInvolvedInSending
 
             #then, get the first item in satPreferenceList that doesnt appear in nodesToNotSendTo
-            try: 
-                satIndToForwardTo, index = next((item, idx) for idx, item in enumerate(satIndexPreferenceList) if item not in nodesToNotSendTo)
-            #if there are none present (like in a 2ISL case), then get the first viable edge and use that
-            except StopIteration: 
-                satIndToForwardTo, index = next((item, idx) for idx, item in enumerate(satIndexPreferenceList) if item in nodesToNotSendTo)
+            satIndToForwardTo, index = next((item, idx) for idx, item in enumerate(satIndexPreferenceList) if item not in nodesToNotSendTo)
 
             #then, use the index to get the "actionOutput"
             #actionOutput is the corresponding action value for the first viable action
             # 
             # so index = the index of the argsorted actionPreferenceList and satInds that is viable and maximized
             # actionPreferenceList[index] = the index of the max viable action value 
+            # fullActionOutput[^] = action value corresponding to the chosen action 
             # phew  
             actionOutput = actionPreferenceList[index]
 
         #create predicted state (simple for now)
-        #to create the predicted state, get the timing for processing a packet    
+        #to create the predicted state, get the timing for processing a packet     
         timeToProcess = indexableSats[actionOutput].generateProcessingOnePacketTime() 
 
         #then, increase the associated queueLength state 
@@ -404,8 +397,6 @@ class DQNAgentRouting:
         #this only works with experiences that have their reward
         #so, read in a value from the buffer: 
 
-        smallBatchSize = 2
-
         #small batch size seems better in general 
         # 2 gave better performance....
         #im not sure why that is. maybe coupling samples in training introduces temporal dependence, which in this case might
@@ -413,10 +404,10 @@ class DQNAgentRouting:
 
         #this is useful: torch.cat(batch.state).shape[0]
 
-        if len( self.fullExperienceMemory ) < smallBatchSize:
+        if len( self.fullExperienceMemory ) < self.BATCH_SIZE:
             return
         
-        transitions = self.fullExperienceMemory.sample(smallBatchSize)
+        transitions = self.fullExperienceMemory.sample(self.BATCH_SIZE)
 
         # Transpose the batch (see https://stackoverflow.com/a/19343/3343043 for
         # detailed explanation). This converts batch-array of Transitions
@@ -432,18 +423,17 @@ class DQNAgentRouting:
 
         #reshape the state and next state 
         #first get numElementsPerSet 
-        numElementsPerSet = int(state_batch.size()[0] / smallBatchSize)
+        numElementsPerSet = int(state_batch.size()[0] / self.BATCH_SIZE)
         
         #then, reshape 
-        state_batch = state_batch.reshape([smallBatchSize, numElementsPerSet])
-        next_state_batch = next_state_batch.reshape([smallBatchSize, numElementsPerSet])
+        state_batch = state_batch.reshape([self.BATCH_SIZE, numElementsPerSet])
+        next_state_batch = next_state_batch.reshape([self.BATCH_SIZE, numElementsPerSet])
 
         #reward is generated as the inverse of the propagation delay 
         reward_batch = torch.tensor([1/i for i in batch.propDelay])
 
         #store the reward for that batch 
         self.epsRewards = self.epsRewards + [np.average(reward_batch)]
-        #self.epsPerformance = self.epsPerformance + [np.average(batch.propDelay)]
 
         #then, get the current state values
         #use the action that we actually executed beforehand

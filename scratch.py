@@ -1,4 +1,65 @@
-        #if we are doing iterative action space restriction, 
+
+    def getAction(self,
+                  overallState,
+                  packet,
+                  explorationType = "eps",
+                  selectiveActions = True):
+        """
+        This function gets the action. First, it uses a specific exploration type. 
+        Then, it uses the proper action space restriction to generate an action that 
+        it can end up using. 
+
+        Inputs:
+        overallState: state of network, probably including qing delay
+        packet: packet we are sending. used in "restrictive action space" stuff
+        explorationType: how we are exploring things. Default is epsilon greedy.
+        selectiveActions: do we restrict our action space based on the packet's history? 
+
+        Output: 
+        satIndToForwardTo: which satellite we are forwarding to. 
+        
+        """
+        
+        #first, get the fullActionOutput
+        if(explorationType == "eps"):
+            #use epsilon-greedy exploration
+            sample = random.random()
+            eps_threshold = self.EPS_END + (self.EPS_START - self.EPS_END) * \
+                math.exp(-1. * self.steps_done / self.EPS_DECAY)
+            self.steps_done+=1
+
+            #then, if we are using our policy 
+            if sample > eps_threshold:
+                with torch.no_grad():
+                    #first, get the policy net output
+                    fullActionOutput = self.policy_net(overallState)
+            else: 
+                #generate a random policy net output
+                fullActionOutput = torch.rand(self.policy_net.n_actions)
+        else: 
+            raise Exception("This exploration type hasnt been implemented.")
+
+        #if we arent doing selective action space restriction
+        if(not selectiveActions): 
+            #then just get the max 
+            actionOutput = fullActionOutput.argmax().item()
+            satIndToForwardTo = indexableSats[actionOutput].adjMatPersonalIndex
+
+        else:
+            #then, get the argsort for the policy net output
+            actionPreferenceList = torch.argsort(fullActionOutput, descending=True)
+
+            #after getting the actionPreferenceList, then....convert the actionPreferenceList into 
+            #satelliteInds to send to 
+            indexableSats = sorted(self.satellite.connectedToPlayers)
+            satPreferenceList = [indexableSats[idx] for idx in actionPreferenceList]
+            satIndexPreferenceList = [sat.adjMatPersonalIndex for sat in satPreferenceList]
+
+            #after getting the preference list, then get the nodes we cant send to 
+            nodesToNotSendTo = packet.playersInvolvedInSending
+
+            #then, get the first item in satPreferenceList that doesnt appear in nodesToNotSendTo
+            satIndToForwardTo = next(item for item in satIndexPreferenceList if item not in nodesToNotSendTo)         #if we are doing iterative action space restriction, 
         if(True): 
             #then, if we are using our policy 
             if sample > eps_threshold:
