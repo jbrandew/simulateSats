@@ -181,8 +181,8 @@ class GraphicsView:
 
         #get figure and axes to use for all this 
         if(self.fig==[]): 
-           self.fig = plt.figure()
-           self.ax = self.fig.add_subplot(111, projection='3d')
+           self.fig = plt.figure(figsize=(20, 20))
+           self.ax = self.fig.add_subplot(111, projection='3d',figsize=(20, 20))
         
         # Set axis limits
         self.ax.set_xlim([-axisLimit, axisLimit])  # Adjust the limits for the X-axis

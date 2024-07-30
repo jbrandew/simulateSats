@@ -448,7 +448,7 @@ class QMixerAgent(nn.Module):
         super(QMixerAgent, self).__init__()
 
         #setup hyperparameters for training 
-        self.BATCH_SIZE = 2
+        self.BATCH_SIZE = 64
 
         #self.GAMMA = 0.99
         #self.EPS_START = 0.9
@@ -468,6 +468,8 @@ class QMixerAgent(nn.Module):
         self.epsRewards = [] 
         self.epsLoss = []
         self.epsPathLengths = [] 
+
+        self.epsPerformance = [] 
 
     def resetData(self, displayData):
         
@@ -510,8 +512,8 @@ class QMixerAgent(nn.Module):
         self.sats = sats
 
         #create experience buffer pair 
-        #max size of buffer is 5000
-        self.memory = CentralizedReplayMemory(5000) 
+        #max size of buffer is batch size for now (just use fresh data)
+        self.memory = CentralizedReplayMemory(self.BATCH_SIZE) 
 
         #create network to evaluate the joint action set's value  
         self.jointActionValueNetwork = JointActionValueNetwork(self.sats)        
@@ -563,7 +565,6 @@ class QMixerAgent(nn.Module):
                                                                                   "final",
                                                                                   False)
 
-        
         #so get the packet delay, and then add a dimension 
         batchPacketDelay = torch.tensor([subExperience.packetDelay for subExperience in experienceBatch]).unsqueeze(1)
 
@@ -575,12 +576,24 @@ class QMixerAgent(nn.Module):
         #please note, that reward here = 1/packetDelay for the experience 
         #also, possibly normalizing reward based on previous delay 
         
-        jointActionValueTarget = jointActionValueNext + (self.discountFactor/batchPacketDelay)
+        #normalize reward based on sliding window
+        #so, if we have more than 5
 
-        #if(len(self.epsRewards) > 0 ): 
-        #    jointActionValueTarget = jointActionValueNext + (self.discountFactor/batchPacketDelay)*np.average(self.epsRewards)
-        #else:     
-        #    jointActionValueTarget = jointActionValueNext + (self.discountFactor/batchPacketDelay)
+        # if( len(self.epsPerformance) > 5): 
+        #     #then, first get the average across batches 
+        #     batchAvg = torch.mean(batchPacketDelay[-5:], dim = 1, keepdim= True)
+            
+        #     #then, get reward based on this 
+        #     jointActionValueTarget = self.discountFactor * jointActionValueNext +  batchAvg / batchPacketDelay 
+
+        # else: 
+
+            #if we dont have enough batches, do it normally 
+            
+        jointActionValueTarget = self.discountFactor * jointActionValueNext + (self.discountFactor/batchPacketDelay)
+
+        #so, then store into performance 
+        self.epsPerformance.append(batchPacketDelay)
 
         #then, compute the loss based on this joint target
         #TODO: consider other loss functions 
@@ -593,7 +606,7 @@ class QMixerAgent(nn.Module):
         loss.backward() 
 
         #then, clip the gradients to prevent exploding gradients 
-        #nn.utils.clip_grad_norm_(self.parameters(), max_norm=0.01)  # Adjust max_norm as needed
+        nn.utils.clip_grad_norm_(self.parameters(), max_norm=0.01)  # Adjust max_norm as needed
 
         #then, have the optimizer step in the next direction 
         self.optimizer.step() 

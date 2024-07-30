@@ -34,6 +34,14 @@ import math
 Transition = namedtuple('Transition',
                         ('state', 'action', 'next_state', 'propDelay'))
 
+# class Transition:
+#     def __init__(self, state, action, next_state, propDelay):
+#         self.state = state
+#         self.action = action
+#         self.next_state = next_state
+#         self.propDelay = propDelay
+
+
 #create replay object 
 class ReplayMemory(object):
 
@@ -48,14 +56,13 @@ class ReplayMemory(object):
 
     #randomly sample from our past memory for an amount = batch size 
     #sample without replacement, but doesnt actually remove from the buffer/sampling 
-    def sample(self, batch_size):
-        return random.sample(self.memory, batch_size)
+    def sample(self, numSamples):
+        return random.sample(self.memory, numSamples)
 
     #get the length of the buffer. not sure if this is calculated every time 
     def __len__(self):
         return len(self.memory)
     
-
 #create DQN network 
 class DQN(nn.Module):
     """
@@ -138,19 +145,17 @@ class DQNAgentRouting:
 
         #setup hyperparameters; used for training 
         self.BATCH_SIZE = 128
-        self.GAMMA = 0.99
+        self.GAMMA = 0.9
         self.EPS_START = 0.9
         #used to be .05 
         #so regardless of poliy we learned, we always go random at least 5% of the time. 
-        self.EPS_END = 0.05
+        self.EPS_END = 0.15
         #lower "decay" value actually increases rate we go to the "eps_end" value 
         self.EPS_DECAY = 10000
         #used to be .005
         #make Tau = 1 to disable target network concept 
-        self.TAU = 1
-        self.LR = 1e-4
-
-        self.discountFactor = 0.95
+        self.TAU = 0.9
+        self.LR = 1e-3
 
         #initialize the # of steps we have completed 
         self.steps_done = 0 
@@ -336,12 +341,7 @@ class DQNAgentRouting:
             except StopIteration: 
                 satIndToForwardTo, index = next((item, idx) for idx, item in enumerate(satIndexPreferenceList) if item in nodesToNotSendTo)
 
-            #then, use the index to get the "actionOutput"
-            #actionOutput is the corresponding action value for the first viable action
-            # 
-            # so index = the index of the argsorted actionPreferenceList and satInds that is viable and maximized
-            # actionPreferenceList[index] = the index of the max viable action value 
-            # phew  
+            #then, get the action output for the chosen index 
             actionOutput = actionPreferenceList[index]
 
         #create predicted state (simple for now)
@@ -404,8 +404,6 @@ class DQNAgentRouting:
         #this only works with experiences that have their reward
         #so, read in a value from the buffer: 
 
-        smallBatchSize = 2
-
         #small batch size seems better in general 
         # 2 gave better performance....
         #im not sure why that is. maybe coupling samples in training introduces temporal dependence, which in this case might
@@ -413,10 +411,13 @@ class DQNAgentRouting:
 
         #this is useful: torch.cat(batch.state).shape[0]
 
-        if len( self.fullExperienceMemory ) < smallBatchSize:
+        if len( self.fullExperienceMemory ) < self.BATCH_SIZE:
             return
         
-        transitions = self.fullExperienceMemory.sample(smallBatchSize)
+        transitions = self.fullExperienceMemory.sample(self.BATCH_SIZE)
+
+        #for transition in transitions:
+        #    self.fullExperienceMemory.remove(transition) 
 
         # Transpose the batch (see https://stackoverflow.com/a/19343/3343043 for
         # detailed explanation). This converts batch-array of Transitions
@@ -432,11 +433,11 @@ class DQNAgentRouting:
 
         #reshape the state and next state 
         #first get numElementsPerSet 
-        numElementsPerSet = int(state_batch.size()[0] / smallBatchSize)
+        numElementsPerSet = int(state_batch.size()[0] / self.BATCH_SIZE)
         
         #then, reshape 
-        state_batch = state_batch.reshape([smallBatchSize, numElementsPerSet])
-        next_state_batch = next_state_batch.reshape([smallBatchSize, numElementsPerSet])
+        state_batch = state_batch.reshape([self.BATCH_SIZE, numElementsPerSet])
+        next_state_batch = next_state_batch.reshape([self.BATCH_SIZE, numElementsPerSet])
 
         #reward is generated as the inverse of the propagation delay 
         reward_batch = torch.tensor([1/i for i in batch.propDelay])
@@ -452,8 +453,6 @@ class DQNAgentRouting:
         #we do this with gradients, because we will optimize with them in a second 
         state_action_values = self.policy_net(state_batch).gather(1,action_batch.unsqueeze(1))
 
-        #.gather(1, action_batch), either use the action for indexing, or just index by action
-
         #get the next state values 
         #should be a list here...
         #will need to make modifications for the approach when i use batching instead of single values
@@ -461,7 +460,8 @@ class DQNAgentRouting:
             next_state_values = self.target_net(next_state_batch).max(1).values
 
         #then get the values for next state actions using the reward  
-        target_state_action_values = (next_state_values * self.GAMMA) + self.discountFactor * reward_batch
+        #gamm
+        target_state_action_values = (next_state_values * self.GAMMA) + reward_batch
 
         # Compute Huber loss
         criterion = nn.SmoothL1Loss()

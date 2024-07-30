@@ -4,9 +4,9 @@
 
 #constellation parameters
 #walkerDelta or square  
-LEOConstellation: 'square'
+LEOConstellation: 'walkerDelta'
 NumberLEOSatellites: 360
-OrbitalPlanes: 20
+OrbitalPlanes: 5
 Inclination: 80 
 phasingParameter: 5
 orbitAltitudeLEO: 1000000
@@ -22,16 +22,16 @@ SunLocation: [149.6e+6, 0, 0]
 
 #topology and routing polocy / satellite info
 #either basicSquare or IPO
-initialTopology: 'basicSquare'
+initialTopology: 'IPO'
 #possible values: 
 #OSPF, basic, mixedSingleAgentRLRestOSPF, RL
-routingPolicy: 'RL'
+routingPolicy: 'OSPF'
 topologyPolicy: null
 #RL training: [[100,70,100,30]]
 #eh
 #normal behavior: 100
 #cant be 1d array 
-packetProcessRate: [[100,90,100,10]]
+packetProcessRate: 100 #[[100,90,100,10]]
 
 #simulation runtime parameters 
 numPeople: 1
@@ -60,7 +60,7 @@ FPS: 3
 dynamicLocation: False
 #this needs to be None if working with non RL method/decision style
 #can either be centralized or distributed. distributed if single RL agent
-RLTrainingMethod: 'distributed' 
+RLTrainingMethod: 'None' 
 #could add the server processing time & amount here 
 
 

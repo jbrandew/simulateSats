@@ -97,10 +97,15 @@ visualizerArgs = {
 }
 
 #set up RL config: 
-num_episodes = 300
+num_episodes = 100
 
 #get simulator object 
 simmer = Simulator.Simulator(managerData)
+
+#plt.figure(figsize=(12, 8))
+#simmer.plotCurrentState() 
+  # width, height in inches
+#plt.show()
 #hold = simmer.simulateWithVisualizer(simulationArgs, visualizerArgs)
 
 #iterate through episodes  
@@ -115,7 +120,6 @@ for i_episode in range(num_episodes):
 
     actions = simmer.manager.sats[0,0].agent.epsActions
     toPrint = np.unique(actions, return_counts=True) 
-
     print(toPrint)
 
     #reset the state of the simulator
@@ -128,8 +132,24 @@ for i_episode in range(num_episodes):
     print("Episode # ")
     print(i_episode)
 
+
+# plt.clf() 
+# plt.plot(holdLatencyTimes)
+# plt.xlabel("Packet Index", fontsize = 30)
+# plt.ylabel("Latency", fontsize = 30)
+# plt.title("OSPF Small Constellation", fontsize = 35)
+
+# plt.xticks(fontsize = 20)
+# plt.yticks(fontsize = 20)
+
+# plt.ylim(0.00,4)
+
+
+# plt.show()
+
+
 #make the one RL agent plot its training info 
-simmer.manager.sats[0,0].agent.plotTrainingInfo() 
+#simmer.manager.sats[0,0].agent.plotTrainingInfo() 
 
 
 #enact simulation 
