@@ -122,9 +122,33 @@ class Player:
             self.QFinishTimes = np.zeros(numberPlayers)
             self.QFinishTimeStamps = np.zeros(numberPlayers)
 
+            #create storage for distances to other players 
+            self.distToOthers = np.zeros(numberPlayers)
+
             #create agent for RL routing 
-            self.agent = RoutingRL.DQNAgentRouting(self, trainingPolicy, trainingManager)
+            #last param is for the reward type creation 
+            #use the length of the adj matrix for the agent creation 
+            self.agent = RoutingRL.DQNAgentRouting(self, 
+                                                   trainingPolicy, 
+                                                   trainingManager, 
+                                                   "immediate",
+                                                   len(self.adjMatrix))
              
+    def getTimeDistanceDiff(self, newConnectedSatInd, endDestination):
+        """
+        This function gets the decrease in distance going from this satellite to the newSatInd, with the 
+        endDestination. 
+
+        newConnectedSatInd: sat ind we are forwarding packets towards, indexed across 
+        the satellites that we are currently connected to
+        endDestination: where the packet will end up going towards 
+        """ 
+
+        #return the decrease in distance you get from this hop 
+        #use sorted to make the set indexable 
+        #please note, endDestination isnt using the same reference as newConnectedSatInd 
+        return self.distToOthers[endDestination] - sorted(self.connectedToPlayers)[newConnectedSatInd].distToOthers[endDestination]
+
     def resetWorldState(self, displayStats = True):
         """
         Reset known view of the world. 
@@ -252,6 +276,11 @@ class Player:
         self.connectedToPlayers = set() 
 
     def updateUsingPersonalInfo(self, time): 
+        """
+        This function is for updating the time stamps for data within. 
+        That is, updating how "fresh" we see our worldview as 
+        """
+
         #update personal timing information for edges and QLengths
         self.adjMatrixTimeStamps[self.adjMatPersonalIndex] = time 
         
@@ -285,15 +314,26 @@ class Player:
 
     def updateRoutingTable(self): 
         """
+        If doing OSPF, then: 
         This method builds an MST across the entire network using our personal adjacency matrix 
         Only stores the next hop of each, as thats all thats used
         That is, if we want to go to B from A, what node should i go to next if i am in A? (for all B in tree)
+
+        If doing RL, then: 
+        just update how far we are from the other nodes in our current perspective 
         """
 
         #so, get the next hop table from math function using traffic aware component 
         if(self.routingPolicy == "OSPF"): 
             self.routingTable = myMath.dijkstraWithNodeValuesAllInitialHops(self.adjMatrix, self.adjMatPersonalIndex, self.getQLengths())
         
+        #if we are using RL 
+        #if(self.routingPolicy == "RL"): 
+        #compute our dist to others 
+        self.distToOthers = myMath.dijkstraWithDistances(self.adjMatrix, self.adjMatPersonalIndex, self.getQLengths())
+        
+
+
     def getQLengths(self): 
         #get the normalized Qlengths 
         QLengths = np.maximum(self.QFinishTimes, self.currTime)

@@ -33,10 +33,65 @@ from tensordict import TensorDict
 from tensordict.nn import TensorDictModule
 from torchrl.modules.models.multiagent import QMixer
 
-#transition consists of state, action, next state, reward
-#just a tuple of information 
-Transition = namedtuple('Experience',
-                        ('agentInd', 'actionArray', 'nextActionArray', 'propDelay'))
+
+#create custom network for mixing 
+# Define the SimpleConvNet class
+class SimpleConvNet(nn.Module):
+    def __init__(self, fc_units, inputLength):
+        """
+        Initialize the network.
+        
+        Args:
+        - input_channels (int): Number of input channels.
+        - conv1_out_channels (int): Number of output channels for the first convolutional layer.
+        - conv2_out_channels (int): Number of output channels for the second convolutional layer.
+        - fc_units (int): Number of units in the fully connected layer.
+        - output_size (int): Number of output units.
+        """
+        super(SimpleConvNet, self).__init__()
+        
+        # Define the convolutional layers
+        self.conv1 = nn.Conv1d(in_channels=1, out_channels=3, kernel_size=3, stride=1, padding=1)
+        self.conv2 = nn.Conv1d(in_channels=3, out_channels=3, kernel_size=3, stride=1, padding=1)
+        
+        # Define the fully connected layer
+        # Adjust input size for the fc layer based on the output size of the conv layers
+        self.fc = nn.Linear(3 * inputLength, fc_units)  # Assume input length of 10
+        
+        # Define the output layer
+        self.output = nn.Linear(fc_units, 1)
+    
+    def forward(self, x):
+        """
+        Forward pass through the network.
+        
+        Args:
+        - x (Tensor): Input tensor of shape (batch_size, input_channels, input_length)
+        
+        Returns:
+        - Tensor: Output of the network
+        """
+
+        #first, reshape, as we have an additional component for "channels"
+        x = x.transpose(1,2)
+
+        # Pass through the first convolutional layer
+        x = torch.relu(self.conv1(x))
+        
+        # Pass through the second convolutional layer
+        x = torch.relu(self.conv2(x))
+        
+        # Flatten the tensor for the fully connected layer
+        x = x.view(x.size(0), -1)  # Flatten
+        
+        # Pass through the fully connected layer
+        x = torch.relu(self.fc(x))
+        
+        # Pass through the output layer
+        x = self.output(x)
+        
+        return x
+
 
 #create replay object 
 class CentralizedReplayMemory(object):
@@ -46,7 +101,7 @@ class CentralizedReplayMemory(object):
         def __init__(self,
                      initialGlobalState):
             """
-            This 
+            This is for storing agent experiences for interacting with packets. 
              
             """
             
@@ -234,7 +289,7 @@ class JointActionValueNetwork(nn.Module):
     #just 3 layers, with the input being the observations, and the actions being the output
     def __init__(self, 
                  sats, 
-                 centralTrainingMethod = "VDN"):
+                 centralTrainingMethod = "QMix"):
         """
         Create network that combines data outputs from multiple sub agents. 
 
@@ -264,7 +319,7 @@ class JointActionValueNetwork(nn.Module):
 
             self.mixer = TensorDictModule(
                 module=QMixer(
-                    state_shape=(55,),
+                    state_shape=(116,),
                     mixing_embed_dim=32,
                     n_agents=len(self.sats),
                     device="cpu",
@@ -278,6 +333,14 @@ class JointActionValueNetwork(nn.Module):
             self.dataFormatter = self.VDNFormatter
 
             self.mixer = self.VDNMixer
+
+        if(centralTrainingMethod == "customMixer"):
+
+            self.dataFormatter = self.VDNFormatter
+
+            self.mixer = SimpleConvNet(20, len(self.sats))
+
+            #self.mixer = self.mixerNetwork
 
     def resetData(self):
         #for each subAgent  
@@ -434,7 +497,7 @@ class JointActionValueNetwork(nn.Module):
 
         return mixerOutput
     
-class QMixerAgent(nn.Module): 
+class CentralizedTrainer(nn.Module): 
     """
     This class is used for centralized training of sub agents 
     """
@@ -445,22 +508,10 @@ class QMixerAgent(nn.Module):
         """
 
         #initialize network 
-        super(QMixerAgent, self).__init__()
+        super(CentralizedTrainer, self).__init__()
 
         #setup hyperparameters for training 
-        self.BATCH_SIZE = 64
-
-        #self.GAMMA = 0.99
-        #self.EPS_START = 0.9
-        #self.EPS_END = 0.05
-        #lower "decay" value actually increases rate we go to the "eps_end" value. might be total # steps required to get to min
-        ##need a very high amount for MARL as the # total experiences per agent in the total # episodes may go down
-        #self.EPS_DECAY = 100000
-        #used to be .005
-        #make Tau = 1 to disable target network concept 
-        #tau not used with this stuff 
-        #self.TAU = 0.1
-        
+        self.BATCH_SIZE = 5
         self.LR = 1e-3
         self.discountFactor = 0.95
 
@@ -576,21 +627,23 @@ class QMixerAgent(nn.Module):
         #please note, that reward here = 1/packetDelay for the experience 
         #also, possibly normalizing reward based on previous delay 
         
+        #this method messes with convergence. gives uber low loss really fast. 
+
         #normalize reward based on sliding window
         #so, if we have more than 5
 
         # if( len(self.epsPerformance) > 5): 
+        #     #pdb.set_trace() 
         #     #then, first get the average across batches 
-        #     batchAvg = torch.mean(batchPacketDelay[-5:], dim = 1, keepdim= True)
+        #     prevAvg = np.average(self.epsPerformance[-5:] , axis = 0)
             
         #     #then, get reward based on this 
-        #     jointActionValueTarget = self.discountFactor * jointActionValueNext +  batchAvg / batchPacketDelay 
+        #     jointActionValueTarget = self.discountFactor * jointActionValueNext +  prevAvg / batchPacketDelay 
 
         # else: 
-
             #if we dont have enough batches, do it normally 
-            
-        jointActionValueTarget = self.discountFactor * jointActionValueNext + (self.discountFactor/batchPacketDelay)
+        
+        jointActionValueTarget = self.discountFactor * jointActionValueNext + (1/batchPacketDelay)
 
         #so, then store into performance 
         self.epsPerformance.append(batchPacketDelay)

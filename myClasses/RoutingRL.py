@@ -32,7 +32,7 @@ import math
 #transition consists of state, action, next state, reward
 #just a tuple of information 
 Transition = namedtuple('Transition',
-                        ('state', 'action', 'next_state', 'propDelay'))
+                        ('dest','state', 'action', 'next_state', 'reward'))
 
 # class Transition:
 #     def __init__(self, state, action, next_state, propDelay):
@@ -70,13 +70,27 @@ class DQN(nn.Module):
     """
     #create the initial DQN network
     #just 3 layers, with the input being the observations, and the actions being the output
-    def __init__(self, n_observations, n_actions, networkType = "RNN"):
+    def __init__(self, 
+                 n_observations, 
+                 n_actions, 
+                 networkType = "RNN",
+                 numEmbeddings = None):
+        """
+        DQN initialization 
+
+        n_observations: how many observations do we see (non inf values in adj matrix)
+        n_actions: how many different actions can we take 
+        networkType: what architecture are we using 
+        numEmbeddings: how many different embeddings we can have. here, its just the # of satellites in our grid 
+        """
+
         #initialize network 
         super(DQN, self).__init__()
 
         self.n_actions = n_actions
         self.n_observations = n_observations
         self.networkType = networkType
+        self.numEmbeddings = numEmbeddings
 
         if(networkType == "FF"): 
             self.initializeBasicFFNetwork() 
@@ -84,20 +98,28 @@ class DQN(nn.Module):
         if(networkType == "RNN"): 
             self.initializeRNNNetwork()
 
+        if(networkType == "EmbedRNN"): 
+            self.initializeEmbedRNNNetwork()
+
     # Called with either one element to determine next action, or a batch
     # during optimization. Returns tensor([[left0exp,right0exp]...]).
 
     #forward pass through the network, using the basic input 
-    def forward(self, x):
+    def forward(self, x, dest = None):
+        """
+        x: adj mat
+        dest: packet destination
 
-        #convert to proper data type 
+        """
+
+        #convert to proper data type for each input  
         x = x.to(torch.float32)
 
         if(self.networkType == "FF"):
             x = F.relu(self.layer1(x.unsqueeze(0)))
             x = F.relu(self.layer2(x))
             #reduce dimensionality
-            return self.layer3(x)[0]
+            return self.layer3(x)
 
         if(self.networkType == "RNN"): 
             #pass through RNN, formatting dimensionality and only taking one of the outputs 
@@ -107,9 +129,29 @@ class DQN(nn.Module):
             #forward again 
             #x = F.relu(self.layer3(x))
             #reduce dimensionality 
-            return self.layer3(x)[0]
+            return self.layer3(x)
         
-    
+        if(self.networkType == "EmbedRNN"):
+
+            #format data
+            dest = torch.tensor(dest)
+            
+            #get embedding of destination 
+            embedded = self.embeddingLayer(dest)
+
+            #get adj mat processed 
+            adjMatProc = F.relu(self.layer1(x.unsqueeze(0))[0])
+
+            #get the combined version data output 
+            #concat along dimension thats dependent on if we are batched or not 
+            x = torch.cat([embedded, adjMatProc], dim= adjMatProc.dim() - 1)
+
+            #then, input to next layer 
+            x = F.relu(self.layer2(x))
+
+            #then get output 
+            return self.layer3(x)
+        
     def initializeBasicFFNetwork(self): 
         #create layers 
         self.layer1 = nn.Linear(self.n_observations, 32)
@@ -119,22 +161,46 @@ class DQN(nn.Module):
     def initializeRNNNetwork(self): 
         
         #set up one RNN layer 
-        self.layer1 = nn.RNN(self.n_observations, 5, 6)
+        self.layer1 = nn.RNN(self.n_observations, 5, 3)
+
         #then, set up feed forward layers
-        self.layer2 = nn.Linear(5, 32)
-        self.layer3 = nn.Linear(32, self.n_actions)
+        self.layer2 = nn.Linear(5, 16)
+        self.layer3 = nn.Linear(16, self.n_actions)
+
+    def initializeEmbedRNNNetwork(self):
+        #first, create an embedding layer for the input data involving the destination of the packet 
+        self.embeddingLayer = nn.Embedding(num_embeddings=self.numEmbeddings, embedding_dim=10)
+
+        #then, create a linear layer for spatial relationships
+        self.layer1 = nn.Linear(self.n_observations, 16)
+
+        #then, create a linear layer for combining them  
+        self.layer2 = nn.Linear(16 + 10, 16)
+
+        #then, create a final output layer 
+        self.layer3 = nn.Linear(16, self.n_actions)
+
         
-#
 class DQNAgentRouting: 
     """
     Agent that uses DQN for routing decisions 
+    
+    satellite: the satellite this agent operates 
+    trainingPolicy: centralized vs distributed
+    rewardType: retroactive or immediate. 
+    retroactive is computed as the propagation delay of the packets you are involved in sending
+    immediate is the difference in distance between the place you got it from and the one you are sending towards
+    
+    trainingManager: if doing centralized training, this is the manager for giving gradients/coordinating 
+    satelliteGridSize: need to know how many satellites there are for me to possibly forward packets in the direction of
     """
 
     def __init__(self, 
                  satellite, 
                  trainingPolicy, 
-                 trainingManager = None): 
-
+                 trainingManager = None,
+                 rewardType = "immediate",
+                 satelliteGridSize = None): 
 
         #set up hardware:
         # if GPU is to be used
@@ -143,9 +209,12 @@ class DQNAgentRouting:
         #store the satellite this agent gives routing info to 
         self.satellite = satellite
 
+        #store size
+        self.satelliteGridSize = satelliteGridSize
+    
         #setup hyperparameters; used for training 
         self.BATCH_SIZE = 128
-        self.GAMMA = 0.9
+        self.GAMMA = 0.98 
         self.EPS_START = 0.9
         #used to be .05 
         #so regardless of poliy we learned, we always go random at least 5% of the time. 
@@ -167,6 +236,7 @@ class DQNAgentRouting:
 
         #store info 
         self.trainingPolicy = trainingPolicy
+        self.rewardType = rewardType
 
         #if we actually have a manager, then use centralized training over distributed
         #so, store the training manager
@@ -183,15 +253,22 @@ class DQNAgentRouting:
 
         #policy net = network we use to make our decisions. its the one that we use forward passes to interact with the environment
         #target net = network we use to train upon i.e. the network that generates the target that we use to update the policy net 
-        self.policy_net = DQN(n_observations, n_actions).to(self.device)
-        self.target_net = DQN(n_observations, n_actions).to(self.device)
+        self.policy_net = DQN(n_observations, n_actions, "EmbedRNN", self.satelliteGridSize).to(self.device)
+        self.target_net = DQN(n_observations, n_actions, "EmbedRNN", self.satelliteGridSize).to(self.device)
         self.target_net.load_state_dict(self.policy_net.state_dict())
 
         #create optimizer and buffer 
         self.optimizer = optim.AdamW(self.policy_net.parameters(), lr=self.LR, amsgrad=True)
-        self.fullExperienceMemory = ReplayMemory(10000)
-        self.nonRewardMemory = {}
 
+        #if we are doing retroactive rewards, create pollinated and non pollinated memory 
+        if(self.rewardType == "retroactive"): 
+            self.fullExperienceMemory = ReplayMemory(10000)
+            self.nonRewardMemory = {}
+        
+        #if we are doing immediate rewards, just create a basic memory   
+        elif(self.rewardType == "immediate"): 
+            self.memory = ReplayMemory(1000)
+            
         #past rewards
         self.epsRewards = [] 
         self.epsLoss = []
@@ -305,7 +382,7 @@ class DQNAgentRouting:
             if sample > eps_threshold:
                 with torch.no_grad():
                     #first, get the policy net output
-                    fullActionOutput = self.policy_net(overallState)
+                    fullActionOutput = self.policy_net(overallState, packet.endSat)
             else: 
                 #generate a random policy net output
                 fullActionOutput = torch.rand(self.policy_net.n_actions)
@@ -322,8 +399,12 @@ class DQNAgentRouting:
             satIndToForwardTo = indexableSats[actionOutput].adjMatPersonalIndex
 
         else:
-            #then, get the argsort for the policy net output
-            actionPreferenceList = torch.argsort(fullActionOutput, descending=True)
+
+            try: 
+                #then, get the argsort for the policy net output
+                actionPreferenceList = torch.argsort(fullActionOutput, descending=True)
+            except Exception as e: 
+                pdb.set_trace() 
 
             #so then, get the satellites in the order that we prefer them 
             satPreferenceList = [indexableSats[idx] for idx in actionPreferenceList]
@@ -362,8 +443,20 @@ class DQNAgentRouting:
 
         #if we are doing distributed training, store experience and optimize your self 
         if(self.trainingPolicy == "distributed"): 
-            #create experience and push it 
-            self.nonRewardMemory[packet.packetIndex] = [overallState, actionOutput, predictedState]
+
+            #if we are doing retroactive rewards 
+            if(self.rewardType == "retroactive"): 
+                #create experience and push it 
+                self.nonRewardMemory[packet.packetIndex] = [overallState, actionOutput, predictedState]
+
+            #if we are doing immediate rewards 
+            elif(self.rewardType == "immediate"): 
+                #create more basic experience
+                #get the distance covered by using our satellite's visibility 
+                timeDistanceCovered = self.satellite.getTimeDistanceDiff(actionOutput, packet.endSat)
+                #then, push the experience 
+                self.memory.push(packet.endSat, overallState, actionOutput, predictedState, timeDistanceCovered)
+
             self.optimize() 
 
         #if we are doing centralized training
@@ -392,7 +485,7 @@ class DQNAgentRouting:
         self.epsActions = self.epsActions + [satIndToForwardTo]
 
         return satIndToForwardTo 
-        
+    
     def optimize(self):
         """
         Optimize the current network with respect to experiences in buffer. 
@@ -411,21 +504,28 @@ class DQNAgentRouting:
 
         #this is useful: torch.cat(batch.state).shape[0]
 
-        if len( self.fullExperienceMemory ) < self.BATCH_SIZE:
-            return
-        
-        transitions = self.fullExperienceMemory.sample(self.BATCH_SIZE)
+        #get data depending on the reward type 
+        if(self.rewardType == "retroactive"): 
+            if len( self.fullExperienceMemory ) < self.BATCH_SIZE:
+                return
+            
+            transitions = self.fullExperienceMemory.sample(self.BATCH_SIZE)
 
-        #for transition in transitions:
-        #    self.fullExperienceMemory.remove(transition) 
+        elif(self.rewardType == "immediate"): 
+            if len( self.memory ) < self.BATCH_SIZE:
+                return
+            
+            transitions = self.memory.sample(self.BATCH_SIZE)
 
-        # Transpose the batch (see https://stackoverflow.com/a/19343/3343043 for
-        # detailed explanation). This converts batch-array of Transitions
-        # to Transition of batch-arrays.
+        #batch it up 
         batch = Transition(*zip(*transitions))
+
+        #1d data for destination, so just make it a tensor 
+        dest_batch = torch.tensor(batch.dest)
 
         #so, get necessary elements from the batch 
         state_batch = torch.cat(batch.state)
+
         #dont need to cat the action, as the dimensions of each element are matching 
         #same with propDelay
         action_batch = torch.tensor(batch.action)
@@ -439,8 +539,8 @@ class DQNAgentRouting:
         state_batch = state_batch.reshape([self.BATCH_SIZE, numElementsPerSet])
         next_state_batch = next_state_batch.reshape([self.BATCH_SIZE, numElementsPerSet])
 
-        #reward is generated as the inverse of the propagation delay 
-        reward_batch = torch.tensor([1/i for i in batch.propDelay])
+        #store reward 
+        reward_batch = torch.tensor(batch.reward)
 
         #store the reward for that batch 
         self.epsRewards = self.epsRewards + [np.average(reward_batch)]
@@ -451,13 +551,13 @@ class DQNAgentRouting:
         #alternatively, this could just be the max operatior as well...  
         #we need to match the dimensions of indexer vs data, which is why we do the squeeze 
         #we do this with gradients, because we will optimize with them in a second 
-        state_action_values = self.policy_net(state_batch).gather(1,action_batch.unsqueeze(1))
+        state_action_values = self.policy_net(state_batch, dest_batch).gather(1,action_batch.unsqueeze(1))
 
         #get the next state values 
         #should be a list here...
         #will need to make modifications for the approach when i use batching instead of single values
         with torch.no_grad():
-            next_state_values = self.target_net(next_state_batch).max(1).values
+            next_state_values = self.target_net( next_state_batch, dest_batch).max(1).values
 
         #then get the values for next state actions using the reward  
         #gamm
@@ -487,13 +587,16 @@ class DQNAgentRouting:
         Currently, its simply the inverse of propagation delay of the packet through the network 
         """
 
-        #first get the time it took for the packet to go through the network 
-        packetPropDelay = packet.packetArriveTime - packet.packetSendTime
-        #then, create and push the experience 
-        try: 
-            self.fullExperienceMemory.push(*self.nonRewardMemory[packet.packetIndex], packetPropDelay)
-        except Exception as e: 
-            pdb.set_trace()
+        #only go through with this if we are doing retroactive rewards
+        if(self.rewardType == "retroactive"): 
+            #first get the time it took for the packet to go through the network 
+            packetDelay = packet.packetArriveTime - packet.packetSendTime
+            #then, create and push the experience 
+            try: 
+                #use 1/packetDelay for the reward 
+                self.fullExperienceMemory.push(*self.nonRewardMemory[packet.packetIndex], 1/packetDelay)
+            except Exception as e: 
+                raise Exception("Couldnt properly push memory")
 
     def plotTrainingInfo(self):
         """

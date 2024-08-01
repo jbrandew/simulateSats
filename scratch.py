@@ -1,4 +1,15 @@
 
+        #if we are doing retroactive rewards 
+        if(self.rewardType == "retrocative"): 
+            #reward is generated as the inverse of the propagation delay 
+            reward_batch = torch.tensor([1/i for i in batch.propDelay])
+        #if we are doing immediate rewards 
+        elif(self.rewardType == "immediate"): 
+            #then the reward is just computed as the difference in distance 
+            reward_batch = torch.tensor(batch.distanceDiff)
+
+
+            
     def getAction(self,
                   overallState,
                   packet,

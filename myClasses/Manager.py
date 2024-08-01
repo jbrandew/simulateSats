@@ -13,7 +13,7 @@ import copy
 
 #import myClasses.centralTrainingNetwork as centralTrainingNetwork
 
-import myClasses.qMixerAgent as qMixerAgent
+import myClasses.centralizedTrainer as centralizedTrainer 
 
 
 #general manager/scheduler, model of processes   
@@ -101,10 +101,10 @@ class Manager():
         #if we are working with centralized training 
         if(self.RLTrainingMethod == "centralized"): 
             #then, create a trainer 
-            self.qMixerAgent = qMixerAgent.QMixerAgent()
+            self.centralTrainer = centralizedTrainer.CentralizedTrainer()
         else:
             #otherwise, leave the trainer blank  
-            self.qMixerAgent = None
+            self.centralTrainer = None
 
         #call generate satellites function, which initializes our structure 
         self.generateSatellites(constellationPoints, normVecs, packetProcessRate, routingPolicy, RLTrainingMethod)
@@ -152,7 +152,7 @@ class Manager():
         #if we are working with centralized training 
         if(self.RLTrainingMethod == "centralized"): 
             #then, initialize trainer network
-            self.qMixerAgent.initializeNetworks(self.raveledSats)
+            self.centralTrainer.initializeNetworks(self.raveledSats)
 
 
     def resetWorldState(self, displayStats = True): 
@@ -166,7 +166,7 @@ class Manager():
         
         if(self.RLTrainingMethod == "centralized"):
             displaySubAgentStats = False
-            self.qMixerAgent.resetData(True)  
+            self.centralTrainer.resetData(True)  
         else:
             displaySubAgentStats = True
 
@@ -658,7 +658,7 @@ class Manager():
         #if doing centralized training 
         if(self.RLTrainingMethod == "centralized"): 
             #then assign prop delay using the packet 
-            self.qMixerAgent.startExperience(packet, self.generateDeepAdjMatWithQueues())        
+            self.centralTrainer.startExperience(packet, self.generateDeepAdjMatWithQueues())        
 
     def propagatePropDelay(self, packet): 
         """
@@ -679,7 +679,7 @@ class Manager():
         #if doing centralized training 
         if(self.RLTrainingMethod == "centralized"): 
             #then assign prop delay using the packet 
-            self.qMixerAgent.assignPropDelay(packet, self.generateDeepAdjMatWithQueues())
+            self.centralTrainer.assignPropDelay(packet, self.generateDeepAdjMatWithQueues())
     
     def generateSatellites(self, 
                            walkerPoints, 
@@ -731,7 +731,7 @@ class Manager():
                                                                 mixedPolicy,
                                                                 {"totalNumPlayers":self.numPlanes*self.numSatPerPlane},
                                                                 RLTrainingMethod,
-                                                                self.qMixerAgent
+                                                                self.centralTrainer
                                                                 ) 
         #if its not mixed then, its all the same 
         else: 
@@ -746,7 +746,7 @@ class Manager():
                                                             routingPolicy,
                                                             {"totalNumPlayers":self.numPlanes*self.numSatPerPlane},
                                                             RLTrainingMethod,
-                                                            self.qMixerAgent
+                                                            self.centralTrainer
                                                             ) 
 
         self.raveledSats = np.ravel(self.sats)

@@ -97,7 +97,7 @@ visualizerArgs = {
 }
 
 #set up RL config: 
-num_episodes = 100
+num_episodes = 200
 
 #get simulator object 
 simmer = Simulator.Simulator(managerData)
@@ -116,17 +116,19 @@ for i_episode in range(num_episodes):
     # pdb.set_trace()
 
     #get latency each time 
-    holdLatencyTimes = simmer.executeGeneralSimulation(**simulationArgs)
+    holdLatencyTimes, numInv = simmer.executeGeneralSimulation(**simulationArgs)
 
-    actions = simmer.manager.sats[0,0].agent.epsActions
-    toPrint = np.unique(actions, return_counts=True) 
-    print(toPrint)
+    # actions = simmer.manager.sats[0,0].agent.epsActions
+    # toPrint = np.unique(actions, return_counts=True) 
+    # print(toPrint)
 
     #reset the state of the simulator
     simmer.resetWorldState()
 
     print("Average latency for packets for this episode:")
     print(np.average(holdLatencyTimes))
+    print("Average num nodes in the path")
+    print(np.average(numInv))
     #print("Packet Latency")
     #print(holdLatencyTimes)
     print("Episode # ")

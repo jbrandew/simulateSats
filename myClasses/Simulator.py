@@ -435,7 +435,7 @@ class Simulator():
         #will probably have much more adjMat updates/broadcasts than updateRoutingTable methods 
         #just because computationally one is way more than the other 
 
-        if(routingPolicy == 'OSPF'): 
+        if(True): #if(routingPolicy == 'OSPF'): 
             numUpdates = 30
             for updateRoutingTableInd in range(numUpdates): 
                 #so create time and events 
@@ -612,10 +612,14 @@ class Simulator():
         #then, finally just return the difference between the two. 
         #create storage for latency 
         latencyTimes = np.zeros(len(packets))
+        
+        numInvolved = np.zeros(len(packets))
+
         #then, iterating through the packets
         for packetInd in range(len(packets)): 
             latencyTimes[packetInd] = packets[packetInd].packetArriveTime - packets[packetInd].packetSendTime
-        
+            numInvolved[packetInd] = len(packets[packetInd].playersInvolvedInSending)
+
         # #print average latency
         # print("Average latency")
         # print(np.average(latencyTimes))
@@ -625,7 +629,7 @@ class Simulator():
         #polyHold = np.polyfit(np.arange(len(latencyTimes)), latencyTimes, 2)
 
         #then, return it
-        return latencyTimes
+        return latencyTimes, numInvolved
 
 
     def update(self, 

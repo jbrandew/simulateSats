@@ -651,7 +651,32 @@ def getConeCoords():
 
     return x, y, z 
 
+def dijkstraWithDistances(adj_matrix, source, nodeValues):
 
+    for ind, value in enumerate(nodeValues): 
+        adj_matrix[ind] +=value/2
+        adj_matrix[:,ind] +=value/2
+        adj_matrix[ind,ind] -=value/2
+
+    n = len(adj_matrix)  # Number of nodes
+    distances = np.full(n, np.inf)  # Initialize distances with infinity
+    distances[source] = 0  # Distance to the source node is 0
+    priority_queue = [(0, source)]  # Min-heap priority queue
+    
+    while priority_queue:
+        current_distance, current = heapq.heappop(priority_queue)
+        
+        if current_distance > distances[current]:
+            continue
+        
+        for neighbor, weight in enumerate(adj_matrix[current]):
+            if weight > 0:  # Check if there is an edge
+                distance = current_distance + weight
+                if distance < distances[neighbor]:
+                    distances[neighbor] = distance
+                    heapq.heappush(priority_queue, (distance, neighbor))
+                    
+    return distances
 
 def dijkstra(adj_matrix, start, end):
     n = len(adj_matrix)
