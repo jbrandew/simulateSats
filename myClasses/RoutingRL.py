@@ -151,6 +151,29 @@ class DQN(nn.Module):
 
             #then get output 
             return self.layer3(x)
+                
+        if(self.networkType == "AttentionRNN"):
+
+            #format data
+            dest = torch.tensor(dest)
+            
+            #get embedding of destination 
+            embedded = self.embeddingLayer(dest)
+
+            #get adj mat processed 
+            adjMatProc = F.relu(self.layer1(x.unsqueeze(0))[0])
+
+            #get the combined version data output 
+            #concat along dimension thats dependent on if we are batched or not 
+            x = torch.cat([embedded, adjMatProc], dim= adjMatProc.dim() - 1)
+
+            #then, input to next layer 
+            x = F.relu(self.layer2(x))
+
+            x = F.relu(self.layer3(x))
+
+            #then get output 
+            return self.layer4(x)
         
     def initializeBasicFFNetwork(self): 
         #create layers 
@@ -180,7 +203,24 @@ class DQN(nn.Module):
         #then, create a final output layer 
         self.layer3 = nn.Linear(16, self.n_actions)
 
+    def initializeAttentionNetwork(self):
+
+
+        #first, create an embedding layer for the input data involving the destination of the packet 
+        self.embeddingLayer = nn.Embedding(num_embeddings=self.numEmbeddings, embedding_dim=10)
         
+        #then, create a linear layer for spatial relationships
+        self.layer1 = nn.Linear(self.n_observations, 16)
+
+        self.layer2 = nn.MultiheadAttention(26, 1)
+
+        #then, create a linear layer for combining them  
+        self.layer3 = nn.Linear(16 + 10, 16)
+
+        #then, create a final output layer 
+        self.layer4 = nn.Linear(16, self.n_actions)
+
+
 class DQNAgentRouting: 
     """
     Agent that uses DQN for routing decisions 
@@ -253,8 +293,8 @@ class DQNAgentRouting:
 
         #policy net = network we use to make our decisions. its the one that we use forward passes to interact with the environment
         #target net = network we use to train upon i.e. the network that generates the target that we use to update the policy net 
-        self.policy_net = DQN(n_observations, n_actions, "EmbedRNN", self.satelliteGridSize).to(self.device)
-        self.target_net = DQN(n_observations, n_actions, "EmbedRNN", self.satelliteGridSize).to(self.device)
+        self.policy_net = DQN(n_observations, n_actions, "AttentionRNN", self.satelliteGridSize).to(self.device)
+        self.target_net = DQN(n_observations, n_actions, "AttentionRNN", self.satelliteGridSize).to(self.device)
         self.target_net.load_state_dict(self.policy_net.state_dict())
 
         #create optimizer and buffer 
@@ -288,7 +328,7 @@ class DQNAgentRouting:
     
         #print the past average reward and loss  
         print("Average Reward, for the following satellite")
-        print(self.satellite.adjMatPersonalIndex)
+        #print(self.satellite.adjMatPersonalIndex)
         print(np.average(self.epsRewards))
 
         # print("Average Loss")
@@ -454,8 +494,25 @@ class DQNAgentRouting:
                 #create more basic experience
                 #get the distance covered by using our satellite's visibility 
                 timeDistanceCovered = self.satellite.getTimeDistanceDiff(actionOutput, packet.endSat)
+                
+                #create initial sum from counter factuals 
+                counterfactualSum = 0
+
+                #then, get the counterfactual based on that 
+                #so, for each possible action you could take 
+                for possibleActionOutput in range(self.policy_net.n_actions): 
+                    #subtract out the relative advantage of taking that action 
+                    counterfactualSum = counterfactualSum - (self.satellite.getTimeDistanceDiff(possibleActionOutput, packet.endSat) - timeDistanceCovered)
+                
+                #then, final modifications 
+                counterfactualSum = counterfactualSum / (self.policy_net.n_actions - 1)
+                counterfactualSum = timeDistanceCovered - counterfactualSum
+
+                #then, normalize with respect to rewards already computed
+                counterfactualSum = (counterfactualSum - np.average(self.epsRewards))/(np.std(self.epsRewards))
+
                 #then, push the experience 
-                self.memory.push(packet.endSat, overallState, actionOutput, predictedState, timeDistanceCovered)
+                self.memory.push(packet.endSat, overallState, actionOutput, predictedState, counterfactualSum)
 
             self.optimize() 
 

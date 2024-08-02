@@ -34,9 +34,9 @@ topologyPolicy: null
 packetProcessRate: 10 #[[10, 9, 10, 1 ]]
 
 #simulation runtime parameters 
-numPeople: 500
-numPacketsPerPerson: 1
-packetSendTimeFrame: 500
+numPeople: 1
+numPacketsPerPerson: 500
+packetSendTimeFrame: 1
 #PseudoUniform, SingleFar, simpleForSingleRL
 #cant use single far with multiple people 
 personDistribution: 'PseudoUniform'
@@ -50,7 +50,7 @@ environmentUpdateInterval: 10
 outageFrequency: null
 #takes care of how long we want the visualizer to take data for. Should be greater for more traffic.
 #its a ratio of the visualize time vs the time frame length that packets are being sent over. 
-timeFactor: 1
+timeFactor: 100
 
 #visualizer parameters 
 visualizerOn: False
