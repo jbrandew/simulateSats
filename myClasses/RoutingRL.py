@@ -73,13 +73,16 @@ class DQN(nn.Module):
     def __init__(self, 
                  n_observations, 
                  n_actions, 
+                 device = "cpu",
                  networkType = "RNN",
-                 numEmbeddings = None):
+                 numEmbeddings = None,
+                 ):
         """
         DQN initialization 
 
         n_observations: how many observations do we see (non inf values in adj matrix)
         n_actions: how many different actions can we take 
+        device: type of device we are using. helps with GPU compatibility in training 
         networkType: what architecture are we using 
         numEmbeddings: how many different embeddings we can have. here, its just the # of satellites in our grid 
         """
@@ -89,6 +92,8 @@ class DQN(nn.Module):
 
         self.n_actions = n_actions
         self.n_observations = n_observations
+        self.device = device 
+                
         self.networkType = networkType
         self.numEmbeddings = numEmbeddings
 
@@ -115,6 +120,9 @@ class DQN(nn.Module):
         #convert to proper data type for each input  
         x = x.to(torch.float32)
 
+        #put input tensor on device. aids in GPU compatability 
+        x = x.to(self.device)
+
         if(self.networkType == "FF"):
             x = F.relu(self.layer1(x.unsqueeze(0)))
             x = F.relu(self.layer2(x))
@@ -128,7 +136,7 @@ class DQN(nn.Module):
             x = F.relu(self.layer2(x))
             #forward again 
             #x = F.relu(self.layer3(x))
-            #reduce dimensionality 
+            #reduce dimensionality
             return self.layer3(x)
         
         if(self.networkType == "EmbedRNN"):
@@ -153,6 +161,8 @@ class DQN(nn.Module):
             return self.layer3(x)
                 
         if(self.networkType == "AttentionRNN"):
+            
+            raise Exception("Parameters not yet initialized")
 
             #format data
             dest = torch.tensor(dest)
@@ -244,7 +254,9 @@ class DQNAgentRouting:
 
         #set up hardware:
         # if GPU is to be used
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        #self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = "cpu"
+
 
         #store the satellite this agent gives routing info to 
         self.satellite = satellite
@@ -293,8 +305,8 @@ class DQNAgentRouting:
 
         #policy net = network we use to make our decisions. its the one that we use forward passes to interact with the environment
         #target net = network we use to train upon i.e. the network that generates the target that we use to update the policy net 
-        self.policy_net = DQN(n_observations, n_actions, "AttentionRNN", self.satelliteGridSize).to(self.device)
-        self.target_net = DQN(n_observations, n_actions, "AttentionRNN", self.satelliteGridSize).to(self.device)
+        self.policy_net = DQN(n_observations, n_actions, self.device, "RNN", self.satelliteGridSize).to(self.device)
+        self.target_net = DQN(n_observations, n_actions, self.device, "RNN", self.satelliteGridSize).to(self.device)
         self.target_net.load_state_dict(self.policy_net.state_dict())
 
         #create optimizer and buffer 
@@ -422,10 +434,12 @@ class DQNAgentRouting:
             if sample > eps_threshold:
                 with torch.no_grad():
                     #first, get the policy net output
-                    fullActionOutput = self.policy_net(overallState, packet.endSat)
+                    #get only the first entry, because we are not working with batching
+                    #in this, only getting the action. 
+                    fullActionOutput = self.policy_net(overallState, packet.endSat)[0]
             else: 
                 #generate a random policy net output
-                fullActionOutput = torch.rand(self.policy_net.n_actions)
+                fullActionOutput = torch.rand(self.policy_net.n_actions, device = self.device)
         else: 
             raise Exception("This exploration type hasnt been implemented.")
 
@@ -440,13 +454,13 @@ class DQNAgentRouting:
 
         else:
 
-            try: 
-                #then, get the argsort for the policy net output
-                actionPreferenceList = torch.argsort(fullActionOutput, descending=True)
-            except Exception as e: 
-                pdb.set_trace() 
+            #then, get the argsort for the policy net output
+            actionPreferenceList = torch.argsort(fullActionOutput, descending=True)
 
-            #so then, get the satellites in the order that we prefer them 
+            #print(actionPreferenceList)
+            #print(fullActionOutput)
+
+            #so then, get the satellites in the order that we prefer them
             satPreferenceList = [indexableSats[idx] for idx in actionPreferenceList]
 
             #then, get the adjMatIndices for each 
@@ -461,6 +475,12 @@ class DQNAgentRouting:
             #if there are none present (like in a 2ISL case), then get the first viable edge and use that
             except StopIteration: 
                 satIndToForwardTo, index = next((item, idx) for idx, item in enumerate(satIndexPreferenceList) if item in nodesToNotSendTo)
+
+            # print( self.satellite.adjMatPersonalIndex )
+            # print( [checkSat.adjMatPersonalIndex for checkSat in self.satellite.connectedToPlayers])
+            # print(nodesToNotSendTo)
+            # print(packet.endSat)
+            # pdb.set_trace()
 
             #then, get the action output for the chosen index 
             actionOutput = actionPreferenceList[index]
@@ -495,21 +515,23 @@ class DQNAgentRouting:
                 #get the distance covered by using our satellite's visibility 
                 timeDistanceCovered = self.satellite.getTimeDistanceDiff(actionOutput, packet.endSat)
                 
-                #create initial sum from counter factuals 
-                counterfactualSum = 0
+                counterfactualSum = timeDistanceCovered
 
-                #then, get the counterfactual based on that 
-                #so, for each possible action you could take 
-                for possibleActionOutput in range(self.policy_net.n_actions): 
-                    #subtract out the relative advantage of taking that action 
-                    counterfactualSum = counterfactualSum - (self.satellite.getTimeDistanceDiff(possibleActionOutput, packet.endSat) - timeDistanceCovered)
+                # #create initial sum from counter factuals 
+                # counterfactualSum = 0
+
+                # #then, get the counterfactual based on that 
+                # #so, for each possible action you could take 
+                # for possibleActionOutput in range(self.policy_net.n_actions): 
+                #     #subtract out the relative advantage of taking that action 
+                #     counterfactualSum = counterfactualSum - (self.satellite.getTimeDistanceDiff(possibleActionOutput, packet.endSat) - timeDistanceCovered)
                 
-                #then, final modifications 
-                counterfactualSum = counterfactualSum / (self.policy_net.n_actions - 1)
-                counterfactualSum = timeDistanceCovered - counterfactualSum
+                # #then, final modifications 
+                # counterfactualSum = counterfactualSum / (self.policy_net.n_actions - 1)
+                # counterfactualSum = timeDistanceCovered - counterfactualSum
 
-                #then, normalize with respect to rewards already computed
-                counterfactualSum = (counterfactualSum - np.average(self.epsRewards))/(np.std(self.epsRewards))
+                # #then, normalize with respect to rewards already computed
+                # counterfactualSum = (counterfactualSum - np.average(self.epsRewards))/(np.std(self.epsRewards))
 
                 #then, push the experience 
                 self.memory.push(packet.endSat, overallState, actionOutput, predictedState, counterfactualSum)
@@ -578,14 +600,14 @@ class DQNAgentRouting:
         batch = Transition(*zip(*transitions))
 
         #1d data for destination, so just make it a tensor 
-        dest_batch = torch.tensor(batch.dest)
+        dest_batch = torch.tensor(batch.dest, device = self.device)
 
         #so, get necessary elements from the batch 
         state_batch = torch.cat(batch.state)
 
         #dont need to cat the action, as the dimensions of each element are matching 
         #same with propDelay
-        action_batch = torch.tensor(batch.action)
+        action_batch = torch.tensor(batch.action, device = self.device)
         next_state_batch = torch.cat(batch.next_state)
 
         #reshape the state and next state 
@@ -597,7 +619,7 @@ class DQNAgentRouting:
         next_state_batch = next_state_batch.reshape([self.BATCH_SIZE, numElementsPerSet])
 
         #store reward 
-        reward_batch = torch.tensor(batch.reward)
+        reward_batch = torch.tensor(batch.reward, device = self.device)
 
         #store the reward for that batch 
         self.epsRewards = self.epsRewards + [np.average(reward_batch)]
@@ -606,18 +628,18 @@ class DQNAgentRouting:
         #then, get the current state values
         #use the action that we actually executed beforehand
         #alternatively, this could just be the max operatior as well...  
-        #we need to match the dimensions of indexer vs data, which is why we do the squeeze 
         #we do this with gradients, because we will optimize with them in a second 
-        state_action_values = self.policy_net(state_batch, dest_batch).gather(1,action_batch.unsqueeze(1))
+        #reshape to match indexing 
+        action_batch = action_batch.view(1, 128, 1)
+        state_action_values = self.policy_net(state_batch, dest_batch).gather(2,action_batch)
 
         #get the next state values 
         #should be a list here...
         #will need to make modifications for the approach when i use batching instead of single values
         with torch.no_grad():
-            next_state_values = self.target_net( next_state_batch, dest_batch).max(1).values
+            next_state_values = self.target_net( next_state_batch, dest_batch).max(2).values
 
         #then get the values for next state actions using the reward  
-        #gamm
         target_state_action_values = (next_state_values * self.GAMMA) + reward_batch
 
         # Compute Huber loss

@@ -436,7 +436,7 @@ class Simulator():
         #just because computationally one is way more than the other 
 
         if(True): #if(routingPolicy == 'OSPF'): 
-            numUpdates = 30
+            numUpdates = 200
             for updateRoutingTableInd in range(numUpdates): 
                 #so create time and events 
                 updateTime = fullyFlushedNetworkETA*updateRoutingTableInd/numUpdates
