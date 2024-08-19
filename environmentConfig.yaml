@@ -4,9 +4,9 @@
 
 #constellation parameters
 #walkerDelta or square  
-LEOConstellation: 'square'
+LEOConstellation: 'walkerDelta'
 NumberLEOSatellites: 28
-OrbitalPlanes: 4 
+OrbitalPlanes: 4
 Inclination: 80 
 phasingParameter: 5
 orbitAltitudeLEO: 1000000
@@ -22,7 +22,7 @@ SunLocation: [149.6e+6, 0, 0]
 
 #topology and routing polocy / satellite info
 #either basicSquare or IPO
-initialTopology: 'basicSquare'
+initialTopology: 'IPO'
 #possible values: 
 #OSPF, basic, mixedSingleAgentRLRestOSPF, RL
 routingPolicy: 'RL'
@@ -31,15 +31,15 @@ topologyPolicy: null
 #testing saturation: [[10, 9, 10, 1 ]]
 #normal behavior: 100
 #cant be 1d array 
-packetProcessRate: [[10, 9, 10, 1 ]]
+packetProcessRate: 10 #[[10, 9, 10, 1 ]]
 
 #simulation runtime parameters 
-numPeople: 1
-numPacketsPerPerson: 500
-packetSendTimeFrame: 500
+numPeople: 50
+numPacketsPerPerson: 10
+packetSendTimeFrame: 50
 #PseudoUniform, SingleFar, simpleForSingleRL
 #cant use single far with multiple people 
-personDistribution: 'simpleForSingleRL'
+personDistribution: 'PseudoUniform'
 #can be Even or Uniform
 sendTimeDistribution: 'Uniform'
 
@@ -50,7 +50,7 @@ environmentUpdateInterval: 10
 outageFrequency: null
 #takes care of how long we want the visualizer to take data for. Should be greater for more traffic.
 #its a ratio of the visualize time vs the time frame length that packets are being sent over. 
-timeFactor: 1
+timeFactor: 100
 
 #visualizer parameters 
 visualizerOn: False

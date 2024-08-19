@@ -436,7 +436,7 @@ class Simulator():
         #just because computationally one is way more than the other 
 
         if(True): #if(routingPolicy == 'OSPF'): 
-            numUpdates = 200
+            numUpdates = 500
             for updateRoutingTableInd in range(numUpdates): 
                 #so create time and events 
                 updateTime = fullyFlushedNetworkETA*updateRoutingTableInd/numUpdates
@@ -447,7 +447,7 @@ class Simulator():
                 #then push the events 
                 eventQueue.push(queueEvent)
 
-        numBroadcasts = 200
+        numBroadcasts = 500
         for broadcastAdjMatInd in range(numBroadcasts): 
             #so create time and events 
             updateTime = fullyFlushedNetworkETA*broadcastAdjMatInd/numBroadcasts

@@ -340,7 +340,7 @@ class DQNAgentRouting:
     
         #print the past average reward and loss  
         print("Average Reward, for the following satellite")
-        #print(self.satellite.adjMatPersonalIndex)
+        print(self.satellite.adjMatPersonalIndex)
         print(np.average(self.epsRewards))
 
         # print("Average Loss")
@@ -513,9 +513,13 @@ class DQNAgentRouting:
             elif(self.rewardType == "immediate"): 
                 #create more basic experience
                 #get the distance covered by using our satellite's visibility 
-                timeDistanceCovered = self.satellite.getTimeDistanceDiff(actionOutput, packet.endSat)
+                #essentially the time distance covered 
+                reward = self.satellite.getTimeDistanceDiff(actionOutput, packet.endSat)
                 
-                counterfactualSum = timeDistanceCovered
+                #set reward to just be the inverse of the estimated residual prop delay  
+                #reward = -self.satellite.adjMatrix[actionOutput, packet.endSat]
+
+                #rewardWithCounterfactual = timeDistanceCovered
 
                 # #create initial sum from counter factuals 
                 # counterfactualSum = 0
@@ -526,15 +530,19 @@ class DQNAgentRouting:
                 #     #subtract out the relative advantage of taking that action 
                 #     counterfactualSum = counterfactualSum - (self.satellite.getTimeDistanceDiff(possibleActionOutput, packet.endSat) - timeDistanceCovered)
                 
-                # #then, final modifications 
+                # #then, final modifications for normalization
                 # counterfactualSum = counterfactualSum / (self.policy_net.n_actions - 1)
-                # counterfactualSum = timeDistanceCovered - counterfactualSum
+                # rewardWithCounterfactual = timeDistanceCovered - counterfactualSum
 
-                # #then, normalize with respect to rewards already computed
-                # counterfactualSum = (counterfactualSum - np.average(self.epsRewards))/(np.std(self.epsRewards))
+                #then, normalize with respect to rewards already computed
+                if(len(self.epsRewards) > 2): 
+                    #pdb.set_trace()
+                    reward = 10 * (reward - np.average(self.epsRewards))/(np.std(self.epsRewards))
+                    #print(rewardWithCounterfactual)
+                    #pdb.set_trace() 
 
                 #then, push the experience 
-                self.memory.push(packet.endSat, overallState, actionOutput, predictedState, counterfactualSum)
+                self.memory.push(packet.endSat, overallState, actionOutput, predictedState, reward)
 
             self.optimize() 
 
