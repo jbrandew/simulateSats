@@ -26,6 +26,8 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import pdb 
+from torch_geometric.nn import GCNConv
+from torch_geometric.data import Data
 
 import math
 
@@ -73,6 +75,7 @@ class DQN(nn.Module):
     def __init__(self, 
                  n_observations, 
                  n_actions, 
+                 initialAdjMatrix = None, 
                  device = "cpu",
                  networkType = "RNN",
                  numEmbeddings = None,
@@ -82,6 +85,7 @@ class DQN(nn.Module):
 
         n_observations: how many observations do we see (non inf values in adj matrix)
         n_actions: how many different actions can we take 
+        initialAdjMatrix: used for structural creation of GCNN network 
         device: type of device we are using. helps with GPU compatibility in training 
         networkType: what architecture are we using 
         numEmbeddings: how many different embeddings we can have. here, its just the # of satellites in our grid 
@@ -92,6 +96,7 @@ class DQN(nn.Module):
 
         self.n_actions = n_actions
         self.n_observations = n_observations
+        self.initialAdjMatrix = initialAdjMatrix
         self.device = device 
                 
         self.networkType = networkType
@@ -106,13 +111,16 @@ class DQN(nn.Module):
         if(networkType == "EmbedRNN"): 
             self.initializeEmbedRNNNetwork()
 
+        if(networkType == "GCNN"): 
+            self.initializeGCNNNetwork()
+
     # Called with either one element to determine next action, or a batch
     # during optimization. Returns tensor([[left0exp,right0exp]...]).
 
     #forward pass through the network, using the basic input 
     def forward(self, x, dest = None):
         """
-        x: adj mat
+        x: adj mat non-inf entries 
         dest: packet destination
 
         """
@@ -124,14 +132,15 @@ class DQN(nn.Module):
         x = x.to(self.device)
 
         if(self.networkType == "FF"):
-            x = F.relu(self.layer1(x.unsqueeze(0)))
+
+            x = F.relu(self.layer1(x))
             x = F.relu(self.layer2(x))
             #reduce dimensionality
             return self.layer3(x)
 
         if(self.networkType == "RNN"): 
             #pass through RNN, formatting dimensionality and only taking one of the outputs 
-            x = F.relu(self.layer1(x.unsqueeze(0))[0])
+            x = F.relu(self.layer1(x))
             #pass the last hidden layer output to the feed forward net 
             x = F.relu(self.layer2(x))
             #forward again 
@@ -144,14 +153,60 @@ class DQN(nn.Module):
             #format data
             dest = torch.tensor(dest)
             
-            #get embedding of destination 
+            #get embedding of destination
             embedded = self.embeddingLayer(dest)
 
             #get adj mat processed 
-            adjMatProc = F.relu(self.layer1(x.unsqueeze(0))[0])
+            adjMatProc = F.relu(self.layer1(x))
 
             #get the combined version data output 
             #concat along dimension thats dependent on if we are batched or not 
+            x = torch.cat([embedded, adjMatProc], dim= adjMatProc.dim() - 1)
+
+            #then, input to next layer 
+            x = F.relu(self.layer2(x))
+
+            #then get output 
+            return self.layer3(x)
+        
+        if(self.networkType == "GCNN"):
+
+            """
+            Dest processing 
+            """
+            #format data
+            dest = torch.tensor(dest)
+            
+            #get embedding of destination 
+            embedded = self.embeddingLayer(dest)
+
+            """
+            Adj Mat processing 
+            """
+
+            #get indices of valid edges within the graph             
+            edge_index = torch.tensor(np.array(np.nonzero(np.triu(x))), dtype=torch.long)
+            
+            #then, get the values of the edges 
+            #then, get the rows and cols for getting the proper weights 
+            rows = edge_index[0].numpy()
+            cols = edge_index[1].numpy()            
+
+            #get the edge weights using the rows and cols 
+            pdb.set_trace()
+            edge_weights = x[rows, cols]
+
+            #then, go forward through the first layer 
+            #just pass through for node values for now 
+            adjMatProc = self.gconv1(np.ones(len(edge_index)), edge_index, edge_weights)
+            
+            #use the previous output as the node values 
+            adjMatProc = self.gconv1(adjMatProc, edge_index, edge_weights)
+            
+            """
+            Combined processing 
+            """
+
             x = torch.cat([embedded, adjMatProc], dim= adjMatProc.dim() - 1)
 
             #then, input to next layer 
@@ -213,6 +268,21 @@ class DQN(nn.Module):
         #then, create a final output layer 
         self.layer3 = nn.Linear(16, self.n_actions)
 
+    def initializeGCNNNetwork(self):
+
+        #first, create an embedding layer for the input data involving the destination of the packet 
+        self.embeddingLayer = nn.Embedding(num_embeddings=self.numEmbeddings, embedding_dim=10)
+
+        #then, create two GCNNs for the input adj matrix 
+        self.gconv1 = GCNConv(1, 16)
+        self.gconv2 = GCNConv(16, 1)
+
+        #then, create a linear layer for combining them  
+        self.layer2 = nn.Linear(self.n_observations + self.embeddingLayer.embedding_dim, 16)
+
+        #then, create a final output layer 
+        self.layer3 = nn.Linear(16, self.n_actions)
+ 
     def initializeAttentionNetwork(self):
 
 
@@ -265,11 +335,11 @@ class DQNAgentRouting:
         self.satelliteGridSize = satelliteGridSize
     
         #setup hyperparameters; used for training 
-        self.BATCH_SIZE = 128
+        self.BATCH_SIZE = 32
         self.GAMMA = 0.98 
         self.EPS_START = 0.9
         #used to be .05 
-        #so regardless of poliy we learned, we always go random at least 5% of the time. 
+        #so regardless of poliy we learned, we always go random at least 15% of the time. 
         self.EPS_END = 0.15
         #lower "decay" value actually increases rate we go to the "eps_end" value 
         self.EPS_DECAY = 10000
@@ -305,8 +375,20 @@ class DQNAgentRouting:
 
         #policy net = network we use to make our decisions. its the one that we use forward passes to interact with the environment
         #target net = network we use to train upon i.e. the network that generates the target that we use to update the policy net 
-        self.policy_net = DQN(n_observations, n_actions, self.device, "RNN", self.satelliteGridSize).to(self.device)
-        self.target_net = DQN(n_observations, n_actions, self.device, "RNN", self.satelliteGridSize).to(self.device)
+        self.policy_net = DQN(n_observations, 
+                              n_actions, 
+                              self.satellite.adjMatrix,
+                              self.device, 
+                              "GCNN", 
+                              self.satelliteGridSize).to(self.device)
+        
+        self.target_net = DQN(n_observations, 
+                              n_actions, 
+                              self.satellite.adjMatrix,
+                              self.device, 
+                              "GCNN", 
+                              self.satelliteGridSize).to(self.device)
+        
         self.target_net.load_state_dict(self.policy_net.state_dict())
 
         #create optimizer and buffer 
@@ -436,7 +518,7 @@ class DQNAgentRouting:
                     #first, get the policy net output
                     #get only the first entry, because we are not working with batching
                     #in this, only getting the action. 
-                    fullActionOutput = self.policy_net(overallState, packet.endSat)[0]
+                    fullActionOutput = self.policy_net(overallState, packet.endSat)
             else: 
                 #generate a random policy net output
                 fullActionOutput = torch.rand(self.policy_net.n_actions, device = self.device)
@@ -457,11 +539,13 @@ class DQNAgentRouting:
             #then, get the argsort for the policy net output
             actionPreferenceList = torch.argsort(fullActionOutput, descending=True)
 
-            #print(actionPreferenceList)
-            #print(fullActionOutput)
+            print(actionPreferenceList)
+            try: 
+                #so then, get the satellites in the order that we prefer them
+                satPreferenceList = [indexableSats[idx] for idx in actionPreferenceList]
+            except Exception: 
+                pdb.set_trace()
 
-            #so then, get the satellites in the order that we prefer them
-            satPreferenceList = [indexableSats[idx] for idx in actionPreferenceList]
 
             #then, get the adjMatIndices for each 
             satIndexPreferenceList = [sat.adjMatPersonalIndex for sat in satPreferenceList]
@@ -638,14 +722,14 @@ class DQNAgentRouting:
         #alternatively, this could just be the max operatior as well...  
         #we do this with gradients, because we will optimize with them in a second 
         #reshape to match indexing 
-        action_batch = action_batch.view(1, 128, 1)
-        state_action_values = self.policy_net(state_batch, dest_batch).gather(2,action_batch)
+        action_batch = action_batch.view(1, self.BATCH_SIZE)
+        state_action_values = torch.gather(self.policy_net(state_batch, dest_batch), 1, action_batch)
 
         #get the next state values 
         #should be a list here...
         #will need to make modifications for the approach when i use batching instead of single values
         with torch.no_grad():
-            next_state_values = self.target_net( next_state_batch, dest_batch).max(2).values
+            next_state_values = self.target_net( next_state_batch, dest_batch).max(1).values
 
         #then get the values for next state actions using the reward  
         target_state_action_values = (next_state_values * self.GAMMA) + reward_batch

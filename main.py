@@ -97,7 +97,7 @@ visualizerArgs = {
 }
 
 #set up RL config: 
-num_episodes = 200
+num_episodes = 400
 
 #get simulator object 
 simmer = Simulator.Simulator(managerData)
