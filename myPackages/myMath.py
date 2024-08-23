@@ -651,7 +651,10 @@ def getConeCoords():
 
     return x, y, z 
 
-def dijkstraWithDistances(adj_matrix, source, nodeValues):
+def dijkstraWithDistances(adj_matrixInput, source, nodeValues):
+
+    adj_matrix = copy.deepcopy(adj_matrixInput)
+    #thougth: should probably not be doing with shallow copy...... 
 
     for ind, value in enumerate(nodeValues): 
         adj_matrix[ind] +=value/2
@@ -705,14 +708,16 @@ def dijkstra(adj_matrix, start, end):
 
 def dijkstraWithNodeValuesAndPath(adj_matrix, nodeValues, start, end):
     
+    workingAdjMatrix = copy.deepcopy(adj_matrix)
+
     #modify adjacency matrix by adding to row and column, but taking out the overlap 
     #this is "traffic aware", as you are adding the node value to each edge /2
     for ind, value in enumerate(nodeValues): 
-        adj_matrix[ind] +=value/2
-        adj_matrix[:,ind] +=value/2
-        adj_matrix[ind,ind] -=value/2
+        workingAdjMatrix[ind] +=value/2
+        workingAdjMatrix[:,ind] +=value/2
+        workingAdjMatrix[ind,ind] -=value/2
 
-    return dijkstraWithPath(adj_matrix, start, end)
+    return dijkstraWithPath(workingAdjMatrix, start, end)
 
 def dijkstraWithNodeValuesAllInitialHops(adjMatrix, start, nodeValues = []): 
     """

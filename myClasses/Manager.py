@@ -1130,6 +1130,8 @@ class Manager():
         Generate deep copy of adjmat, which also uses queue lengths 
         """
         
+        print("generated....")
+
         #create experience from adjMatrix and QLengths
         adjMatrixState = copy.deepcopy(self.currAdjMat)
 
@@ -1143,7 +1145,7 @@ class Manager():
             
             adjMatrixState[ind] +=value/2
             adjMatrixState[:,ind] +=value/2
-            adjMatrixState[ind,ind] -=value/2
+            adjMatrixState[ind,ind] -=value
 
         return adjMatrixState
     

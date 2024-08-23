@@ -118,34 +118,57 @@ class DQN(nn.Module):
     # during optimization. Returns tensor([[left0exp,right0exp]...]).
 
     #forward pass through the network, using the basic input 
-    def forward(self, x, dest = None):
+    def forward(self, 
+                rawAdjMat, 
+                dest = None):
         """
-        x: adj mat non-inf entries 
+        This function has different functionality, based on the type of network we are using. 
+    
+        inputs: 
+        rawAdjMat: unprocessed adj Matrix 
         dest: packet destination
 
+        output:
+        batched output/action values given 
+
         """
 
+        #if we are not working with batched data
+        if(rawAdjMat.dim() == 2): 
+            #create batch dimension
+            rawAdjMat = rawAdjMat.unsqueeze(0)
+            
+            #create batch dimension for dest if necessary 
+            if(dest is not None): 
+                dest = dest.unsqueeze(0)
+ 
         #convert to proper data type for each input  
-        x = x.to(torch.float32)
+        rawAdjMat = rawAdjMat.to(torch.float32)
 
         #put input tensor on device. aids in GPU compatability 
-        x = x.to(self.device)
+        rawAdjMat = rawAdjMat.to(self.device)
+
+        #get non inf nor 0 vals over batched input
+        validVals = [smallRawAdjMat[(smallRawAdjMat != np.inf) & (smallRawAdjMat != 0)] for smallRawAdjMat in rawAdjMat]
+        
+        #format data
+        validVals = torch.tensor(np.array(validVals))
 
         if(self.networkType == "FF"):
-
-            x = F.relu(self.layer1(x))
+            
+            x = F.relu(self.layer1(validVals))
             x = F.relu(self.layer2(x))
             #reduce dimensionality
             return self.layer3(x)
 
         if(self.networkType == "RNN"): 
             #pass through RNN, formatting dimensionality and only taking one of the outputs 
-            x = F.relu(self.layer1(x))
+            x = F.relu(self.layer1(validVals))
             #pass the last hidden layer output to the feed forward net 
             x = F.relu(self.layer2(x))
             #forward again 
             #x = F.relu(self.layer3(x))
-            #reduce dimensionality
+    
             return self.layer3(x)
         
         if(self.networkType == "EmbedRNN"):
@@ -157,11 +180,11 @@ class DQN(nn.Module):
             embedded = self.embeddingLayer(dest)
 
             #get adj mat processed 
-            adjMatProc = F.relu(self.layer1(x))
+            x = F.relu(self.layer1(validVals))
 
             #get the combined version data output 
-            #concat along dimension thats dependent on if we are batched or not 
-            x = torch.cat([embedded, adjMatProc], dim= adjMatProc.dim() - 1)
+            #concat along non batch dimension
+            x = torch.cat([embedded, x], dim = 1) 
 
             #then, input to next layer 
             x = F.relu(self.layer2(x))
@@ -177,43 +200,64 @@ class DQN(nn.Module):
             #format data
             dest = torch.tensor(dest)
             
-            #get embedding of destination 
-            embedded = self.embeddingLayer(dest)
+            #get embedding of destination. remove batch dimension, as GCNConv doesnt work with that
+            embedded = self.embeddingLayer(dest)[0]
 
             """
-            Adj Mat processing 
+            Adj Mat processing to get valid indices  
             """
 
             #get indices of valid edges within the graph             
-            edge_index = torch.tensor(np.array(np.nonzero(np.triu(x))), dtype=torch.long)
+            #edge_index = torch.tensor(np.array(np.nonzero(np.triu(rawAdjMat))), dtype=torch.long)
             
+            #first, get upper triangular to eliminate repeats
+            #will need to do these operations across many batch entries....
+            edge_index = np.triu(rawAdjMat)
+
+            #then, get proper mask 
+            edge_index = (edge_index != 0) & np.isfinite(edge_index)
+
+            #then, get nonzero values, getting indices of the valid mask entries 
+            edge_index =  torch.tensor(np.array(np.nonzero(edge_index)), dtype=torch.long)
+            #this removes the batch dimension 
+            edge_index = edge_index[1:3]
+
             #then, get the values of the edges 
             #then, get the rows and cols for getting the proper weights 
+            #use 1 and 2 because we are skipping the batch dimension 
             rows = edge_index[0].numpy()
             cols = edge_index[1].numpy()            
 
             #get the edge weights using the rows and cols 
-            pdb.set_trace()
-            edge_weights = x[rows, cols]
+            edge_weights = rawAdjMat[:, rows, cols]
 
-            #then, go forward through the first layer 
-            #just pass through for node values for now 
-            adjMatProc = self.gconv1(np.ones(len(edge_index)), edge_index, edge_weights)
+            #for now just unsqueeze
+            edge_weights = edge_weights.squeeze(0)
             
-            #use the previous output as the node values 
-            adjMatProc = self.gconv1(adjMatProc, edge_index, edge_weights)
+            #create batch dimension
+            #edge_index = edge_index.unsqueeze(0)
+
+            #create filler for node values. shape is batch dimension * # nodes * single feature 
+            node_values = torch.tensor(np.ones([len(rawAdjMat[0]),1]), dtype=torch.float32)
+            
+            #then, go through networks 
+            #pdb.set_trace()
+            adjMatProc = self.gconv1(node_values, edge_index, edge_weights) 
+            adjMatProc = self.gconv2(adjMatProc, edge_index, edge_weights)
+            #remove channel dimension
+            adjMatProc = adjMatProc[:,0]
             
             """
             Combined processing 
             """
 
-            x = torch.cat([embedded, adjMatProc], dim= adjMatProc.dim() - 1)
+            adjMatProc = torch.cat([embedded, adjMatProc])
 
             #then, input to next layer 
-            x = F.relu(self.layer2(x))
+            adjMatProc = F.relu(self.layer2(adjMatProc))
 
             #then get output 
-            return self.layer3(x)
+            return self.layer3(adjMatProc)
                 
         if(self.networkType == "AttentionRNN"):
             
@@ -226,19 +270,19 @@ class DQN(nn.Module):
             embedded = self.embeddingLayer(dest)
 
             #get adj mat processed 
-            adjMatProc = F.relu(self.layer1(x.unsqueeze(0))[0])
+            adjMatProc = F.relu(self.layer1(rawAdjMat.unsqueeze(0))[0])
 
             #get the combined version data output 
             #concat along dimension thats dependent on if we are batched or not 
-            x = torch.cat([embedded, adjMatProc], dim= adjMatProc.dim() - 1)
+            rawAdjMat = torch.cat([embedded, adjMatProc], dim= adjMatProc.dim() - 1)
 
             #then, input to next layer 
-            x = F.relu(self.layer2(x))
+            rawAdjMat = F.relu(self.layer2(rawAdjMat))
 
-            x = F.relu(self.layer3(x))
+            rawAdjMat = F.relu(self.layer3(rawAdjMat))
 
             #then get output 
-            return self.layer4(x)
+            return self.layer4(rawAdjMat)
         
     def initializeBasicFFNetwork(self): 
         #create layers 
@@ -371,7 +415,7 @@ class DQNAgentRouting:
 
         #get size of observation space from the adjMatrix and QLengths
         #TODO: look at observation compression, as most likely only nearest info matters that much 
-        n_observations = np.sum(self.satellite.adjMatrix != np.inf)
+        n_observations = np.sum((self.satellite.adjMatrix != np.inf) & (self.satellite.adjMatrix != 0))
 
         #policy net = network we use to make our decisions. its the one that we use forward passes to interact with the environment
         #target net = network we use to train upon i.e. the network that generates the target that we use to update the policy net 
@@ -379,14 +423,14 @@ class DQNAgentRouting:
                               n_actions, 
                               self.satellite.adjMatrix,
                               self.device, 
-                              "GCNN", 
+                              "FF", 
                               self.satelliteGridSize).to(self.device)
         
         self.target_net = DQN(n_observations, 
                               n_actions, 
                               self.satellite.adjMatrix,
                               self.device, 
-                              "GCNN", 
+                              "FF", 
                               self.satelliteGridSize).to(self.device)
         
         self.target_net.load_state_dict(self.policy_net.state_dict())
@@ -451,9 +495,14 @@ class DQNAgentRouting:
         overallState: adjMatrix properly indexed 
 
         """
+
         #create experience from adjMatrix and QLengths
         adjMatrixState = copy.deepcopy(self.satellite.adjMatrix)
 
+        if(not np.all(np.diag(adjMatrixState) == 0)):
+            #something bad with adjMatrix generation 
+            pdb.set_trace() 
+        
         #get the queue lengths 
         queueLengthState = copy.deepcopy(self.satellite.getQLengths())
 
@@ -463,13 +512,11 @@ class DQNAgentRouting:
             
             adjMatrixState[ind] +=value/2
             adjMatrixState[:,ind] +=value/2
-            adjMatrixState[ind,ind] -=value/2
+            #0 along diagonal for adjMatrix 
+            adjMatrixState[ind,ind] -=value
 
-        #then, get the non-inf values 
-        #non-inf means there exists a valid connection between the two 
-        #this should never change shape/size, because the topology remains the same 
-        #note, this also automatically reshapes into input shape 
-        overallState = torch.from_numpy(adjMatrixState[adjMatrixState != np.inf])
+        #data conversion          
+        overallState = torch.from_numpy(adjMatrixState) 
 
         return adjMatrixState, overallState
 
@@ -504,8 +551,9 @@ class DQNAgentRouting:
         
         #get the state stuff 
         adjMatrixState, overallState = self.getOverallState()
-
-        #first, get the fullActionOutput
+        qLengths = self.satellite.getQLengths() 
+                
+        #first, get the fullActionOutput 
         if(explorationType == "eps"):
             #use epsilon-greedy exploration
             sample = random.random()
@@ -517,8 +565,7 @@ class DQNAgentRouting:
                 with torch.no_grad():
                     #first, get the policy net output
                     #get only the first entry, because we are not working with batching
-                    #in this, only getting the action. 
-                    fullActionOutput = self.policy_net(overallState, packet.endSat)
+                    fullActionOutput = self.policy_net(overallState, torch.tensor(packet.endSat))[0]
             else: 
                 #generate a random policy net output
                 fullActionOutput = torch.rand(self.policy_net.n_actions, device = self.device)
@@ -539,13 +586,8 @@ class DQNAgentRouting:
             #then, get the argsort for the policy net output
             actionPreferenceList = torch.argsort(fullActionOutput, descending=True)
 
-            print(actionPreferenceList)
-            try: 
-                #so then, get the satellites in the order that we prefer them
-                satPreferenceList = [indexableSats[idx] for idx in actionPreferenceList]
-            except Exception: 
-                pdb.set_trace()
-
+            #so then, get the satellites in the order that we prefer them
+            satPreferenceList = [indexableSats[idx] for idx in actionPreferenceList]
 
             #then, get the adjMatIndices for each 
             satIndexPreferenceList = [sat.adjMatPersonalIndex for sat in satPreferenceList]
@@ -559,12 +601,6 @@ class DQNAgentRouting:
             #if there are none present (like in a 2ISL case), then get the first viable edge and use that
             except StopIteration: 
                 satIndToForwardTo, index = next((item, idx) for idx, item in enumerate(satIndexPreferenceList) if item in nodesToNotSendTo)
-
-            # print( self.satellite.adjMatPersonalIndex )
-            # print( [checkSat.adjMatPersonalIndex for checkSat in self.satellite.connectedToPlayers])
-            # print(nodesToNotSendTo)
-            # print(packet.endSat)
-            # pdb.set_trace()
 
             #then, get the action output for the chosen index 
             actionOutput = actionPreferenceList[index]
@@ -580,10 +616,11 @@ class DQNAgentRouting:
         #then, get the predicted state with modifications using time to process 
         predictedState[satIndToForwardTo]+=timeToProcess/2
         predictedState[:,satIndToForwardTo]+=timeToProcess/2
-        predictedState[satIndToForwardTo, satIndToForwardTo]-=timeToProcess/2
+        #subtract out entirely from origin node
+        predictedState[satIndToForwardTo, satIndToForwardTo]-=timeToProcess
 
         #then, reindex the new state 
-        predictedState = torch.from_numpy(predictedState[predictedState != np.inf])
+        predictedState = torch.from_numpy(predictedState) #[predictedState != np.inf])
 
         #if we are doing distributed training, store experience and optimize your self 
         if(self.trainingPolicy == "distributed"): 
@@ -691,38 +728,39 @@ class DQNAgentRouting:
         #batch it up 
         batch = Transition(*zip(*transitions))
 
-        #1d data for destination, so just make it a tensor 
+        #data formatting for each component
+        #special formatting for 2D state 
         dest_batch = torch.tensor(batch.dest, device = self.device)
-
-        #so, get necessary elements from the batch 
-        state_batch = torch.cat(batch.state)
-
-        #dont need to cat the action, as the dimensions of each element are matching 
-        #same with propDelay
+        state_batch = torch.tensor(np.array(batch.state))
         action_batch = torch.tensor(batch.action, device = self.device)
-        next_state_batch = torch.cat(batch.next_state)
+        next_state_batch = torch.tensor(np.array(batch.next_state))
+        reward_batch = torch.tensor(batch.reward, device = self.device)
+
+        #store episode specific data 
+        self.epsRewards = self.epsRewards + [np.average(reward_batch)]
 
         #reshape the state and next state 
         #first get numElementsPerSet 
-        numElementsPerSet = int(state_batch.size()[0] / self.BATCH_SIZE)
+        #numElementsPerSet = int(state_batch.size()[0] / self.BATCH_SIZE)
         
         #then, reshape 
-        state_batch = state_batch.reshape([self.BATCH_SIZE, numElementsPerSet])
-        next_state_batch = next_state_batch.reshape([self.BATCH_SIZE, numElementsPerSet])
+        #pdb.set_trace()
+        #state_batch = state_batch.reshape([self.BATCH_SIZE, numElementsPerSet])
+        #next_state_batch = next_state_batch.reshape([self.BATCH_SIZE, numElementsPerSet])
 
         #store reward 
-        reward_batch = torch.tensor(batch.reward, device = self.device)
 
-        #store the reward for that batch 
-        self.epsRewards = self.epsRewards + [np.average(reward_batch)]
+
         #self.epsPerformance = self.epsPerformance + [np.average(batch.propDelay)]
 
         #then, get the current state values
         #use the action that we actually executed beforehand
         #alternatively, this could just be the max operatior as well...  
         #we do this with gradients, because we will optimize with them in a second 
-        #reshape to match indexing 
+        #reshape to match indexing
+        #  
         action_batch = action_batch.view(1, self.BATCH_SIZE)
+
         state_action_values = torch.gather(self.policy_net(state_batch, dest_batch), 1, action_batch)
 
         #get the next state values 

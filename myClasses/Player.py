@@ -305,6 +305,8 @@ class Player:
             #then, update the adj matrix information for only the entries where our neighbor player has more recent entries 
             self.adjMatrix[timingMask] = neighborPlayer.adjMatrix[timingMask]
             
+            # pdb.set_trace() 
+
             #update the traffic aware component now 
             #get the timing mask 
             QFinishTimingMask = self.QFinishTimeStamps < neighborPlayer.QFinishTimeStamps
