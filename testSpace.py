@@ -1,107 +1,86 @@
-#import libraries 
 import torch
-import torch.nn.functional as F
-from torch_geometric.nn import GCNConv
-from torch_geometric.data import Data
-import numpy as np
-import pdb 
+import torch.nn as nn
+import torch.optim as optim
+import time
 
+# Define a simple feedforward neural network
+class SimpleNet(nn.Module):
+    def __init__(self, input_size, hidden_size, output_size):
+        super(SimpleNet, self).__init__()
+        self.fc1 = nn.Linear(input_size, hidden_size)
+        self.relu = nn.ReLU()
+        self.fc2 = nn.Linear(hidden_size, output_size)
 
-"""
-Generate graph connectedness 
-"""
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.relu(x)
+        x = self.fc2(x)
+        return x
 
-# Number of nodes and features
-num_nodes = 10
-num_features = 5
-num_classes = 2  # Binary classification
+# Function to measure time for training
+def measure_performance(device, model, criterion, optimizer, input_data, target_data, iterations=100):
+    model.to(device)
+    input_data = input_data.to(device)
+    target_data = target_data.to(device)
 
-# Generate a random adjacency matrix
-adj_matrix = np.random.randint(2, size=(num_nodes, num_nodes))
+    # Warm-up
+    for _ in range(10):
+        outputs = model(input_data)
+        loss = criterion(outputs, target_data)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
 
-# Make the matrix symmetric
-adj_matrix = np.triu(adj_matrix)  # Take the upper triangle of the matrix
-adj_matrix = adj_matrix + adj_matrix.T  # Mirror it to make it symmetric
+    # Measure time
+    start_time = time.time()
 
-# Ensure no self-loops by zeroing out the diagonal
-np.fill_diagonal(adj_matrix, 0)
+    for _ in range(iterations):
+        outputs = model(input_data)
+        loss = criterion(outputs, target_data)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
 
-# Convert the adjacency matrix to edge indices (COO format)
-# only take upper diagonal, as you will face repeated edges otherwise 
-edge_index = torch.tensor(np.array(np.nonzero(np.triu(adj_matrix))), dtype=torch.long)
+    # Ensure all GPU operations are finished
+    if device == 'cuda':
+        torch.cuda.synchronize()
 
-#then create data for edge attributes (just the weights in this case)
-edge_attr = torch.rand(edge_index.shape[1], 1)  # Each edge has a single feature
+    end_time = time.time()
 
-"""
-Generate Targets and Node Data/Features
-"""
+    return (end_time - start_time) / iterations
 
-# Random feature matrix
-x = torch.rand((num_nodes, num_features))
+def main():
+    # Hyperparameters
+    input_size = 1000
+    hidden_size = 500
+    output_size = 10
+    num_samples = 10000
+    learning_rate = 0.001
+    iterations = 100
 
-# Random labels for nodes (0 or 1)
-y = torch.randint(0, num_classes, (num_nodes,))
+    # Generate random input and target data
+    input_data = torch.randn(num_samples, input_size)
+    target_data = torch.randn(num_samples, output_size)
 
-# Create a PyTorch Geometric Data object
-data = Data(x=x, edge_index=edge_index, y=y, edge_attr=edge_attr)
+    # Instantiate the model, loss function, and optimizer
+    model = SimpleNet(input_size, hidden_size, output_size)
+    criterion = nn.MSELoss()
 
-"""
-Create class for the model generation 
-"""
+    # Measure performance on CPU
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    cpu_time = measure_performance('cpu', model, criterion, optimizer, input_data, target_data, iterations)
+    print(f"Time per iteration on CPU: {cpu_time:.6f} seconds")
 
-#create GCN model: 
-class GCN(torch.nn.Module):
-    def __init__(self, in_channels, out_channels):
-        super(GCN, self).__init__()
-        self.conv1 = GCNConv(in_channels, 16)
-        self.conv2 = GCNConv(16, out_channels)
+    # Check if GPU is available
+    if torch.cuda.is_available():
+        # Re-create model and optimizer for GPU
+        model_gpu = SimpleNet(input_size, hidden_size, output_size).to('cuda')
+        optimizer_gpu = optim.Adam(model_gpu.parameters(), lr=learning_rate)
 
-    def forward(self, data):
-        x, edge_index, edge_weight = data.x, data.edge_index, data.edge_attr
+        gpu_time = measure_performance('cuda', model_gpu, criterion, optimizer_gpu, input_data, target_data, iterations)
+        print(f"Time per iteration on GPU: {gpu_time:.6f} seconds")
+    else:
+        print("CUDA is not available. Cannot measure GPU performance.")
 
-        # First GCN layer + ReLU
-        x = self.conv1(x, edge_index, edge_weight)
-        x = F.relu(x)
-
-        # Second GCN layer
-        x = self.conv2(x, edge_index, edge_weight)
-
-        return F.log_softmax(x, dim=1)
-
-"""
-Init proper objects and train 
-"""
-
-# Instantiate the model
-model = GCN(in_channels=num_features, out_channels=num_classes)
-
-# Set up the loss function and optimizer
-optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-criterion = torch.nn.CrossEntropyLoss()
-
-# Training loop
-epochs = 100
-for epoch in range(epochs):
-    model.train()
-    optimizer.zero_grad()  # Clear gradients
-
-    # Forward pass
-    out = model(data)
-    
-    # Calculate the loss
-    loss = criterion(out, data.y)
-    
-    # Backward pass and optimization
-    loss.backward()
-    optimizer.step()
-    
-    # Print the loss every 10 epochs
-    if epoch % 10 == 0:
-        print(f'Epoch {epoch}, Loss: {loss.item()}')
-
-# Final output after training
-model.eval()
-_, pred = model(data).max(dim=1)
-accuracy = (pred == data.y).sum().item() / num_nodes
-print(f'Accuracy: {accuracy * 100:.2f}%')
+if __name__ == "__main__":
+    main()

@@ -193,71 +193,77 @@ class DQN(nn.Module):
             return self.layer3(x)
         
         if(self.networkType == "GCNN"):
-
+            
             """
             Dest processing 
             """
             #format data
             dest = torch.tensor(dest)
             
-            #get embedding of destination. remove batch dimension, as GCNConv doesnt work with that
-            embedded = self.embeddingLayer(dest)[0]
+            #get embedding of destination.
+            embedded = self.embeddingLayer(dest)
 
             """
-            Adj Mat processing to get valid indices  
+            Adj Mat processing 
+            Need to do specialized processing because GCNN dont inherently work with batching. 
             """
-
-            #get indices of valid edges within the graph             
-            #edge_index = torch.tensor(np.array(np.nonzero(np.triu(rawAdjMat))), dtype=torch.long)
             
-            #first, get upper triangular to eliminate repeats
-            #will need to do these operations across many batch entries....
-            edge_index = np.triu(rawAdjMat)
+            batchSize = dest.shape[0]
 
-            #then, get proper mask 
-            edge_index = (edge_index != 0) & np.isfinite(edge_index)
+            #preallocate storage for output of network 
+            GCNNBatchOutput = torch.zeros([batchSize, self.n_actions])
 
-            #then, get nonzero values, getting indices of the valid mask entries 
-            edge_index =  torch.tensor(np.array(np.nonzero(edge_index)), dtype=torch.long)
-            #this removes the batch dimension 
-            edge_index = edge_index[1:3]
+            for batchElemInd in range(dest.shape[0]): 
+                
+                #first, get the data on a per element basis 
+                smallRawAdjMat = rawAdjMat[batchElemInd]
 
-            #then, get the values of the edges 
-            #then, get the rows and cols for getting the proper weights 
-            #use 1 and 2 because we are skipping the batch dimension 
-            rows = edge_index[0].numpy()
-            cols = edge_index[1].numpy()            
+                #only get non repeat entries for adjMat 
+                edge_index = np.triu(smallRawAdjMat)
 
-            #get the edge weights using the rows and cols 
-            edge_weights = rawAdjMat[:, rows, cols]
+                #then, get proper mask 
+                edge_index = (edge_index != 0) & np.isfinite(edge_index)
 
-            #for now just unsqueeze
-            edge_weights = edge_weights.squeeze(0)
-            
-            #create batch dimension
-            #edge_index = edge_index.unsqueeze(0)
+                #then, get nonzero values, getting indices of the valid mask entries 
+                edge_index =  torch.tensor(np.array(np.nonzero(edge_index)), dtype=torch.long)
 
-            #create filler for node values. shape is batch dimension * # nodes * single feature 
-            node_values = torch.tensor(np.ones([len(rawAdjMat[0]),1]), dtype=torch.float32)
-            
-            #then, go through networks 
-            #pdb.set_trace()
-            adjMatProc = self.gconv1(node_values, edge_index, edge_weights) 
-            adjMatProc = self.gconv2(adjMatProc, edge_index, edge_weights)
-            #remove channel dimension
-            adjMatProc = adjMatProc[:,0]
-            
-            """
-            Combined processing 
-            """
+                #get the index sets for elements 
+                rows = edge_index[0].numpy()
+                cols = edge_index[1].numpy()            
 
-            adjMatProc = torch.cat([embedded, adjMatProc])
+                #get the edge weights using the rows and cols 
+                edge_weights = smallRawAdjMat[rows, cols]
 
-            #then, input to next layer 
-            adjMatProc = F.relu(self.layer2(adjMatProc))
+                #for now just unsqueeze
+                edge_weights = edge_weights.squeeze(0)
+                
+                #create filler for node values. shape is # nodes * single feature 
+                node_values = torch.tensor(np.ones([len(smallRawAdjMat[0]),1]), dtype=torch.float32)
+                
+                #then, go through networks 
+                adjMatProc = self.gconv1(node_values, edge_index, edge_weights) 
+                adjMatProc = self.gconv2(adjMatProc, edge_index, edge_weights)
 
-            #then get output 
-            return self.layer3(adjMatProc)
+                #remove channel dimension
+                adjMatProc = adjMatProc[:,0]
+                
+                """
+                Combined processing 
+                """
+
+                #combine outputs
+                adjMatProc = torch.cat([embedded[batchElemInd], adjMatProc])
+
+                #then, input to next layer 
+                adjMatProc = F.relu(self.layer2(adjMatProc))
+
+                #then get output
+                adjMatProc = self.layer3(adjMatProc) 
+
+                #store output  
+                GCNNBatchOutput[batchElemInd] = adjMatProc
+
+            return GCNNBatchOutput
                 
         if(self.networkType == "AttentionRNN"):
             
@@ -318,11 +324,13 @@ class DQN(nn.Module):
         self.embeddingLayer = nn.Embedding(num_embeddings=self.numEmbeddings, embedding_dim=10)
 
         #then, create two GCNNs for the input adj matrix 
-        self.gconv1 = GCNConv(1, 16)
-        self.gconv2 = GCNConv(16, 1)
+        self.gconv1 = GCNConv(1, 5)
+        self.gconv2 = GCNConv(5, 1)
 
         #then, create a linear layer for combining them  
-        self.layer2 = nn.Linear(self.n_observations + self.embeddingLayer.embedding_dim, 16)
+        #you get # outputs = # nodes for GCNNs 
+        #16 is arbitrary 
+        self.layer2 = nn.Linear(len(self.initialAdjMatrix) + self.embeddingLayer.embedding_dim, 16)
 
         #then, create a final output layer 
         self.layer3 = nn.Linear(16, self.n_actions)
@@ -423,14 +431,14 @@ class DQNAgentRouting:
                               n_actions, 
                               self.satellite.adjMatrix,
                               self.device, 
-                              "FF", 
+                              "GCNN", 
                               self.satelliteGridSize).to(self.device)
         
         self.target_net = DQN(n_observations, 
                               n_actions, 
                               self.satellite.adjMatrix,
                               self.device, 
-                              "FF", 
+                              "GCNN", 
                               self.satelliteGridSize).to(self.device)
         
         self.target_net.load_state_dict(self.policy_net.state_dict())
@@ -564,7 +572,7 @@ class DQNAgentRouting:
             if sample > eps_threshold:
                 with torch.no_grad():
                     #first, get the policy net output
-                    #get only the first entry, because we are not working with batching
+                    #get only the first entry, because we are not working with batching 
                     fullActionOutput = self.policy_net(overallState, torch.tensor(packet.endSat))[0]
             else: 
                 #generate a random policy net output
@@ -656,9 +664,9 @@ class DQNAgentRouting:
                 # rewardWithCounterfactual = timeDistanceCovered - counterfactualSum
 
                 #then, normalize with respect to rewards already computed
-                if(len(self.epsRewards) > 2): 
+#                if(len(self.epsRewards) > 2): 
                     #pdb.set_trace()
-                    reward = 10 * (reward - np.average(self.epsRewards))/(np.std(self.epsRewards))
+#                    reward = 10 * (reward - np.average(self.epsRewards))/(np.std(self.epsRewards))
                     #print(rewardWithCounterfactual)
                     #pdb.set_trace() 
 
