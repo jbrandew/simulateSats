@@ -133,14 +133,23 @@ class DQN(nn.Module):
 
         """
 
+        #put the input to the network on the corresponding device
+        #helps with GPU processing :D  
+        rawAdjMat = rawAdjMat.to(self.device)
+
+        if(dest is not None):
+            #format data
+            dest = torch.tensor(dest)
+            dest = dest.to(self.device)
+
+        #create batch dimension for dest if necessary 
+        if(dest is not None): 
+            dest = dest.unsqueeze(0)
+
         #if we are not working with batched data
         if(rawAdjMat.dim() == 2): 
             #create batch dimension
             rawAdjMat = rawAdjMat.unsqueeze(0)
-            
-            #create batch dimension for dest if necessary 
-            if(dest is not None): 
-                dest = dest.unsqueeze(0)
  
         #convert to proper data type for each input  
         rawAdjMat = rawAdjMat.to(torch.float32)
@@ -149,10 +158,12 @@ class DQN(nn.Module):
         rawAdjMat = rawAdjMat.to(self.device)
 
         #get non inf nor 0 vals over batched input
-        validVals = [smallRawAdjMat[(smallRawAdjMat != np.inf) & (smallRawAdjMat != 0)] for smallRawAdjMat in rawAdjMat]
+        validVals = torch.stack([smallRawAdjMat[(smallRawAdjMat != np.inf) & (smallRawAdjMat != 0)] for smallRawAdjMat in rawAdjMat])
         
+        #pdb.set_trace() 
         #format data
-        validVals = torch.tensor(np.array(validVals))
+        #pdb.set_trace() 
+        #validVals = torch.tensor(np.array(validVals))
 
         if(self.networkType == "FF"):
             
@@ -196,10 +207,7 @@ class DQN(nn.Module):
             
             """
             Dest processing 
-            """
-            #format data
-            dest = torch.tensor(dest)
-            
+            """            
             #get embedding of destination.
             embedded = self.embeddingLayer(dest)
 
@@ -292,6 +300,7 @@ class DQN(nn.Module):
         
     def initializeBasicFFNetwork(self): 
         #create layers 
+        pdb.set_trace() 
         self.layer1 = nn.Linear(self.n_observations, 32)
         self.layer2 = nn.Linear(32, 32)
         self.layer3 = nn.Linear(32, self.n_actions)
@@ -376,8 +385,8 @@ class DQNAgentRouting:
 
         #set up hardware:
         # if GPU is to be used
-        #self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.device = "cpu"
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        #self.device = "cpu"
 
 
         #store the satellite this agent gives routing info to 
@@ -427,6 +436,7 @@ class DQNAgentRouting:
 
         #policy net = network we use to make our decisions. its the one that we use forward passes to interact with the environment
         #target net = network we use to train upon i.e. the network that generates the target that we use to update the policy net 
+        #also, put it on proper device for faster computation 
         self.policy_net = DQN(n_observations, 
                               n_actions, 
                               self.satellite.adjMatrix,
@@ -440,7 +450,7 @@ class DQNAgentRouting:
                               self.device, 
                               "GCNN", 
                               self.satelliteGridSize).to(self.device)
-        
+
         self.target_net.load_state_dict(self.policy_net.state_dict())
 
         #create optimizer and buffer 
@@ -471,25 +481,13 @@ class DQNAgentRouting:
     
     def episodeAnalysis(self): 
         
-    
         #print the past average reward and loss  
         print("Average Reward, for the following satellite")
         print(self.satellite.adjMatPersonalIndex)
-        print(np.average(self.epsRewards))
-
-        # print("Average Loss")
-        # print(np.average(self.epsLoss))
-        # self.crossEpsLoss = self.crossEpsLoss + [np.average(self.epsLoss)]
-
-        # #also, print the stats of the selected actions 
-        # #print("Action Stats")
-        # #print(self.epsActions)
-        # actionStats = np.unique(self.epsActions, return_counts=True)
-        # self.crossEpsAction = self.crossEpsAction + [actionStats]
-
-        # self.crossEpsReward = self.crossEpsReward + [np.average(self.epsRewards)]
-
-        # print(actionStats)
+        try: 
+            print(torch.mean(torch.stack(self.epsRewards)))
+        except Exception: 
+            print("Invalid reward")
 
     def getOverallState(self):
         """
@@ -745,7 +743,7 @@ class DQNAgentRouting:
         reward_batch = torch.tensor(batch.reward, device = self.device)
 
         #store episode specific data 
-        self.epsRewards = self.epsRewards + [np.average(reward_batch)]
+        self.epsRewards = self.epsRewards + [torch.mean(reward_batch)]
 
         #reshape the state and next state 
         #first get numElementsPerSet 
@@ -766,7 +764,6 @@ class DQNAgentRouting:
         #alternatively, this could just be the max operatior as well...  
         #we do this with gradients, because we will optimize with them in a second 
         #reshape to match indexing
-        #  
         action_batch = action_batch.view(1, self.BATCH_SIZE)
 
         state_action_values = torch.gather(self.policy_net(state_batch, dest_batch), 1, action_batch)
@@ -784,7 +781,8 @@ class DQNAgentRouting:
         criterion = nn.SmoothL1Loss()
         loss = criterion(state_action_values, target_state_action_values.unsqueeze(1))
 
-        self.epsLoss = self.epsLoss + [np.average(loss.detach().numpy())]
+        #store the loss :D 
+        self.epsLoss = self.epsLoss + [torch.mean(loss)]
 
         # Optimize the model
         #zero out gradients, as we arent using memory here over batches 

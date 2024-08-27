@@ -1,86 +1,63 @@
+import gymnasium as gym
 import torch
 import torch.nn as nn
-import torch.optim as optim
-import time
+import numpy as np
+from torch.optim import Adam
+from tianshou.env import SubprocVectorEnv
+from tianshou.data import Collector, ReplayBuffer
+from tianshou.policy import A2CPolicy
+from tianshou.trainer import onpolicy_trainer
+from tianshou.utils.net.common import ActorCritic, Net
+from tianshou.utils.net.discrete import Actor, Critic
 
-# Define a simple feedforward neural network
-class SimpleNet(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size):
-        super(SimpleNet, self).__init__()
-        self.fc1 = nn.Linear(input_size, hidden_size)
-        self.relu = nn.ReLU()
-        self.fc2 = nn.Linear(hidden_size, output_size)
+# Create the CartPole environment
+env_name = "CartPole-v1"
+train_envs = SubprocVectorEnv([lambda: gym.make(env_name) for _ in range(8)], wrapper_class=gym.wrappers)
+test_envs = SubprocVectorEnv([lambda: gym.make(env_name) for _ in range(100)], wrapper_class=gym.wrappers)
 
-    def forward(self, x):
-        x = self.fc1(x)
-        x = self.relu(x)
-        x = self.fc2(x)
-        return x
+# Define the network for actor and critic
+state_shape = env.observation_space.shape or env.observation_space.n
+action_shape = env.action_space.shape or env.action_space.n
 
-# Function to measure time for training
-def measure_performance(device, model, criterion, optimizer, input_data, target_data, iterations=100):
-    model.to(device)
-    input_data = input_data.to(device)
-    target_data = target_data.to(device)
+net = Net(state_shape, hidden_sizes=[128, 128], activation=nn.ReLU, device="cpu")
+actor = Actor(net, action_shape, softmax_output=False, device="cpu").to("cpu")
+critic = Critic(net, device="cpu").to("cpu")
+actor_critic = ActorCritic(actor, critic)
 
-    # Warm-up
-    for _ in range(10):
-        outputs = model(input_data)
-        loss = criterion(outputs, target_data)
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+# Define the optimizer
+optim = Adam(actor_critic.parameters(), lr=3e-4)
 
-    # Measure time
-    start_time = time.time()
+# Define the policy using A2C (which is an actor-critic method)
+policy = A2CPolicy(
+    actor,
+    critic,
+    optim,
+    dist_fn=torch.distributions.Categorical,
+    discount_factor=0.99,
+    gae_lambda=0.95,
+    vf_coef=0.5,
+    ent_coef=0.01,
+    max_grad_norm=0.5,
+)
 
-    for _ in range(iterations):
-        outputs = model(input_data)
-        loss = criterion(outputs, target_data)
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+# Define the buffer and collectors
+train_collector = Collector(policy, train_envs, ReplayBuffer(20000))
+test_collector = Collector(policy, test_envs)
 
-    # Ensure all GPU operations are finished
-    if device == 'cuda':
-        torch.cuda.synchronize()
+# Train the policy
+result = onpolicy_trainer(
+    policy,
+    train_collector,
+    test_collector,
+    max_epoch=10,
+    step_per_epoch=10000,
+    repeat_per_collect=4,
+    episode_per_test=10,
+    batch_size=64,
+)
 
-    end_time = time.time()
-
-    return (end_time - start_time) / iterations
-
-def main():
-    # Hyperparameters
-    input_size = 1000
-    hidden_size = 500
-    output_size = 10
-    num_samples = 10000
-    learning_rate = 0.001
-    iterations = 100
-
-    # Generate random input and target data
-    input_data = torch.randn(num_samples, input_size)
-    target_data = torch.randn(num_samples, output_size)
-
-    # Instantiate the model, loss function, and optimizer
-    model = SimpleNet(input_size, hidden_size, output_size)
-    criterion = nn.MSELoss()
-
-    # Measure performance on CPU
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    cpu_time = measure_performance('cpu', model, criterion, optimizer, input_data, target_data, iterations)
-    print(f"Time per iteration on CPU: {cpu_time:.6f} seconds")
-
-    # Check if GPU is available
-    if torch.cuda.is_available():
-        # Re-create model and optimizer for GPU
-        model_gpu = SimpleNet(input_size, hidden_size, output_size).to('cuda')
-        optimizer_gpu = optim.Adam(model_gpu.parameters(), lr=learning_rate)
-
-        gpu_time = measure_performance('cuda', model_gpu, criterion, optimizer_gpu, input_data, target_data, iterations)
-        print(f"Time per iteration on GPU: {gpu_time:.6f} seconds")
-    else:
-        print("CUDA is not available. Cannot measure GPU performance.")
-
-if __name__ == "__main__":
-    main()
+# Test the trained policy
+policy.eval()
+test_collector.reset()
+result = test_collector.collect(n_episode=10, render=0.1)
+print(f"Final reward: {result['rews'].mean()}, length: {result['lens'].mean()}")
