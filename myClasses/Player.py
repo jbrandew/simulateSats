@@ -9,7 +9,8 @@ import heapq
 
 import random
 
-import myClasses.RoutingRL as RoutingRL
+import myClasses.DQNRouting as DQNRouting
+import myClasses.A2CRouting as A2CRouting 
 
 class PQueue:
     """
@@ -128,7 +129,7 @@ class Player:
             #create agent for RL routing 
             #last param is for the reward type creation 
             #use the length of the adj matrix for the agent creation 
-            self.agent = RoutingRL.DQNAgentRouting(self, 
+            self.agent = A2CRouting.RLAgentRouting(self, 
                                                    trainingPolicy, 
                                                    trainingManager, 
                                                    "immediate",
@@ -182,8 +183,9 @@ class Player:
         """
         Store propagation delay for a packet we are involved in sending
         """
-
+        #this is for non A2C/non retroactive reward....
         if(self.routingPolicy == "RL"):
+            return 
             self.agent.retroactiveRewardCreation(packet)
 
     def getNextHopAndUpdatePacket(self, packet): 
