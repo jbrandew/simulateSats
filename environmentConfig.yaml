@@ -5,7 +5,7 @@
 #constellation parameters
 #walkerDelta or square  
 LEOConstellation: 'walkerDelta'
-NumberLEOSatellites: 28
+NumberLEOSatellites: 16
 OrbitalPlanes: 4
 Inclination: 80 
 phasingParameter: 5
@@ -34,9 +34,9 @@ topologyPolicy: null
 packetProcessRate: 10 #[[10, 9, 10, 1 ]]
 
 #simulation runtime parameters 
-numPeople: 1
-numPacketsPerPerson: 500
-packetSendTimeFrame: 1
+numPeople: 10
+numPacketsPerPerson: 50
+packetSendTimeFrame: 100
 #PseudoUniform, SingleFar, simpleForSingleRL
 #cant use single far with multiple people 
 personDistribution: 'PseudoUniform'
@@ -50,6 +50,7 @@ environmentUpdateInterval: 10
 outageFrequency: null
 #takes care of how long we want the visualizer to take data for. Should be greater for more traffic.
 #its a ratio of the visualize time vs the time frame length that packets are being sent over. 
+# could make this adaptive (run normal simulation once and look at time frame, then adjust to that)
 timeFactor: 100
 
 #visualizer parameters 
